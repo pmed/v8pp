@@ -65,7 +65,7 @@ v8::Handle<v8::Value> context::load_module(const v8::Arguments& args)
 
 	if ( !dl )
 	{
-		return scope.Close(throw_ex("load_module: could not load shared library "
+		return scope.Close(throw_ex("load_module(" + name + "): could not load shared library "
 			+ filename.string()));
 	}
 
@@ -79,8 +79,8 @@ v8::Handle<v8::Value> context::load_module(const v8::Arguments& args)
 
 	if ( !sym )
 	{
-		return scope.Close(throw_ex("load_module: initialisation function "
-			BOOST_PP_STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME) " not found"));
+		return scope.Close(throw_ex("load_module(" + name + "): initialization function "
+			BOOST_PP_STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME) " not found in " + filename.string()));
 	}
 
 	typedef v8::Handle<v8::Value> (*module_init_proc)();
