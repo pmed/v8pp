@@ -5,9 +5,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "v8pp", "v8pp\v8pp.vcxproj",
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test\test.vcxproj", "{69779536-9D04-48B2-B853-4E1B761A7A50}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "console", "lib\console.vcxproj", "{967D7CE6-8AD1-465C-A838-0A7E666DC1AE}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "console", "plugins\console.vcxproj", "{967D7CE6-8AD1-465C-A838-0A7E666DC1AE}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "file", "lib\file.vcxproj", "{300469B1-31DA-4485-A75B-111C78697B16}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "file", "plugins\file.vcxproj", "{300469B1-31DA-4485-A75B-111C78697B16}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
