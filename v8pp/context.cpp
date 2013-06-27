@@ -54,7 +54,6 @@ v8::Handle<v8::Value> context::load_module(const v8::Arguments& args)
 	boost::filesystem::path filename =  ctx->lib_path_ / name;
 	filename.replace_extension(V8PP_PLUGIN_SUFFIX);
 
-	nullptr;
 #if defined(WIN32)
 	HMODULE dl = ::LoadLibrary(filename.c_str());
 #elif defined(__linux__)
