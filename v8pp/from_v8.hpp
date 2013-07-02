@@ -18,7 +18,7 @@ T* get_native_object_ptr(v8::Local<v8::Value> value)
 	while ( value->IsObject() )
 	{
 		v8::Local<v8::Object> obj = value->ToObject();
-		T* native = static_cast<T*>(obj->GetPointerFromInternalField(0));
+		T* native = reinterpret_cast<T*>(obj->GetPointerFromInternalField(0));
 		if ( native )
 		{
 			return native;
@@ -33,7 +33,7 @@ template<typename T>
 T get_external_data(v8::Local<v8::Value> value)
 {
 	v8::Local<v8::External> ext = value.As<v8::External>();
-	return static_cast<T>(ext->Value());
+	return reinterpret_cast<T>(ext->Value());
 }
 
 // A string that converts to char const * (useful for fusion::invoke)
@@ -201,7 +201,7 @@ struct from_v8< std::vector<T, A> >
 			throw std::runtime_error("expected javascript array");
 		}
 
-		v8::Array const* array = v8::Array::Cast(*value);
+		v8::Array* array = v8::Array::Cast(*value);
 
 		result_type result;
 		result.reserve(array->Length());

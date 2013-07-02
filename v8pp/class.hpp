@@ -135,7 +135,8 @@ public:
 		try
 		{
 			T* obj = detail::get_native_object_ptr<T>(args.Holder());
-			typename P::method_type* pptr = detail::get_external_data<P::method_type*>(args.Data());
+			typedef typename P::method_type method_type;
+			method_type* pptr = detail::get_external_data<method_type*>(args.Data());
 			return scope.Close(forward_ret<P>(obj, *pptr, args));
 		}
 		catch (std::exception const& ex)

@@ -71,7 +71,7 @@ v8::Handle<v8::Value> context::load_module(const v8::Arguments& args)
 #if defined(WIN32)
 	void *sym = ::GetProcAddress(dl, BOOST_PP_STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
 #elif defined(__linux__)
-	void *sym = dlsym(dl, V8PP_PLUGIN_PROC_INIT);
+	void *sym = dlsym(dl, BOOST_PP_STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
 #else
 	#error unsupported platform yet
 #endif
@@ -83,7 +83,7 @@ v8::Handle<v8::Value> context::load_module(const v8::Arguments& args)
 	}
 
 	typedef v8::Handle<v8::Value> (*module_init_proc)();
-	module_init_proc init_proc = static_cast<module_init_proc>(sym);
+	module_init_proc init_proc = reinterpret_cast<module_init_proc>(sym);
 
 	v8::Persistent<v8::Value> value = v8::Persistent<v8::Value>::New(init_proc());
 	ctx->modules_.insert(context::dynamic_modules::value_type(name, context::dynamic_module(dl, value)));
@@ -100,7 +100,7 @@ void context::unload_modules()
 #if defined(WIN32)
 		::FreeLibrary((HMODULE)mod.first);
 #elif defined(__linux__)
-		dlclose(it->secondnd.first);
+		dlclose(it->second.first);
 #endif
 	}
 	modules_.clear();

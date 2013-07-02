@@ -42,7 +42,7 @@ public:
 		typedef typename detail::function_ptr<Function> FunctionProto;
 
 		v8::InvocationCallback callback = &forward<FunctionProto>;
-		v8::Handle<v8::Value> data = v8::External::New(f);
+		v8::Handle<v8::Value> data = v8::External::New(reinterpret_cast<void*>(f));
 
 		obj_->Set(v8::String::NewSymbol(name), v8::FunctionTemplate::New(callback, data));
 		return *this;
