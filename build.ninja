@@ -1,0 +1,29 @@
+cxx = g++
+cxxflags = -Wall -Wextra -Wno-return-type-c-linkage -std=c++11 -fPIC -I. -I./v8pp
+ldflags = -L. -lv8pp -lv8 -lboost_system -lboost_program_options -lboost_filesystem -ldl
+
+rule cxx
+  command = $cxx $cxxflags -c $in -o $out
+  description = $cxx $in
+
+rule ar
+  command = ar rcs $out $in
+  description = ar $out
+
+rule link
+  command = $cxx -o $out $in $ldflags
+  description = link $out
+
+rule plugin
+  command = $cxx $cxxflags $in -o $out $ldflags -shared
+  description = plugin $out
+
+build v8pp_test: link test/main.o || libv8pp.a file.so console.so
+
+build libv8pp.a: ar v8pp/context.o
+build console.so: plugin plugins/console.cpp || libv8pp.a
+build file.so: plugin plugins/file.cpp || libv8pp.a
+
+build v8pp/context.o: cxx v8pp/context.cpp
+build test/main.o: cxx test/main.cpp
+
