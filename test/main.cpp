@@ -22,7 +22,7 @@ int main(int argc, char const * argv[])
 	desc.add_options()
 		("help,h", "print this help message.")
 		("script,s", po::value(&scripts), "script to run.")
-		("library-path,l", po::value(&lib_path), "path containing plugin libraries.")
+		("library-path,l", po::value(&lib_path)->default_value(V8PP_PLUGIN_LIB_PATH), "path containing plugin libraries.")
 		;
 
 	po::variables_map vm;
@@ -44,14 +44,9 @@ int main(int argc, char const * argv[])
 
 	po::notify(vm);
 
-	if ( lib_path.empty() )
-	{
-		lib_path = V8PP_PLUGIN_LIB_PATH;
-	}
-
 	if ( scripts.empty() )
 	{
-		std::cerr << "must supply at least one script\n" << desc << std::endl;
+		std::cerr << "must supply at least one script\n" << std::endl;
 		return EXIT_FAILURE;
 	}
 
