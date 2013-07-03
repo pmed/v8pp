@@ -254,12 +254,12 @@ public:
 		return scope.Close(obj);
 	}
 
-	v8::Persistent<v8::FunctionTemplate>& class_function_template()
+	static v8::Persistent<v8::FunctionTemplate>& class_function_template()
 	{
 		return singleton::instance().class_function_template();
 	}
 
-	v8::Persistent<v8::FunctionTemplate>& js_function_template()
+	static v8::Persistent<v8::FunctionTemplate>& js_function_template()
 	{
 		return singleton::instance().js_function_template();
 	}
