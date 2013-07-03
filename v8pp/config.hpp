@@ -5,7 +5,7 @@
 
 #define V8PP_MAX_ARG_LIMIT 5
 
-#define V8PP_PLUGIN_LIB_PATH ""
+#define V8PP_PLUGIN_LIB_PATH "./"
 
 #define V8PP_PLUGIN_INIT_PROC_NAME v8pp_module_init
 
