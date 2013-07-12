@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS += -Wall -Wextra -std=c++11 -fPIC
+CXXFLAGS += -Wall -Wextra -Wno-return-type-c-linkage -std=c++11 -fPIC
 LDFLAGS += -shared
 AR = ar
 ARFLAGS = rcs
