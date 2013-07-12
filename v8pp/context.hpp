@@ -32,7 +32,7 @@ public:
 	// Add module to the context
 	void add(char const *name, module& m);
 
-	/// Scoped context (enter on create, exit on destroy)
+	// Scoped context (enter on create, exit on destroy)
 	friend class scope;
 	class scope : boost::noncopyable
 	{

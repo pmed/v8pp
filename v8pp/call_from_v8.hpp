@@ -19,9 +19,8 @@
 
 namespace v8pp {
 
-namespace mpl = boost::mpl;
-
 namespace detail {
+
 template <class P, int N>
 struct call_from_v8_helper_function;
 
@@ -35,7 +34,7 @@ typename P::return_type
 call_from_v8(typename P::function_type ptr, v8::Arguments const& args)
 {
 	typedef typename P::arguments args_tl;
-	enum { arg_count = mpl::size<args_tl>::value };
+	enum { arg_count = boost::mpl::size<args_tl>::value };
 
 	if ( args.Length() != arg_count )
 	{
@@ -50,7 +49,7 @@ typename P::return_type
 call_from_v8(T& obj, typename P::method_type ptr, v8::Arguments const& args)
 {
 	typedef typename P::arguments args_tl;
-	enum { arg_count = mpl::size<args_tl>::value };
+	enum { arg_count = boost::mpl::size<args_tl>::value };
 
 	if ( args.Length() != arg_count )
 	{
@@ -70,7 +69,7 @@ call_from_v8(T& obj, typename P::method_type ptr, v8::Arguments const& args)
 #else // BOOST_PP_IS_ITERATING
 
 #  define n BOOST_PP_ITERATION()
-#  define V8PP_CALL_V8_from_v8_args(z, n, data) v8pp::from_v8<typename mpl::at_c<args_tl, n>::type>(args[ n ])
+#  define V8PP_CALL_V8_from_v8_args(z, n, data) v8pp::from_v8<typename boost::mpl::at_c<args_tl, n>::type>(args[ n ])
 
 namespace v8pp { namespace detail {
 

@@ -11,28 +11,6 @@ namespace v8pp {
 
 namespace detail {
 
-template <typename T, typename F>
-struct arg_factory
-{
-	typedef typename F::template construct<T>  factory_type;
-
-	static typename factory_type::return_type create(v8::Arguments const& args)
-	{
-		return call_from_v8<factory_type>(&factory_type::create, args);
-	}
-};
-
-template<typename T>
-struct arg_factory<T, v8_args_factory>
-{
-	static T* create(v8::Arguments const& args)
-	{
-		return new T(args);
-	}
-};
-
-} // namespace detail
-
 template <typename M, typename Factory>
 class class_singleton_factory
 {
@@ -83,6 +61,26 @@ class class_singleton
 {
 	typedef class class_singleton<T, Factory> self_type;
 
+	template <typename T, typename F>
+	struct arg_factory
+	{
+		typedef typename F::template construct<T> factory_type;
+
+		static typename factory_type::return_type create(v8::Arguments const& args)
+		{
+			return call_from_v8<factory_type>(&factory_type::create, args);
+		}
+	};
+
+	template<typename T>
+	struct arg_factory<T, v8_args_factory>
+	{
+		static T* create(v8::Arguments const& args)
+		{
+			return new T(args);
+		}
+	};
+
 	class_singleton()
 		: func_(v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New()))
 	{
@@ -92,8 +90,6 @@ class class_singleton
 		}
 		func_->InstanceTemplate()->SetInternalFieldCount(1);
 	}
-
-	//typedef v8::Handle<v8::Value> (T::*method_callback)(v8::Arguments const& args);
 
 public:
 	static self_type& instance()
@@ -116,7 +112,7 @@ public:
 	{
 		v8::HandleScope scope;
 
-		T* wrap = detail::arg_factory<T, Factory>::create(args);
+		T* wrap = arg_factory<T, Factory>::create(args);
 		v8::Local<v8::Object> local_obj = func_->GetFunction()->NewInstance();
 		v8::Persistent<v8::Object> obj = v8::Persistent<v8::Object>::New(local_obj);
 
@@ -148,7 +144,7 @@ public:
 private:
 	template<typename P>
 	struct pass_direct_if : boost::is_same<
-		v8::Arguments const&, typename mpl::front<typename P::arguments>::type>
+		v8::Arguments const&, typename boost::mpl::front<typename P::arguments>::type>
 	{
 	};
 
@@ -192,8 +188,9 @@ private:
 
 private:
 	v8::Persistent<v8::FunctionTemplate> func_;
-
 };
+
+} // namespace detail
 
 // Interface for registering C++ classes with v8
 // T = class
@@ -202,7 +199,7 @@ private:
 template<typename T, typename Factory = factory<> >
 class class_
 {
-	typedef class_singleton<T, Factory> singleton;
+	typedef detail::class_singleton<T, Factory> singleton;
 public:
 	class_() {}
 
@@ -263,24 +260,6 @@ public:
 	{
 		return singleton::instance().js_function_template();
 	}
-
-private:
-/*
-	// passing v8::Arguments directly but modify return type
-	template <class R, R (T::*Ptr)(const v8::Arguments&)>
-    inline Class& Set(char const *name) {
-        return Set<R(const v8::Arguments&), Ptr>(name);
-    }
-
-    // passing v8::Arguments and return v8::Handle<v8::Value> directly
-    template <v8::Handle<v8::Value> (T::*Ptr)(const v8::Arguments&)>
-    inline Class& Set(char const *name) {
-        return Method<v8::Handle<v8::Value>(const v8::Arguments&), Ptr>(name);
-    }
-*/
-private:
-	//typedef class_singleton<T, Factory> singleton_type;
-	//typedef typename singleton_type::method_callback method_callback;
 };
 
 } // namespace v8pp

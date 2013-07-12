@@ -15,10 +15,10 @@
 
 namespace v8pp {
 
-/// Calls a V8 function, converting C++ arguments to v8::Value arguments
-/// @tparam T... C++ types of arguments
-/// @param func  v8 function to call
-/// @param args...  C++ arguments to convert to JS arguments using ToV8
+// Calls a V8 function, converting C++ arguments to v8::Value arguments
+// @tparam T... C++ types of arguments
+// @param func  v8 function to call
+// @param args...  C++ arguments to convert to JS arguments using ToV8
 inline v8::Handle<v8::Value> call_v8(v8::Handle<v8::Function> func)
 {
 	return func->Call(func, 0, nullptr);

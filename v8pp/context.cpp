@@ -138,8 +138,6 @@ context::context(boost::filesystem::path const& lib_path)
 	global_template->Set(v8::String::NewSymbol("run"), v8::FunctionTemplate::New(run_file));
 
 	impl_ = v8::Context::New(nullptr, global_template);
-
-//	add("v8pp", m);
 }
 
 context::~context()

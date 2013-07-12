@@ -21,8 +21,6 @@
 #       endif
 namespace v8pp { namespace detail {
 
-namespace mpl = boost::mpl;
-
 template<typename T>
 struct function_ptr;
 
@@ -58,7 +56,7 @@ template<typename R BOOST_PP_COMMA_IF(n) BOOST_PP_ENUM_PARAMS(n, typename A)>
 struct function_ptr<R (*)( BOOST_PP_ENUM_PARAMS(n, A) )>
 {
 	typedef R return_type;
-	typedef mpl::vector<BOOST_PP_ENUM_PARAMS(n, A)> arguments;
+	typedef boost::mpl::vector<BOOST_PP_ENUM_PARAMS(n, A)> arguments;
 	typedef R (*function_type)(BOOST_PP_ENUM_PARAMS(n, A));
 };
 
@@ -66,7 +64,7 @@ template<typename C, typename R BOOST_PP_COMMA_IF(n) BOOST_PP_ENUM_PARAMS(n, typ
 struct mem_function_ptr<C, R (C::*)( BOOST_PP_ENUM_PARAMS(n, A) )>
 {
 	typedef R return_type;
-	typedef mpl::vector<BOOST_PP_ENUM_PARAMS(n, A)> arguments;
+	typedef boost::mpl::vector<BOOST_PP_ENUM_PARAMS(n, A)> arguments;
 	typedef R (C::*method_type)(BOOST_PP_ENUM_PARAMS(n, A));
 };
 
@@ -74,7 +72,7 @@ template<typename C, typename R BOOST_PP_COMMA_IF(n) BOOST_PP_ENUM_PARAMS(n, typ
 struct mem_function_ptr<C, R (C::*)( BOOST_PP_ENUM_PARAMS(n, A) ) const>
 {
 	typedef R return_type;
-	typedef mpl::vector<BOOST_PP_ENUM_PARAMS(n, A)> arguments;
+	typedef boost::mpl::vector<BOOST_PP_ENUM_PARAMS(n, A)> arguments;
 	typedef R (C::*method_type)(BOOST_PP_ENUM_PARAMS(n, A)) const;
 };
 
