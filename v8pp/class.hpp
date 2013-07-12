@@ -61,10 +61,10 @@ class class_singleton
 {
 	typedef class class_singleton<T, Factory> self_type;
 
-	template <typename T, typename F>
+	template <typename C, typename F>
 	struct arg_factory
 	{
-		typedef typename F::template construct<T> factory_type;
+		typedef typename F::template construct<C> factory_type;
 
 		static typename factory_type::return_type create(v8::Arguments const& args)
 		{
@@ -72,12 +72,12 @@ class class_singleton
 		}
 	};
 
-	template<typename T>
-	struct arg_factory<T, v8_args_factory>
+	template<typename C>
+	struct arg_factory<C, v8_args_factory>
 	{
-		static T* create(v8::Arguments const& args)
+		static C* create(v8::Arguments const& args)
 		{
-			return new T(args);
+			return new C(args);
 		}
 	};
 
