@@ -1,3 +1,8 @@
 /bin
 /*.*sdf
 /*.suo
+
+*.so
+*.o
+*.a
+/v8pp_test
