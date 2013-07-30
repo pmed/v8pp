@@ -6,7 +6,54 @@
 #include <string>
 #include <cstdint>
 
+#include <boost/unordered_map.hpp>
+
 namespace v8pp {
+
+namespace detail {
+
+// Native objects registry. Monostate
+class native_object_registry
+{
+public:
+	static void add(void const* native, v8::Handle<v8::Value> value)
+	{
+		v8::Persistent<v8::Value> pvalue = v8::Persistent<v8::Value>::New(value);
+		items().insert(objects::value_type(native, pvalue));
+	}
+
+	static void remove(void const* native)
+	{
+		objects::iterator it = items().find(native);
+		if ( it != items().end() )
+		{
+			it->second.Dispose();
+			items().erase_return_void(it);
+		}
+	}
+
+	static v8::Handle<v8::Value> find(void const* native)
+	{
+		return items().at(native);
+	}
+
+private:
+	native_object_registry();
+	~native_object_registry();
+	native_object_registry(native_object_registry const&);
+	native_object_registry& operator=(native_object_registry const&);
+
+private:
+	typedef boost::unordered_map<void const*, v8::Persistent<v8::Value>> objects;
+
+	static objects& items()
+	{
+		static objects items_;
+		return items_;
+	}
+};
+
+} // namespace detail
 
 inline v8::Handle<v8::Value> to_v8(v8::Handle<v8::Value> src)
 {
@@ -58,6 +105,12 @@ inline v8::Handle<v8::Value> to_v8(uint32_t const src)
 inline v8::Handle<v8::Value> to_v8(bool const src)
 {
 	return v8::Boolean::New(src);
+}
+
+template<typename T>
+v8::Handle<v8::Value> to_v8(T* src)
+{
+	return detail::native_object_registry::find(src);
 }
 
 } // namespace v8pp

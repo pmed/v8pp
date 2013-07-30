@@ -6,6 +6,7 @@
 #include "factory.hpp"
 #include "proto.hpp"
 #include "call_from_v8.hpp"
+#include "to_v8.hpp"
 
 namespace v8pp {
 
@@ -117,6 +118,7 @@ public:
 		v8::Persistent<v8::Object> obj = v8::Persistent<v8::Object>::New(local_obj);
 
 		obj->SetPointerInInternalField(0, wrap);
+		detail::native_object_registry::add(wrap, obj);
 		obj.MakeWeak(wrap, on_made_weak);
 		return scope.Close(obj);
 	}
@@ -130,7 +132,7 @@ public:
 		// this will kill without zero-overhead exception handling
 		try
 		{
-			T* obj = detail::get_native_object_ptr<T>(args.Holder());
+			T* obj = detail::get_object_field<T*>(args.Holder());
 			typedef typename P::method_type method_type;
 			method_type* pptr = detail::get_external_data<method_type*>(args.Data());
 			return scope.Close(forward_ret<P>(obj, *pptr, args));
@@ -181,6 +183,7 @@ private:
 	static void on_made_weak(v8::Persistent<v8::Value> object, void* parameter)
 	{
 		T* obj = static_cast<T*>(parameter);
+		detail::native_object_registry::remove(obj);
 		delete(obj);
 		object.Dispose();
 		object.Clear();

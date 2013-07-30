@@ -13,12 +13,12 @@ namespace detail {
 
 // Get pointer to native object
 template<typename T>
-T* get_native_object_ptr(v8::Local<v8::Value> value)
+T get_object_field(v8::Handle<v8::Value> value)
 {
 	while ( value->IsObject() )
 	{
 		v8::Local<v8::Object> obj = value->ToObject();
-		T* native = reinterpret_cast<T*>(obj->GetPointerFromInternalField(0));
+		T native = reinterpret_cast<T>(obj->GetPointerFromInternalField(0));
 		if ( native )
 		{
 			return native;
@@ -229,7 +229,7 @@ struct from_v8< v8::Handle<v8::Value> >
 template<typename T>
 struct from_v8_ptr
 {
-	typedef T result_type;
+	typedef T* result_type;
 
 	static result_type exec(v8::Handle<v8::Value> value)
 	{
@@ -242,7 +242,7 @@ struct from_v8_ptr
 			throw std::runtime_error("expected object");
 		}
 
-		T obj_ptr = get_native_object_ptr<T>(value);
+		T* obj_ptr = get_object_field<T*>(value);
 		if ( !obj_ptr )
 		{
 			throw std::runtime_error("expected C++ wrapped object");
@@ -252,10 +252,10 @@ struct from_v8_ptr
 };
 
 template<typename T>
-struct from_v8<T*> : from_v8_ptr<T*> {};
+struct from_v8<T*> : from_v8_ptr<T> {};
 
 template<typename T>
-struct from_v8<T const *> : from_v8_ptr<T const *> {};
+struct from_v8<T const *> : from_v8_ptr<T const> {};
 
 //////////////////////////////////////////////////////////////////////////////
 // deal with references
@@ -272,7 +272,7 @@ struct from_v8_ref
 			throw std::runtime_error("expected object");
 		}
 
-		T* obj_ptr = get_native_object_ptr<T*>(value);
+		T* obj_ptr = get_object_field<T*>(value);
 		if ( !obj_ptr )
 		{
 			throw std::runtime_error("expected C++ wrapped object");
