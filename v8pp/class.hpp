@@ -236,7 +236,7 @@ public:
 		v8::HandleScope scope;
 
 		v8::Local<v8::Object> obj = class_function_template()->GetFunction()->NewInstance();
-		obj->SetPointerInInternalField(0, ext);
+		obj->SetAlignedPointerInInternalField(0, ext);
 		return scope.Close(obj);
 	}
 
@@ -249,7 +249,7 @@ public:
 		v8::Local<v8::Object> local_obj = class_function_template()->GetFunction()->NewInstance();
 		v8::Persistent<v8::Object> obj = v8::Persistent<v8::Object>::New(local_obj);
 
-		obj->SetPointerInInternalField(0, ext);
+		obj->SetAlignedPointerInInternalField(0, ext);
 		obj.MakeWeak(ext, &singleton::on_made_weak);
 
 		return scope.Close(obj);
