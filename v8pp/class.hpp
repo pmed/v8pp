@@ -117,7 +117,7 @@ public:
 		v8::Local<v8::Object> local_obj = func_->GetFunction()->NewInstance();
 		v8::Persistent<v8::Object> obj = v8::Persistent<v8::Object>::New(local_obj);
 
-		obj->SetPointerInInternalField(0, wrap);
+		obj->SetAlignedPointerInInternalField(0, wrap);
 		detail::native_object_registry::add(wrap, obj);
 		obj.MakeWeak(wrap, on_made_weak);
 		return scope.Close(obj);
@@ -180,13 +180,11 @@ private:
 		return v8::Undefined();
 	}
 
-	static void on_made_weak(v8::Persistent<v8::Value> object, void* parameter)
+	static void on_made_weak(v8::Isolate*, v8::Persistent<v8::Object>* handle, T* obj)
 	{
-		T* obj = static_cast<T*>(parameter);
 		detail::native_object_registry::remove(obj);
-		delete(obj);
-		object.Dispose();
-		object.Clear();
+		delete obj;
+		handle->Dispose();
 	}
 
 private:
@@ -218,6 +216,8 @@ public:
 	typename boost::enable_if<boost::is_member_function_pointer<Method>, class_&>::type
 	set(char const *name, Method m)
 	{
+		v8::HandleScope scope;
+
 		typedef typename detail::mem_function_ptr<T, Method> MethodProto;
 
 		v8::InvocationCallback callback = &singleton::template forward<MethodProto>;
@@ -234,6 +234,7 @@ public:
 	static v8::Handle<v8::Object> reference_external(T* ext)
 	{
 		v8::HandleScope scope;
+
 		v8::Local<v8::Object> obj = class_function_template()->GetFunction()->NewInstance();
 		obj->SetPointerInInternalField(0, ext);
 		return scope.Close(obj);
@@ -244,8 +245,8 @@ public:
 	static inline v8::Handle<v8::Object> import_external(T* ext)
 	{
 		v8::HandleScope scope;
-		v8::Local<v8::Object> local_obj = class_function_template()->GetFunction()->NewInstance();
 
+		v8::Local<v8::Object> local_obj = class_function_template()->GetFunction()->NewInstance();
 		v8::Persistent<v8::Object> obj = v8::Persistent<v8::Object>::New(local_obj);
 
 		obj->SetPointerInInternalField(0, ext);

@@ -23,7 +23,7 @@ context* context::get(v8::Handle<v8::Object> obj)
 		return nullptr;
 	}
 
-	return static_cast<context*>(v8::External::Unwrap(ctx_val));
+	return static_cast<context*>(ctx_val.As<v8::External>()->Value());
 }
 
 v8::Handle<v8::Value> context::load_module(const v8::Arguments& args)
@@ -137,7 +137,8 @@ context::context(boost::filesystem::path const& lib_path)
 	global_template->Set(v8::String::NewSymbol("require"), v8::FunctionTemplate::New(load_module));
 	global_template->Set(v8::String::NewSymbol("run"), v8::FunctionTemplate::New(run_file));
 
-	impl_ = v8::Context::New(nullptr, global_template);
+	v8::Handle<v8::Context> ctx = v8::Context::New(v8::Isolate::GetCurrent(), nullptr, global_template);
+	impl_ = v8::Persistent<v8::Context>::New(ctx);
 }
 
 context::~context()
@@ -156,7 +157,23 @@ void context::add(char const *name, module& m)
 
 bool context::run(char const *filename)
 {
-	scope s(*this);
+	struct context_scope : v8::HandleScope
+	{
+		v8::Context* ctx;
+
+		explicit context_scope(v8::Context* ctx)
+			: ctx(ctx)
+		{
+			ctx->Enter();
+		}
+
+		~context_scope()
+		{
+			ctx->Exit();
+		}
+	};
+
+	context_scope scope(*impl_);
 	return run_in_scope(filename);
 }
 

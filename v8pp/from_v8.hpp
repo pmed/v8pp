@@ -18,7 +18,7 @@ T get_object_field(v8::Handle<v8::Value> value)
 	while ( value->IsObject() )
 	{
 		v8::Local<v8::Object> obj = value->ToObject();
-		T native = reinterpret_cast<T>(obj->GetPointerFromInternalField(0));
+		T native = reinterpret_cast<T>(obj->GetAlignedPointerFromInternalField(0));
 		if ( native )
 		{
 			return native;

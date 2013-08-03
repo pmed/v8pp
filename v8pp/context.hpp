@@ -32,23 +32,6 @@ public:
 	// Add module to the context
 	void add(char const *name, module& m);
 
-	// Scoped context (enter on create, exit on destroy)
-	friend class scope;
-	class scope : boost::noncopyable
-	{
-	public:
-		explicit scope(context& ctx) : ctx_(ctx) { ctx_.impl_->Enter(); }
-		~scope() { ctx_.impl_->Exit(); }
-	private:
-		context& ctx_;
-		v8::HandleScope v8_scope_;
-	};
-
-	struct scope_thread_lock : v8::Locker, scope
-	{
-		explicit scope_thread_lock(context& ctx) : scope(ctx) {}
-	};
-
 private:
 	v8::Persistent<v8::Context> impl_;
 

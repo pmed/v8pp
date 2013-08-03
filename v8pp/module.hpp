@@ -21,6 +21,8 @@ public:
 	// Set InvocationCallback into the module
 	module& set(char const* name, v8::InvocationCallback callback)
 	{
+		v8::HandleScope scope;
+
 		obj_->Set(v8::String::NewSymbol(name), v8::FunctionTemplate::New(callback));
 		return *this;
 	}
@@ -29,6 +31,8 @@ public:
 	template<typename T, typename F>
 	module& set(char const* name, class_<T, F>& cl)
 	{
+		v8::HandleScope scope;
+
 		obj_->Set(v8::String::NewSymbol(name), cl.js_function_template()->GetFunction());
 		cl.class_function_template()->SetClassName(v8::String::NewSymbol(name));
 		return *this;
@@ -39,6 +43,8 @@ public:
 	typename boost::enable_if<detail::is_function_pointer<Function>, module&>::type
 	set(char const* name, Function f)
 	{
+		v8::HandleScope scope;
+
 		typedef typename detail::function_ptr<Function> FunctionProto;
 
 		v8::InvocationCallback callback = &forward<FunctionProto>;
@@ -53,6 +59,8 @@ public:
 	typename boost::disable_if<detail::is_function_pointer<T>, module&>::type
 	set(char const* name, T t)
 	{
+		v8::HandleScope scope;
+
 		obj_->Set(v8::String::NewSymbol(name), v8::External::New(t));
 		return *this;
 	}
@@ -89,6 +97,7 @@ private:
 	static v8::Handle<v8::Value> forward(const v8::Arguments& args)
 	{
 		v8::HandleScope scope;
+
 		try
 		{
 			return scope.Close(forward_ret<P>(args));
