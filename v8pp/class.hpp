@@ -7,8 +7,12 @@
 #include "proto.hpp"
 #include "call_from_v8.hpp"
 #include "to_v8.hpp"
+#include "throw_ex.hpp"
 
 namespace v8pp {
+
+template<typename T, typename Factory>
+class class_;
 
 namespace detail {
 
