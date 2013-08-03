@@ -260,15 +260,15 @@ public:
 		return scope.Close(obj);
 	}
 
-	// Create a new JavaScript object in C++ code, optianlly return its native pointer
-	static v8::Handle<v8::Object> create(v8::Arguments const& args, T** native = nullptr)
+	// Create a new wrapped JavaScript object in C++ code, return its native pointer
+	static T* create(v8::Arguments const& args, v8::Handle<v8::Object>* handle = nullptr)
 	{
 		v8::Handle<v8::Object> object = singleton::instance().wrap_object(args);
-		if ( native )
+		if ( handle )
 		{
-			*native = reinterpret_cast<T*>(object->GetAlignedPointerFromInternalField(0));
+			*handle = object;
 		}
-		return object;
+		return reinterpret_cast<T*>(object->GetAlignedPointerFromInternalField(0));
 	}
 
 	// Destroy JavaScript object from C++ code
