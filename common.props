@@ -2,8 +2,10 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
-    <V8_INCLUDE>$(SolutionDir)..\v8\include</V8_INCLUDE>
-    <V8_LIB>$(SolutionDir)..\v8\build\Release\lib</V8_LIB>
+    <V8_INCLUDE>C:\Projects\jsx\extern\v8\include</V8_INCLUDE>
+    <V8_LIB>C:\Projects\jsx\extern\v8\lib</V8_LIB>
+    <BOOST_INCLUDE>C:\Projects\jsx\extern\boost\include</BOOST_INCLUDE>
+    <BOOST_LIB>C:\Projects\jsx\extern\boost\lib</BOOST_LIB>
   </PropertyGroup>
   <PropertyGroup>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
@@ -11,19 +13,19 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <WarningLevel>Level4</WarningLevel>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup>
-    <ClCompile>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(V8_INCLUDE);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST_INCLUDE);$(V8_INCLUDE);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4190</DisableSpecificWarnings>
+      <PreprocessorDefinitions>V8_USE_UNSAFE_HANDLES;V8_DISABLE_DEPRECATIONS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(V8_LIB)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>v8.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(BOOST_LIB)\$(PlatformTarget);$(V8_LIB)\$(PlatformTarget)\$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>v8.lib;ws2_32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <Lib>
+      <AdditionalLibraryDirectories>$(BOOST_LIB)\$(PlatformTarget)\;$(V8_LIB)\$(Configuration)\$(PlatformTarget)</AdditionalLibraryDirectories>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
     <BuildMacro Include="V8_INCLUDE">
@@ -31,6 +33,12 @@
     </BuildMacro>
     <BuildMacro Include="V8_LIB">
       <Value>$(V8_LIB)</Value>
+    </BuildMacro>
+    <BuildMacro Include="BOOST_INCLUDE">
+      <Value>$(BOOST_INCLUDE)</Value>
+    </BuildMacro>
+    <BuildMacro Include="BOOST_LIB">
+      <Value>$(BOOST_LIB)</Value>
     </BuildMacro>
   </ItemGroup>
 </Project>
