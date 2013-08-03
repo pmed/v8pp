@@ -18,8 +18,7 @@ class native_object_registry
 public:
 	static void add(void const* native, v8::Handle<v8::Value> value)
 	{
-		v8::Persistent<v8::Value> pvalue = v8::Persistent<v8::Value>::New(value);
-		items().insert(objects::value_type(native, pvalue));
+		items().insert(objects::value_type(native, v8::Persistent<v8::Value>(value)));
 	}
 
 	static void remove(void const* native)
@@ -28,13 +27,19 @@ public:
 		if ( it != items().end() )
 		{
 			it->second.Dispose();
-			items().erase_return_void(it);
+			items().erase(it);
 		}
 	}
 
 	static v8::Handle<v8::Value> find(void const* native)
 	{
-		return items().at(native);
+		v8::Handle<v8::Value> result;
+		objects::iterator it = items().find(native);
+		if ( it != items().end() )
+		{
+			result = it->second;
+		}
+		return result;
 	}
 
 private:
@@ -67,7 +72,7 @@ inline v8::Handle<v8::Value> to_v8(std::string const& src)
 
 inline v8::Handle<v8::Value> to_v8(char const *src)
 {
-	return v8::String::New(src);
+	return v8::String::New(src? src : "");
 }
 
 inline v8::Handle<v8::Value> to_v8(int64_t const src)
@@ -110,7 +115,12 @@ inline v8::Handle<v8::Value> to_v8(bool const src)
 template<typename T>
 v8::Handle<v8::Value> to_v8(T* src)
 {
-	return detail::native_object_registry::find(src);
+	v8::Handle<v8::Value> result = detail::native_object_registry::find(src);
+	if ( result.IsEmpty() )
+	{
+		throw std::runtime_error("expected pointer to wrapped object");
+	}
+	return result;
 }
 
 } // namespace v8pp
