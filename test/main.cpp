@@ -55,9 +55,7 @@ int main(int argc, char const * argv[])
 		v8pp::context ctx(lib_path);
 		for (script_names::const_iterator it = scripts.begin(), end = scripts.end(); it != end; ++it)
 		{
-			v8::HandleScope scope;
-			std::string const& script = *it;
-			ctx.run(script.c_str());
+			ctx.run(it->c_str());
 		}
 	}
 	catch (std::exception & ex)
