@@ -60,8 +60,7 @@ template<typename T, typename Factory>
 class class_singleton
 	: public class_singleton_factory<class_singleton<T, Factory>, Factory>
 {
-	template<typename T, typename Factory>
-	friend class class_;
+	friend class class_<T, Factory>;
 
 	typedef class class_singleton<T, Factory> self_type;
 
