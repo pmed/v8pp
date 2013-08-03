@@ -261,12 +261,22 @@ public:
 	}
 
 	// Create a new wrapped JavaScript object in C++ code, return its native pointer
-	static T* create(v8::Arguments const& args, v8::Handle<v8::Object>* handle = nullptr)
+	static T* create(v8::Arguments const& args, v8::Handle<v8::Object>* result_handle = nullptr)
 	{
-		v8::Handle<v8::Object> object = singleton::instance().wrap_object(args);
-		if ( handle )
+		v8::Handle<v8::Object> object = wrap_object(args);
+		if ( result_handle )
 		{
-			*handle = object;
+			*result_handle = object;
+		}
+		return reinterpret_cast<T*>(object->GetAlignedPointerFromInternalField(0));
+	}
+
+	static T* create(int argc, v8::Handle<v8::Value>* argv, v8::Handle<v8::Object>* result_handle = nullptr)
+	{
+		v8::Handle<v8::Object> object = wrap_object(argc, argv);
+		if ( result_handle )
+		{
+			*result_handle = object;
 		}
 		return reinterpret_cast<T*>(object->GetAlignedPointerFromInternalField(0));
 	}
@@ -289,6 +299,44 @@ public:
 	static v8::Persistent<v8::FunctionTemplate>& js_function_template()
 	{
 		return singleton::instance().js_function_template();
+	}
+
+private:
+	// Create wrapped object with array of arguments
+	// Throws runtime_error  if arguments doesn't identical to the Factory signature
+	static v8::Handle<v8::Object> wrap_object(int argc, v8::Handle<v8::Value>* argv)
+	{
+		v8::HandleScope scope;
+
+		// Emulate local static function to invoke
+		// class_singleton::wrap_object(args) from JavaScript
+		struct wrap_object_impl
+		{
+			static v8::Handle<v8::Value> call(v8::Arguments const& args)
+			{
+				try
+				{
+					return singleton::instance().wrap_object(args);
+				}
+				catch (std::exception const& ex)
+				{
+					return throw_ex(ex.what());
+				}
+			}
+		};
+
+		// Create function template and call its function to convert arguments array
+		// into v8::Arguments and call class_singleton::wrap_object(args)
+		v8::Handle<v8::FunctionTemplate> wrapper = v8::FunctionTemplate::New(&wrap_object_impl::call);
+
+		v8::TryCatch try_catch;
+		v8::Handle<v8::Value> result = wrapper->GetFunction()->Call(v8::Object::New(), argc, argv);
+		if ( try_catch.HasCaught() )
+		{
+			v8::String::Utf8Value msg(try_catch.Exception());
+			throw std::runtime_error(*msg);
+		}
+		return scope.Close(result->ToObject());
 	}
 };
 
