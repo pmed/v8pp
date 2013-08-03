@@ -53,9 +53,10 @@ public:
 
 	void print(v8::Arguments const& args)
 	{
+		v8::HandleScope scope;
+
 		for (int i = 0; i < args.Length(); ++i)
 		{
-			v8::HandleScope scope;
 			if (i > 0) stream_ << ' ';
 			v8::String::Utf8Value str(args[i]);
 			stream_ << *str;

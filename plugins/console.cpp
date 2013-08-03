@@ -5,9 +5,10 @@ namespace console {
 
 v8::Handle<v8::Value> log(v8::Arguments const& args)
 {
+	v8::HandleScope handle_scope;
+
 	for (int i = 0; i < args.Length(); ++i)
 	{
-		v8::HandleScope handle_scope;
 		if (i > 0) std::cout << ' ';
 		v8::String::Utf8Value str(args[i]);
 		std::cout <<  *str;
