@@ -60,6 +60,9 @@ template<typename T, typename Factory>
 class class_singleton
 	: public class_singleton_factory<class_singleton<T, Factory>, Factory>
 {
+	template<typename T, typename Factory>
+	friend class class_;
+
 	typedef class class_singleton<T, Factory> self_type;
 
 	template <typename C, typename F>
@@ -123,6 +126,7 @@ public:
 		return scope.Close(obj);
 	}
 
+private:
 	// every method is run inside a handle scope
 	template<typename P>
 	static v8::Handle<v8::Value> forward(v8::Arguments const& args)
@@ -143,7 +147,6 @@ public:
 		}
 	}
 
-private:
 	template<typename P>
 	struct pass_direct_if : boost::is_same<
 		v8::Arguments const&, typename boost::mpl::front<typename P::arguments>::type>
@@ -184,7 +187,6 @@ private:
 	{
 		detail::native_object_registry::remove(obj);
 		delete obj;
-		handle->Dispose();
 	}
 
 private:
@@ -253,6 +255,27 @@ public:
 		obj.MakeWeak(ext, &singleton::on_made_weak);
 
 		return scope.Close(obj);
+	}
+
+	// Create a new JavaScript object in C++ code, optianlly return its native pointer
+	static v8::Handle<v8::Object> create(v8::Arguments const& args, T** native = nullptr)
+	{
+		v8::Handle<v8::Object> object = singleton::instance().wrap_object(args);
+		if ( native )
+		{
+			*native = reinterpret_cast<T*>(object->GetAlignedPointerFromInternalField(0));
+		}
+		return object;
+	}
+
+	// Destroy JavaScript object from C++ code
+	static void destroy(v8::Handle<v8::Object> object)
+	{
+		T* native = from_v8<T*>(object);
+		if ( native )
+		{
+			singleton::instance().on_made_weak(nullptr, nullptr, native);
+		}
 	}
 
 	static v8::Persistent<v8::FunctionTemplate>& class_function_template()
