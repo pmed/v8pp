@@ -157,23 +157,8 @@ void context::add(char const *name, module& m)
 
 bool context::run(char const *filename)
 {
-	struct context_scope : v8::HandleScope
-	{
-		v8::Context* ctx;
-
-		explicit context_scope(v8::Context* ctx)
-			: ctx(ctx)
-		{
-			ctx->Enter();
-		}
-
-		~context_scope()
-		{
-			ctx->Exit();
-		}
-	};
-
-	context_scope scope(*impl_);
+	v8::Context::Scope context_scope(impl_);
+	v8::HandleScope scope;
 	return run_in_scope(filename);
 }
 
