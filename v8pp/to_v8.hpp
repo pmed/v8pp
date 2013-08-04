@@ -123,6 +123,12 @@ v8::Handle<v8::Value> to_v8(T* src)
 	return result;
 }
 
+template<typename T>
+v8::Handle<v8::Value> to_v8(T& src)
+{
+	return to_v8(&src);
+}
+
 } // namespace v8pp
 
 #endif // V8PP_TO_V8_HPP_INCLUDED
