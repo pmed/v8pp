@@ -9,10 +9,12 @@
 
 #define V8PP_PLUGIN_INIT_PROC_NAME v8pp_module_init
 
-#if defined(WIN32)
-#define V8PP_PLUGIN_SUFFIX ".dll"
-#else
-#define V8PP_PLUGIN_SUFFIX ".so"
+#if !defined(V8PP_PLUGIN_SUFFIX)
+	#if defined(WIN32)
+	#define V8PP_PLUGIN_SUFFIX ".dll"
+	#else
+	#define V8PP_PLUGIN_SUFFIX ".so"
+	#endif
 #endif
 
 #if defined(_MSC_VER)
