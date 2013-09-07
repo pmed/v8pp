@@ -28,14 +28,6 @@ T get_object_field(v8::Handle<v8::Value> value)
 	return nullptr;
 }
 
-// Get external data
-template<typename T>
-T get_external_data(v8::Local<v8::Value> value)
-{
-	v8::Local<v8::External> ext = value.As<v8::External>();
-	return reinterpret_cast<T>(ext->Value());
-}
-
 // A string that converts to char const * (useful for fusion::invoke)
 struct convertible_string : std::string
 {
@@ -235,11 +227,7 @@ struct from_v8_ptr
 	{
 		if ( !value->IsObject() )
 		{
-			if ( value->IsNull() )
-			{
-				return nullptr;
-			}
-			throw std::runtime_error("expected object");
+			return nullptr;
 		}
 
 		T* obj_ptr = get_object_field<T*>(value);

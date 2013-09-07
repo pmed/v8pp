@@ -27,17 +27,14 @@ struct function_ptr;
 template<typename C, typename T>
 struct mem_function_ptr;
 
-template<typename T>
-struct is_function_pointer : boost::mpl::and_<
-		boost::is_pointer<T>,
-		boost::is_function<typename boost::remove_pointer<T>::type>
-	>
-{
-};
+template<typename C, typename T>
+struct mem_object_ptr;
 
-template<typename P>
-struct is_void_return : boost::is_same<void, typename P::return_type>::type
+template<typename C, typename R>
+struct mem_object_ptr<C, R C::*>
 {
+	typedef R return_type;
+	typedef R (C::*attribute_type);
 };
 
 }} // namespace v8pp::detail

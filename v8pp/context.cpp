@@ -1,3 +1,4 @@
+#include "class.hpp"
 #include "context.hpp"
 #include "throw_ex.hpp"
 #include "module.hpp"
@@ -13,6 +14,14 @@
 #endif
 
 namespace v8pp {
+
+namespace detail
+{
+
+singleton_registry::singletons singleton_registry::items_;
+object_registry::objects object_registry::items_;
+
+}
 
 context* context::get(v8::Handle<v8::Object> obj)
 {
@@ -55,7 +64,9 @@ v8::Handle<v8::Value> context::load_module(const v8::Arguments& args)
 	filename.replace_extension(V8PP_PLUGIN_SUFFIX);
 
 #if defined(WIN32)
-	HMODULE dl = ::LoadLibrary(filename.c_str());
+	UINT const prev_error_mode = SetErrorMode(SEM_NOOPENFILEERRORBOX);
+	HMODULE dl = LoadLibraryW(filename.native().c_str());
+	::SetErrorMode(prev_error_mode);
 #elif defined(__linux__)
 	void *dl = dlopen(filename.c_str(), RTLD_LAZY);
 #else

@@ -2,12 +2,11 @@
 #define V8PP_CLASS_HPP_INCLUDED
 
 #include <boost/mpl/front.hpp>
+#include <boost/type_traits/is_member_object_pointer.hpp>
+#include <boost/unordered_set.hpp>
 
 #include "factory.hpp"
-#include "proto.hpp"
-#include "call_from_v8.hpp"
-#include "to_v8.hpp"
-#include "throw_ex.hpp"
+#include "forward.hpp"
 
 namespace v8pp {
 
@@ -15,6 +14,31 @@ template<typename T, typename Factory>
 class class_;
 
 namespace detail {
+
+class singleton_registry
+{
+public:
+	typedef boost::unordered_map<std::type_index, void*> singletons;
+
+	template<typename T>
+	static T& get()
+	{
+		std::type_index const type_idx(typeid(T));
+		singletons::iterator it = items_.find(type_idx);
+		if ( it == items_.end())
+		{
+			it = items_.insert(singletons::value_type(type_idx, new T)).first;
+		}
+		return *static_cast<T*>(it->second);
+	}
+private:
+	singleton_registry();
+	~singleton_registry();
+	singleton_registry(singleton_registry const&);
+	singleton_registry& operator=(singleton_registry const&);
+
+	static singletons items_;
+};
 
 template <typename M, typename Factory>
 class class_singleton_factory
@@ -64,9 +88,7 @@ template<typename T, typename Factory>
 class class_singleton
 	: public class_singleton_factory<class_singleton<T, Factory>, Factory>
 {
-	friend class class_<T, Factory>;
-
-	typedef class class_singleton<T, Factory> self_type;
+public:
 
 	template <typename C, typename F>
 	struct arg_factory
@@ -98,11 +120,10 @@ class class_singleton
 		func_->InstanceTemplate()->SetInternalFieldCount(1);
 	}
 
-public:
-	static self_type& instance()
+	static class_singleton& instance()
 	{
-		static self_type obj;
-		return obj;
+		static class_singleton& instance_ = singleton_registry::get<class_singleton>();
+		return instance_;
 	}
 
 	v8::Persistent<v8::FunctionTemplate>& class_function_template()
@@ -115,85 +136,59 @@ public:
 		return this->js_function_template_helper();
 	}
 
-	v8::Handle<v8::Object> wrap_object(v8::Arguments const& args)
+	v8::Handle<v8::Object> wrap_object(T* wrap)
 	{
 		v8::HandleScope scope;
 
-		T* wrap = arg_factory<T, Factory>::create(args);
-		v8::Local<v8::Object> local_obj = func_->GetFunction()->NewInstance();
+		v8::Handle<v8::Object> local_obj = func_->GetFunction()->NewInstance();
 		v8::Persistent<v8::Object> obj = v8::Persistent<v8::Object>::New(local_obj);
-
-		obj->SetAlignedPointerInInternalField(0, wrap);
-		detail::native_object_registry::add(wrap, obj);
 		obj.MakeWeak(wrap, on_made_weak);
+		obj->SetAlignedPointerInInternalField(0, wrap);
+		detail::object_registry::add(wrap, obj);
+		objects_.insert(wrap);
 		return scope.Close(obj);
 	}
 
-private:
-	// every method is run inside a handle scope
-	template<typename P>
-	static v8::Handle<v8::Value> forward(v8::Arguments const& args)
+	v8::Handle<v8::Object> wrap_external_object(T* wrap)
 	{
 		v8::HandleScope scope;
 
-		// this will kill without zero-overhead exception handling
-		try
-		{
-			T* obj = detail::get_object_field<T*>(args.Holder());
-			typedef typename P::method_type method_type;
-			method_type* pptr = detail::get_external_data<method_type*>(args.Data());
-			return scope.Close(forward_ret<P>(obj, *pptr, args));
-		}
-		catch (std::exception const& ex)
-		{
-			return throw_ex(ex.what());
-		}
+		v8::Handle<v8::Object> obj = func_->GetFunction()->NewInstance();
+		obj->SetAlignedPointerInInternalField(0, wrap);
+		detail::object_registry::add(wrap, obj);
+		return scope.Close(obj);
 	}
 
-	template<typename P>
-	struct pass_direct_if : boost::is_same<
-		v8::Arguments const&, typename boost::mpl::front<typename P::arguments>::type>
+	v8::Handle<v8::Object> wrap_object(v8::Arguments const& args)
 	{
-	};
-
-	// invoke passing javascript object argument directly
-	template<typename P>
-	static typename boost::enable_if<pass_direct_if<P>, typename P::return_type>::type
-	invoke(T* obj, typename P::method_type ptr, v8::Arguments const& args)
-	{
-		return (obj->*ptr)(args);
+		T* wrap = arg_factory<T, Factory>::create(args);
+		return wrap_object(wrap);
 	}
 
-	template<typename P>
-	static typename boost::disable_if<pass_direct_if<P>, typename P::return_type>::type
-	invoke(T* obj, typename P::method_type ptr, v8::Arguments const& args)
+	void destroy_objects()
 	{
-		return call_from_v8<P>(*obj, ptr, args);
+		std::for_each(objects_.begin(), objects_.end(), destroy_object);
 	}
 
-	template<typename P>
-	static typename boost::disable_if<detail::is_void_return<P>, v8::Handle<v8::Value>>::type
-	forward_ret(T *obj, typename P::method_type ptr, v8::Arguments const& args)
+	static void destroy_object(T* obj)
 	{
-		return to_v8(invoke<P>(obj, ptr, args));
-	}
-
-	template<typename P>
-	static typename boost::enable_if<detail::is_void_return<P>, v8::Handle<v8::Value>>::type
-	forward_ret(T *obj, typename P::method_type ptr, v8::Arguments const& args)
-	{
-		invoke<P>(obj, ptr, args);
-		return v8::Undefined();
-	}
-
-	static void on_made_weak(v8::Isolate*, v8::Persistent<v8::Object>* handle, T* obj)
-	{
-		detail::native_object_registry::remove(obj);
+		detail::object_registry::remove(obj);
 		delete obj;
 	}
 
 private:
+	static void on_made_weak(v8::Isolate*, v8::Persistent<v8::Object>* obj, T* native)
+	{
+		v8::Handle<v8::Value> real_obj = detail::object_registry::find(native);
+		if ( !real_obj.IsEmpty() )
+		{
+			destroy_object(native);
+		}
+		obj->Dispose();
+	}
+
 	v8::Persistent<v8::FunctionTemplate> func_;
+	boost::unordered_set<T*> objects_;
 };
 
 } // namespace detail
@@ -219,14 +214,14 @@ public:
 	// Set class method with any prototype
 	template<typename Method>
 	typename boost::enable_if<boost::is_member_function_pointer<Method>, class_&>::type
-	set(char const *name, Method m)
+	set(char const *name, Method method)
 	{
 		v8::HandleScope scope;
 
 		typedef typename detail::mem_function_ptr<T, Method> MethodProto;
 
-		v8::InvocationCallback callback = &singleton::template forward<MethodProto>;
-		v8::Handle<v8::Value> data = v8::External::New(new Method(m));
+		v8::InvocationCallback callback = forward_mem_function<MethodProto, T>;
+		v8::Handle<v8::Value> data = detail::set_external_data(method);
 
 		class_function_template()->PrototypeTemplate()->Set(
 			v8::String::NewSymbol(name),
@@ -234,61 +229,54 @@ public:
 		return *this;
 	}
 
+	// Set class attribute
+	template<typename Attribute>
+	typename boost::enable_if<boost::is_member_object_pointer<Attribute>, class_&>::type
+	set(char const *name, Attribute attribute, bool read_only = false)
+	{
+		v8::HandleScope scope;
+
+		typedef typename detail::mem_object_ptr<T, Attribute> AttributeProto;
+
+		v8::AccessorGetter getter = member_get<AttributeProto>;
+		v8::AccessorSetter setter = member_set<AttributeProto>;
+		if ( read_only )
+		{
+			setter = NULL;
+		}
+
+		v8::Handle<v8::Value> data = detail::set_external_data(attribute);
+		PropertyAttribute const prop_attrs = PropertyAttribute(v8::DontDelete | (read_only? v8::ReadOnly : 0));
+
+		class_function_template()->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol(name),
+			getter, setter, data, v8::DEFAULT, prop_attrs);
+		return *this;
+	}
+
+	
+	// Set value as a read-only property
+	template<typename Value>
+	class_& set_const(char const* name, Value value)
+	{
+		v8::HandleScope scope;
+
+		class_function_template()->PrototypeTemplate()->Set(v8::String::NewSymbol(name), v8pp::to_v8(value),
+			v8::PropertyAttribute(v8::ReadOnly | v8::DontDelete));
+		return *this;
+	}
+
 	// create javascript object which references externally created C++
 	// class. It will not take ownership of the C++ pointer.
 	static v8::Handle<v8::Object> reference_external(T* ext)
 	{
-		v8::HandleScope scope;
-
-		v8::Local<v8::Object> obj = class_function_template()->GetFunction()->NewInstance();
-		obj->SetAlignedPointerInInternalField(0, ext);
-		return scope.Close(obj);
+		return singleton::instance().wrap_external_object(ext);
 	}
 
 	// As ReferenceExternal but delete memory for C++ object when javascript
 	// object is deleted. You must use "new" to allocate ext.
-	static inline v8::Handle<v8::Object> import_external(T* ext)
+	static v8::Handle<v8::Object> import_external(T* ext)
 	{
-		v8::HandleScope scope;
-
-		v8::Local<v8::Object> local_obj = class_function_template()->GetFunction()->NewInstance();
-		v8::Persistent<v8::Object> obj = v8::Persistent<v8::Object>::New(local_obj);
-
-		obj->SetAlignedPointerInInternalField(0, ext);
-		obj.MakeWeak(ext, &singleton::on_made_weak);
-
-		return scope.Close(obj);
-	}
-
-	// Create a new wrapped JavaScript object in C++ code, return its native pointer
-	static T* create(v8::Arguments const& args, v8::Handle<v8::Object>* result_handle = nullptr)
-	{
-		v8::Handle<v8::Object> object = wrap_object(args);
-		if ( result_handle )
-		{
-			*result_handle = object;
-		}
-		return reinterpret_cast<T*>(object->GetAlignedPointerFromInternalField(0));
-	}
-
-	static T* create(int argc, v8::Handle<v8::Value>* argv, v8::Handle<v8::Object>* result_handle = nullptr)
-	{
-		v8::Handle<v8::Object> object = wrap_object(argc, argv);
-		if ( result_handle )
-		{
-			*result_handle = object;
-		}
-		return reinterpret_cast<T*>(object->GetAlignedPointerFromInternalField(0));
-	}
-
-	// Destroy JavaScript object from C++ code
-	static void destroy(v8::Handle<v8::Object> object)
-	{
-		T* native = from_v8<T*>(object);
-		if ( native )
-		{
-			singleton::instance().on_made_weak(nullptr, nullptr, native);
-		}
+		return singleton::instance().wrap_object(ext);
 	}
 
 	static v8::Persistent<v8::FunctionTemplate>& class_function_template()
@@ -301,42 +289,49 @@ public:
 		return singleton::instance().js_function_template();
 	}
 
-private:
-	// Create wrapped object with array of arguments
-	// Throws runtime_error  if arguments doesn't identical to the Factory signature
-	static v8::Handle<v8::Object> wrap_object(int argc, v8::Handle<v8::Value>* argv)
+	static void destroy_object(T* obj)
 	{
-		v8::HandleScope scope;
+		singleton::instance().destroy_object(obj);
+	}
 
-		// Emulate local static function to invoke
-		// class_singleton::wrap_object(args) from JavaScript
-		struct wrap_object_impl
-		{
-			static v8::Handle<v8::Value> call(v8::Arguments const& args)
-			{
-				try
-				{
-					return singleton::instance().wrap_object(args);
-				}
-				catch (std::exception const& ex)
-				{
-					return throw_ex(ex.what());
-				}
-			}
-		};
+	static void destroy_object(v8::Handle<v8::Object> object)
+	{
+		singleton::instance().destroy_object(object);
+	}
 
-		// Create function template and call its function to convert arguments array
-		// into v8::Arguments and call class_singleton::wrap_object(args)
-		v8::Handle<v8::FunctionTemplate> wrapper = v8::FunctionTemplate::New(&wrap_object_impl::call);
+	static void destroy_objects()
+	{
+		singleton::instance().destroy_objects();
+	}
 
-		v8::TryCatch try_catch;
-		v8::Handle<v8::Value> result = wrapper->GetFunction()->Call(v8::Object::New(), argc, argv);
-		if ( try_catch.HasCaught() )
-		{
-			v8::String::Utf8Value msg(try_catch.Exception());
-			throw std::runtime_error(*msg);
-		}
-		return scope.Close(result->ToObject());
+private:
+	template<typename P>
+	static v8::Handle<v8::Value> member_get(v8::Local<v8::String> name, v8::AccessorInfo const& info)
+	{
+		typedef typename P::attribute_type attribute_type;
+
+		T const& self = v8pp::from_v8<T const&>(info.This());
+		attribute_type ptr = detail::get_external_data<attribute_type>(info.Data());
+		return v8pp::to_v8(self.*ptr);
+	}
+
+	template<typename P>
+	static void member_set(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::AccessorInfo const& info)
+	{
+		typedef typename P::return_type return_type;
+		typedef typename P::attribute_type attribute_type;
+
+		T& self = v8pp::from_v8<T&>(info.This());
+		attribute_type ptr = detail::get_external_data<attribute_type>(info.Data());
+		self.*ptr = v8pp::from_v8<return_type>(value);
+	}
+
+	static void member_dont_set(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::AccessorInfo const& info)
+	{
+		std::string msg = "Property ";
+		msg += *v8::String::Utf8Value(name);
+		msg += " is read-only";
+		throw std::runtime_error(msg);
 	}
 };
 

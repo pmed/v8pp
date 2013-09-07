@@ -3,10 +3,7 @@
 
 #include <v8.h>
 
-#include "call_from_v8.hpp"
-#include "proto.hpp"
-#include "to_v8.hpp"
-#include "throw_ex.hpp"
+#include "forward.hpp"
 
 namespace v8pp {
 
@@ -47,21 +44,30 @@ public:
 
 		typedef typename detail::function_ptr<Function> FunctionProto;
 
-		v8::InvocationCallback callback = &forward<FunctionProto>;
-		v8::Handle<v8::Value> data = v8::External::New(reinterpret_cast<void*>(f));
+		v8::InvocationCallback callback = forward_function<FunctionProto>;
+		v8::Handle<v8::Value> data = detail::set_external_data(f);
 
 		obj_->Set(v8::String::NewSymbol(name), v8::FunctionTemplate::New(callback, data));
 		return *this;
 	}
 
-	// Set any C++ data pointer into the module
-	template<typename T>
-	typename boost::disable_if<detail::is_function_pointer<T>, module&>::type
-	set(char const* name, T t)
+	// Set another module in the module
+	module& set(char const* name, module& m)
 	{
 		v8::HandleScope scope;
 
-		obj_->Set(v8::String::NewSymbol(name), v8::External::New(t));
+		obj_->Set(v8::String::NewSymbol(name), m.new_instance());
+		return *this;
+	}
+
+	// Set value as a read-only property
+	template<typename Value>
+	module& set_const(char const* name, Value value)
+	{
+		v8::HandleScope scope;
+
+		obj_->Set(v8::String::NewSymbol(name), v8pp::to_v8(value),
+			v8::PropertyAttribute(v8::ReadOnly | v8::DontDelete));
 		return *this;
 	}
 
@@ -69,47 +75,7 @@ public:
 	v8::Local<v8::Object> new_instance() { return obj_->NewInstance(); }
 
 private:
-// C++ function invoke helpers
-	template<typename P>
-	static typename P::return_type invoke(const v8::Arguments& args)
-	{
-		typedef typename P::function_type function_type;
-		function_type ptr = detail::get_external_data<function_type>(args.Data());
-		return call_from_v8<P>(ptr, args);
-	}
-
-	template<typename P>
-	static typename boost::disable_if<boost::is_same<void, typename P::return_type>, v8::Handle<v8::Value>>::type
-	forward_ret(const v8::Arguments& args)
-	{
-		return to_v8(invoke<P>(args));
-	}
-
-	template<typename P>
-	static typename boost::enable_if<boost::is_same<void, typename P::return_type>, v8::Handle<v8::Value>>::type
-	forward_ret(const v8::Arguments& args)
-	{
-		invoke<P>(args);
-		return v8::Undefined();
-	}
-
-	template<typename P>
-	static v8::Handle<v8::Value> forward(const v8::Arguments& args)
-	{
-		v8::HandleScope scope;
-
-		try
-		{
-			return scope.Close(forward_ret<P>(args));
-		}
-		catch (std::exception const& ex)
-		{
-			return scope.Close(throw_ex(ex.what()));
-		}
-	}
-
-private:
-	v8::Local<v8::ObjectTemplate> obj_;
+	v8::Handle<v8::ObjectTemplate> obj_;
 };
 
 } // namespace v8pp

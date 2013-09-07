@@ -21,6 +21,7 @@ class context
 {
 public:
 	explicit context(boost::filesystem::path const& lib_path = V8PP_PLUGIN_LIB_PATH);
+
 	~context();
 
 	// Run file, returns false on failure, use v8::TryCatch around it to find out why.

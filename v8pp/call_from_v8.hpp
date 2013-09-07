@@ -21,10 +21,10 @@ namespace v8pp {
 
 namespace detail {
 
-template <class P, int N>
+template <typename P, size_t N>
 struct call_from_v8_helper_function;
 
-template <class P, class T, int N>
+template <typename P, typename T, size_t N>
 struct call_from_v8_helper_mem_function;
 
 } // namespace detail
