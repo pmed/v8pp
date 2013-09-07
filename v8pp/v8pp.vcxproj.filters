@@ -15,5 +15,6 @@
     <ClInclude Include="call_from_v8.hpp" />
     <ClInclude Include="call_v8.hpp" />
     <ClInclude Include="proto.hpp" />
+    <ClInclude Include="forward.hpp" />
   </ItemGroup>
 </Project>
