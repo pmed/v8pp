@@ -181,6 +181,21 @@ struct from_v8<double>
 	}
 };
 
+template<>
+struct from_v8<float>
+{
+	typedef float result_type;
+
+	static result_type exec(v8::Handle<v8::Value> value)
+	{
+		if ( !value->IsNumber() )
+		{
+			throw std::runtime_error("expected javascript number");
+		}
+		return static_cast<float>(value->ToNumber()->Value());
+	}
+};
+
 template<typename T, class A>
 struct from_v8< std::vector<T, A> >
 {
