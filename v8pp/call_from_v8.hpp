@@ -80,6 +80,7 @@ struct call_from_v8_helper_function<P, n>
 	exec(typename P::function_type ptr, v8::Arguments const& args)
 	{
 		typedef typename P::arguments args_tl;
+		args;
 		return (*ptr)(BOOST_PP_ENUM(n, V8PP_CALL_V8_from_v8_args, ~));
 	}
 };
@@ -91,6 +92,7 @@ struct call_from_v8_helper_mem_function<P, T, n>
 	exec(T& obj, typename P::method_type ptr, v8::Arguments const& args)
 	{
 		typedef typename P::arguments args_tl;
+		args;
 		return (obj.*ptr)(BOOST_PP_ENUM(n, V8PP_CALL_V8_from_v8_args, ~));
 	}
 };
