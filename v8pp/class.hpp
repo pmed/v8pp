@@ -248,7 +248,7 @@ public:
 		}
 
 		v8::Handle<v8::Value> data = detail::set_external_data(attribute);
-		PropertyAttribute const prop_attrs = PropertyAttribute(v8::DontDelete | (read_only? v8::ReadOnly : 0));
+		v8::PropertyAttribute const prop_attrs = v8::PropertyAttribute(v8::DontDelete | (read_only? v8::ReadOnly : 0));
 
 		class_function_template()->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol(name),
 			getter, setter, data, v8::DEFAULT, prop_attrs);
