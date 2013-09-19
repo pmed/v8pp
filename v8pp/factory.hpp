@@ -23,15 +23,41 @@ namespace v8pp {
 
 struct none {};
 
-// Factory that calls C++ constructor with v8::Arguments directly
-struct v8_args_factory {};
 
 // Factory that prevents class from being constructed in JavaScript
-struct no_factory {};
+struct no_factory
+{
+	template<typename C>
+	struct instance
+	{
+		static void destroy(C* object)
+		{
+			delete object;
+		}
+	};
+};
 
 // primary template
 template<BOOST_PP_ENUM(V8PP_FACTORY_MAX_SIZE, V8PP_FACTORY_header, ~)>
 struct factory;
+
+// Factory that calls C++ constructor with v8::Arguments directly
+struct v8_args_factory
+{
+	template<typename C>
+	struct instance
+	{
+		static C* create(v8::Arguments const& args)
+		{
+			return new C(args);
+		}
+
+		static void destroy(C* object)
+		{
+			delete object;
+		}
+	};
+};
 
 } //namespace v8pp
 
@@ -57,7 +83,7 @@ struct factory<
 	>
 {
 	template<typename C>
-	struct construct
+	struct instance
 	{
 		typedef C type;
 
@@ -69,6 +95,11 @@ struct factory<
 		static C* create(BOOST_PP_ENUM(n, V8PP_FACTORY_args, ~))
 		{
 			return new C(BOOST_PP_ENUM_PARAMS(n,arg));
+		}
+
+		static void destroy(C* object)
+		{
+			delete object;
 		}
 	};
 };
