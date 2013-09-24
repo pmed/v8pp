@@ -248,14 +248,40 @@ public:
 		}
 
 		v8::Handle<v8::Value> data = detail::set_external_data(attribute);
-		v8::PropertyAttribute const prop_attrs = v8::PropertyAttribute(v8::DontDelete | (read_only? v8::ReadOnly : 0));
+		v8::PropertyAttribute const prop_attrs = v8::PropertyAttribute(v8::DontDelete | (setter? 0 : v8::ReadOnly));
 
 		class_function_template()->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol(name),
 			getter, setter, data, v8::DEFAULT, prop_attrs);
 		return *this;
 	}
 
+	// Set class attribute with getter and setter
+	template<typename Getter, typename Setter>
+	typename boost::enable_if<boost::mpl::and_<
+		boost::is_member_function_pointer<Getter>,
+		boost::is_member_function_pointer<Setter>>, class_&>::type
+	set(char const *name, Getter get, Setter set = NULL)
+	{
+		v8::HandleScope scope;
+
+		typedef typename detail::mem_function_ptr<T, Getter> GetterProto;
+		typedef typename detail::mem_function_ptr<T, Setter> SetterProto;
+		typedef property_data<GetterProto, SetterProto> prop_data;
 	
+		v8::Handle<v8::Value> data = detail::set_external_data(new prop_data(get, set));
+		v8::AccessorGetter getter = property_get<GetterProto, SetterProto>;
+		v8::AccessorSetter setter = property_set<GetterProto, SetterProto>;
+		if (!set)
+		{
+			setter = NULL;
+		}
+		v8::PropertyAttribute const prop_attrs = v8::PropertyAttribute(v8::DontDelete | (setter? 0 : v8::ReadOnly));
+
+		class_function_template()->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol(name),
+			getter, setter, data, v8::DEFAULT, prop_attrs);
+		return *this;
+	}
+
 	// Set value as a read-only property
 	template<typename Value>
 	class_& set_const(char const* name, Value value)
@@ -328,12 +354,68 @@ private:
 		self.*ptr = v8pp::from_v8<return_type>(value);
 	}
 
-	static void member_dont_set(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::AccessorInfo const& info)
+	template<typename GetterProto, typename SetterProto>
+	struct property_data
 	{
-		std::string msg = "Property ";
-		msg += *v8::String::Utf8Value(name);
-		msg += " is read-only";
-		throw std::runtime_error(msg);
+		typedef typename GetterProto::method_type getter_type;
+		typedef typename SetterProto::method_type setter_type;
+
+		getter_type get;
+		setter_type set;
+
+		property_data(getter_type get, setter_type set)
+			: get(get)
+			, set(set)
+		{
+		}
+
+		v8::Handle<v8::Value> call_get(T const& obj) const
+		{
+			if (get)
+			try
+			{
+				return to_v8((obj.*get)());
+			}
+			catch (std::exception const& ex)
+			{
+				return throw_ex(ex.what());
+			}
+			return v8::Undefined();
+		}
+
+		void call_set(T& obj, v8::Handle<v8::Value> value) const
+		{
+			if (set)
+			try
+			{
+				typedef typename boost::mpl::at_c<SetterProto::arguments, 0>::type value_type;
+				(obj.*set)(v8pp::from_v8<value_type>(value));
+			}
+			catch (std::exception const&)
+			{
+				//?? return throw_ex(ex.what());
+			}
+		}
+	};
+
+	template<typename GetterProto, typename SetterProto>
+	static v8::Handle<v8::Value> property_get(v8::Local<v8::String> name, v8::AccessorInfo const& info)
+	{
+		typedef property_data<GetterProto, SetterProto> prop_data;
+
+		T const& self = v8pp::from_v8<T const&>(info.This());
+		prop_data const* d = detail::get_external_data<prop_data const*>(info.Data());
+		return d->call_get(self);
+	}
+
+	template<typename GetterProto, typename SetterProto>
+	static void property_set(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::AccessorInfo const& info)
+	{
+		typedef property_data<GetterProto, SetterProto> prop_data;
+
+		T& self = v8pp::from_v8<T&>(info.This());
+		prop_data const* d = detail::get_external_data<prop_data const*>(info.Data());
+		d->call_set(self, value);
 	}
 };
 
