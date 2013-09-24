@@ -29,12 +29,12 @@ T get_object_field(v8::Handle<v8::Value> value)
 }
 
 // A string that converts to char const * (useful for fusion::invoke)
-struct convertible_string : std::string
+template<typename Char>
+struct convertible_string : std::basic_string<Char>
 {
-	convertible_string() {}
-	convertible_string(char const *str) : std::string(str) {}
+	convertible_string(Char const *str, size_t len) : std::basic_string<Char>(str, len) {}
 
-	operator char const *() { return c_str(); }
+	operator Char const*() const { return c_str(); }
 };
 
 template<typename T>
@@ -51,14 +51,15 @@ struct from_v8<std::string>
 		{
 			throw std::runtime_error("cannot make string from non-string type");
 		}
-		return *v8::String::Utf8Value(value);
+		v8::String::Utf8Value const utf8_str(value);
+		return result_type(*utf8_str, utf8_str.length());
 	}
 };
 
 template<>
-struct from_v8<convertible_string>
+struct from_v8<convertible_string<char>>
 {
-	typedef convertible_string result_type;
+	typedef convertible_string<char> result_type;
 
 	static result_type exec(v8::Handle<v8::Value> value)
 	{
@@ -66,17 +67,60 @@ struct from_v8<convertible_string>
 		{
 			throw std::runtime_error("cannot make string from non-string type");
 		}
-		return *v8::String::Utf8Value(value);
+		v8::String::Utf8Value const utf8_str(value);
+		return result_type(*utf8_str, utf8_str.length());
 	}
 };
 
 // char const * and char const * have to be copied immediately otherwise
 // the underlying memory will die due to the way v8 strings work.
 template<>
-struct from_v8<char const *> : from_v8<convertible_string> {};
+struct from_v8<char const *> : from_v8<convertible_string<char>> {};
 
 template<>
-struct from_v8<char const * const> : from_v8<convertible_string> {};
+struct from_v8<char const * const> : from_v8<convertible_string<char>> {};
+
+#ifdef WIN32
+static_assert(sizeof(wchar_t) == sizeof(uint16_t), "wchar_t has 16 bits");
+
+template<>
+struct from_v8<std::wstring>
+{
+	typedef std::wstring result_type;
+
+	static result_type exec(v8::Handle<v8::Value> value)
+	{
+		if ( !value->IsString() )
+		{
+			throw std::runtime_error("cannot make string from non-string type");
+		}
+		v8::String::Value const utf16_str(value);
+		return result_type((wchar_t const*)(*utf16_str), utf16_str.length());
+	}
+};
+
+template<>
+struct from_v8<convertible_string<wchar_t>>
+{
+	typedef convertible_string<wchar_t> result_type;
+
+	static result_type exec(v8::Handle<v8::Value> value)
+	{
+		if ( !value->IsString() )
+		{
+			throw std::runtime_error("cannot make string from non-string type");
+		}
+		v8::String::Value const utf16_str(value);
+		return result_type((wchar_t const*)(*utf16_str), utf16_str.length());
+	}
+};
+
+template<>
+struct from_v8<wchar_t const *> : from_v8<convertible_string<wchar_t>> {};
+
+template<>
+struct from_v8<wchar_t const * const> : from_v8<convertible_string<wchar_t>> {};
+#endif
 
 template<>
 struct from_v8< v8::Handle<v8::Function> >
@@ -286,6 +330,10 @@ struct from_v8_ref
 
 template<typename U>
 struct from_v8_ref<std::string, U> : from_v8<std::string> {};
+#ifdef WIN32
+template<typename U>
+struct from_v8_ref<std::wstring, U> : from_v8<std::wstring> {};
+#endif
 
 template<typename T, typename U, typename R>
 struct from_v8_ref<std::vector<T, U>, R> : from_v8< std::vector<T, U> > {};

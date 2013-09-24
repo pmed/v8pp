@@ -63,13 +63,27 @@ inline v8::Handle<v8::Value> to_v8(v8::Handle<v8::Value> src)
 
 inline v8::Handle<v8::Value> to_v8(std::string const& src)
 {
-	return v8::String::New(src.c_str());
+	return v8::String::New(src.data(), src.length());
 }
 
 inline v8::Handle<v8::Value> to_v8(char const *src)
 {
 	return v8::String::New(src? src : "");
 }
+
+#ifdef WIN32
+static_assert(sizeof(wchar_t) == sizeof(uint16_t), "wchar_t has 16 bits");
+
+inline v8::Handle<v8::Value> to_v8(std::wstring const& src)
+{
+	return v8::String::New((uint16_t const*)src.data(), src.length());
+}
+
+inline v8::Handle<v8::Value> to_v8(wchar_t const *src)
+{
+	return v8::String::New((uint16_t const*)(src? src : L""));
+}
+#endif
 
 inline v8::Handle<v8::Value> to_v8(int64_t const src)
 {
