@@ -153,18 +153,19 @@ v8::Handle<v8::Value> forward_function(const v8::Arguments& args)
 	}
 }
 
-template<typename P, typename T>
+template<typename P>
 v8::Handle<v8::Value> forward_mem_function(v8::Arguments const& args)
 {
 	v8::HandleScope scope;
 
 	try
 	{
-		T* obj = detail::get_object_field<T*>(args.Holder());
-
+		typedef typename P::class_type class_type;
 		typedef typename P::method_type method_type;
+
+		class_type* obj = detail::get_object_field<class_type*>(args.Holder());
 		method_type ptr = detail::get_external_data<method_type>(args.Data());
-		return scope.Close(detail::forward_ret<P, T>(obj, ptr, args));
+		return scope.Close(detail::forward_ret<P>(obj, ptr, args));
 	}
 	catch (std::exception const& ex)
 	{
