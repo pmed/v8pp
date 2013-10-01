@@ -13,21 +13,25 @@ template<typename T>
 class persistent_ptr
 {
 public:
-	/// Create an empty pointer
+	/// Create an empty persistent pointer
 	persistent_ptr()
 		: value_()
 		, v8_value_()
 	{
 	}
 
-	/// Create a pointer from V8 Value, store persistent handle for it
-	explicit persistent_ptr(v8::Handle<v8::Value> v8_value)
-		: value_(from_v8<T*>(v8_value))
+	/// Create a persistent pointer from a  pointer to a wrapped object, store persistent handle to it
+	explicit persistent_ptr(T* value)
+		: value_()
 	{
-		if (value_)
-		{
-			v8_value_ = v8::Persistent<v8::Value>::New(v8_value);
-		}
+		reset(value);
+	}
+
+	/// Create a persistent pointer from V8 Value, store persistent handle to it
+	explicit persistent_ptr(v8::Handle<v8::Value> v8_value)
+		: value_()
+	{
+		reset(from_v8<T*>(v8_value));
 	}
 
 	/// On destroy dispose persistent handle only
@@ -50,7 +54,7 @@ public:
 		return *this;
 	}
 
-	/// Reset with a new pointer, replace persistent handle for it
+	/// Reset with a new pointer to wrapped C++ object, replace persistent handle for it
 	void reset(T* value = nullptr)
 	{
 		if (value != value_)
@@ -61,11 +65,12 @@ public:
 			if (value_)
 			{
 				v8_value_ = v8::Persistent<v8::Value>::New(v8pp::to_v8(value_));
+				assert(!v8_value_.IsEmpty());
 			}
 		}
 	}
 
-	/// Get pointer to the object
+	/// Get pointer to the wrapped C++ object
 	T* get() { return value_; }
 	T const* get() const { return value_; }
 
