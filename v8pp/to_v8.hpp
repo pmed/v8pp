@@ -56,7 +56,8 @@ private:
 
 } // namespace detail
 
-inline v8::Handle<v8::Value> to_v8(v8::Handle<v8::Value> src)
+template<typename T>
+inline v8::Handle<T> to_v8(v8::Handle<T> src)
 {
 	return src;
 }
