@@ -19,6 +19,11 @@ namespace v8pp {
 // @tparam T... C++ types of arguments
 // @param func  v8 function to call
 // @param args...  C++ arguments to convert to JS arguments using ToV8
+inline v8::Handle<v8::Value> call_v8(v8::Handle<v8::Function> func, v8::Handle<v8::Object> recv)
+{
+	return func->Call(recv, 0, nullptr);
+}
+
 inline v8::Handle<v8::Value> call_v8(v8::Handle<v8::Function> func)
 {
 	return func->Call(func, 0, nullptr);
@@ -40,7 +45,14 @@ inline v8::Handle<v8::Value> call_v8(v8::Handle<v8::Function> func)
 namespace v8pp {
 
 template <BOOST_PP_ENUM_PARAMS(n, typename T)>
-inline v8::Handle<v8::Value> call_v8(FunctionHandle& func, BOOST_PP_ENUM(n, V8PP_CALL_V8_args, ~))
+inline v8::Handle<v8::Value> call_v8(v8::Handle<v8::Function> func, v8::Handle<v8::Object> recv, BOOST_PP_ENUM(n, V8PP_CALL_V8_args, ~))
+{
+	v8::Handle<v8::Value> argv[] = { BOOST_PP_ENUM(n, V8PP_CALL_V8_tov8, ~) };
+	return func->Call(recv, n, argv);
+}
+
+template <BOOST_PP_ENUM_PARAMS(n, typename T)>
+inline v8::Handle<v8::Value> call_v8(v8::Handle<v8::Function> func, BOOST_PP_ENUM(n, V8PP_CALL_V8_args, ~))
 {
 	v8::Handle<v8::Value> argv[] = { BOOST_PP_ENUM(n, V8PP_CALL_V8_tov8, ~) };
 	return func->Call(func, n, argv);
