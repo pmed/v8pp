@@ -3,7 +3,6 @@
 
 #include <boost/mpl/front.hpp>
 #include <boost/type_traits/is_member_object_pointer.hpp>
-#include <boost/unordered_set.hpp>
 
 #include "factory.hpp"
 #include "forward.hpp"
@@ -16,11 +15,15 @@ class class_;
 
 namespace detail {
 
+#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
+// Global singleton_registry to store class_singleton instances
+// in a single place among several DLLs
 class singleton_registry
 {
 public:
 	typedef boost::unordered_map<std::type_index, void*> singletons;
 
+	// Get existing instance or create a new one
 	template<typename T>
 	static T& get()
 	{
@@ -28,7 +31,7 @@ public:
 		singletons::iterator it = items_.find(type_idx);
 		if ( it == items_.end())
 		{
-			it = items_.insert(singletons::value_type(type_idx, new T)).first;
+			it = items_.insert(std::make_pair(type_idx, new T)).first;
 		}
 		return *static_cast<T*>(it->second);
 	}
@@ -38,8 +41,9 @@ private:
 	singleton_registry(singleton_registry const&);
 	singleton_registry& operator=(singleton_registry const&);
 
-	static singletons items_;
+	static V8PP_API singletons items_;
 };
+#endif
 
 template <typename M, typename Factory>
 class class_singleton_factory
@@ -89,8 +93,6 @@ template<typename T, typename Factory>
 class class_singleton
 	: public class_singleton_factory<class_singleton<T, Factory>, Factory>
 {
-public:
-
 	template <typename C, typename F>
 	struct arg_factory
 	{
@@ -113,6 +115,7 @@ public:
 		}
 	};
 
+public:
 	class_singleton()
 		: func_(v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New()))
 	{
@@ -125,7 +128,11 @@ public:
 
 	static class_singleton& instance()
 	{
+#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
 		static class_singleton& instance_ = singleton_registry::get<class_singleton>();
+#else
+		class_singleton instance_;
+#endif
 		return instance_;
 	}
 
@@ -139,30 +146,30 @@ public:
 		return this->js_function_template_helper();
 	}
 
-	v8::Handle<v8::Object> wrap_object(T* wrap)
+	v8::Persistent<v8::Object> wrap_object(T* wrap)
 	{
-		v8::HandleScope scope;
+		v8::Persistent<v8::Object> obj;
+		obj.Reset(v8::Isolate::GetCurrent(), func_->GetFunction()->NewInstance());
 
-		v8::Handle<v8::Object> local_obj = func_->GetFunction()->NewInstance();
-		v8::Persistent<v8::Object> obj = v8::Persistent<v8::Object>::New(local_obj);
+		obj->SetAlignedPointerInInternalField(0, wrap);
+		detail::object_registry<T>::add(wrap, obj);
 		obj.MakeWeak(wrap, on_made_weak);
-		obj->SetAlignedPointerInInternalField(0, wrap);
-		detail::object_registry::add(wrap, obj);
-		objects_.insert(wrap);
-		return scope.Close(obj);
+
+		return obj;
 	}
 
-	v8::Handle<v8::Object> wrap_external_object(T* wrap)
+	v8::Persistent<v8::Object> wrap_external_object(T* wrap)
 	{
-		v8::HandleScope scope;
+		v8::Persistent<v8::Object> obj;
+		obj.Reset(v8::Isolate::GetCurrent(), func_->GetFunction()->NewInstance());
 
-		v8::Handle<v8::Object> obj = func_->GetFunction()->NewInstance();
 		obj->SetAlignedPointerInInternalField(0, wrap);
-		detail::object_registry::add(wrap, obj);
-		return scope.Close(obj);
+		detail::object_registry<T>::add(wrap, obj);
+
+		return obj;
 	}
 
-	v8::Handle<v8::Object> wrap_object(v8::Arguments const& args)
+	v8::Persistent<v8::Object> wrap_object(v8::Arguments const& args)
 	{
 		T* wrap = arg_factory<T, Factory>::create(args);
 		return wrap_object(wrap);
@@ -170,28 +177,22 @@ public:
 
 	void destroy_objects()
 	{
-		std::for_each(objects_.begin(), objects_.end(), destroy_object);
+		detail::object_registry<T>::remove_all(Factory::instance<T>::destroy);
 	}
 
 	static void destroy_object(T* obj)
 	{
-		detail::object_registry::remove(obj);
-		Factory::instance<T>::destroy(obj);
+		detail::object_registry<T>::remove(obj, Factory::instance<T>::destroy);
 	}
 
 private:
 	static void on_made_weak(v8::Isolate*, v8::Persistent<v8::Object>* obj, T* native)
 	{
-		v8::Handle<v8::Value> real_obj = detail::object_registry::find(native);
-		if ( !real_obj.IsEmpty() )
-		{
-			destroy_object(native);
-		}
-		obj->Dispose();
+		destroy_object(native);
+//		no more need to obj->Dispose() since it's performed in destroy_object() call above
 	}
 
 	v8::Persistent<v8::FunctionTemplate> func_;
-	boost::unordered_set<T*> objects_;
 };
 
 } // namespace detail

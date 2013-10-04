@@ -7,37 +7,76 @@
 #include <cstdint>
 
 #include <boost/unordered_map.hpp>
+#include <boost/unordered_set.hpp>
 
 namespace v8pp {
 
 namespace detail {
 
 // Native objects registry. Monostate
+template<typename T>
 class object_registry
 {
 public:
+#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
 	typedef boost::unordered_map<void const*, v8::Persistent<v8::Value>> objects;
 
-	static void add(void const* object, v8::Handle<v8::Value> value)
+	// use additional set to distiguish instances of T in the global registry
+	static boost::unordered_set<T*>& instances()
 	{
-		items_.insert(objects::value_type(object, v8::Persistent<v8::Value>::New(value)));
+		static boost::unordered_set<T*> instances_;
+		return instances_;
 	}
 
-	static void remove(void const* object)
+#else
+	typedef boost::unordered_map<T const*, v8::Persistent<v8::Value>> objects;
+#endif
+
+	static void add(T* object, v8::Persistent<v8::Value> value)
 	{
-		objects::iterator it = items_.find(object);
-		if ( it != items_.end() )
+#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
+		instances().insert(object);
+#endif
+		items().insert(std::make_pair(object, value));
+	}
+
+	static void remove(T* object, void (*destroy)(T*))
+	{
+#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
+		instances().erase(object);
+#endif
+		objects::iterator it = items().find(object);
+		if (it != items().end())
 		{
 			it->second.Dispose();
-			items_.erase(it);
+			items().erase(it);
+			if (destroy)
+			{
+				destroy(object);
+			}
 		}
 	}
 
-	static v8::Handle<v8::Value> find(void const* native)
+	static void remove_all(void (*destroy)(T*))
+	{
+#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
+		while (!instances().empty())
+		{
+			remove(*instances().begin(), destroy);
+		}
+#else
+		while (!items().empty())
+		{
+			remove(items().begin()->first, destroy);
+		}
+#endif
+	}
+
+	static v8::Handle<v8::Value> find(T const* native)
 	{
 		v8::Handle<v8::Value> result;
-		objects::iterator it = items_.find(native);
-		if ( it != items_.end() )
+		objects::iterator it = items().find(native);
+		if ( it != items().end() )
 		{
 			result = it->second;
 		}
@@ -51,10 +90,27 @@ private:
 	object_registry& operator=(object_registry const&);
 
 private:
-	static objects items_;
+	static objects& items();
 };
 
-} // namespace detail
+#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
+extern V8PP_API object_registry<void>::objects global_registry_objects_;
+
+template<typename T>
+inline typename object_registry<T>::objects& object_registry<T>::items()
+{
+	return global_registry_objects_;
+}
+#else
+template<typename T>
+inline typename object_registry<T>::objects& object_registry<T>::items()
+{
+	static objects items_;
+	return items_;
+}
+#endif
+
+} // detail
 
 template<typename T>
 inline v8::Handle<T> to_v8(v8::Handle<T> src)
@@ -132,23 +188,11 @@ typename boost::enable_if<boost::is_enum<T>, v8::Handle<v8::Value> >::type to_v8
 template<typename T>
 typename boost::enable_if<boost::is_class<T>, v8::Handle<v8::Value> >::type to_v8(T const* src)
 {
-	return detail::object_registry::find(src);
-}
-
-template<typename T>
-typename boost::enable_if<boost::is_class<T>, v8::Handle<v8::Value> >::type to_v8(T* src)
-{
-	return to_v8(static_cast<T const*>(src));
+	return detail::object_registry<T>::find(src);
 }
 
 template<typename T>
 typename boost::enable_if<boost::is_class<T>, v8::Handle<v8::Value> >::type to_v8(T const& src)
-{
-	return to_v8(&src);
-}
-
-template<typename T>
-typename boost::enable_if<boost::is_class<T>, v8::Handle<v8::Value> >::type to_v8(T& src)
 {
 	return to_v8(&src);
 }

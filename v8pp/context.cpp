@@ -15,13 +15,14 @@
 
 namespace v8pp {
 
-namespace detail
-{
+#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
+namespace detail {
 
 singleton_registry::singletons singleton_registry::items_;
-object_registry::objects object_registry::items_;
+object_registry<void>::objects global_registry_objects_;
 
-}
+} // detail
+#endif
 
 context* context::get(v8::Handle<v8::Object> obj)
 {
