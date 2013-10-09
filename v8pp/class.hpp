@@ -261,13 +261,13 @@ public:
 	typename boost::enable_if<boost::mpl::and_<
 		boost::is_member_function_pointer<GetMethod>,
 		boost::is_member_function_pointer<SetMethod>>, class_&>::type
-	set(char const *name, property_t<GetMethod, SetMethod> prop)
+	set(char const *name, property_<GetMethod, SetMethod> prop)
 	{
 		v8::HandleScope scope;
 
-		v8::AccessorGetter getter = property_t<GetMethod, SetMethod>::get;
-		v8::AccessorSetter setter = property_t<GetMethod, SetMethod>::set;
-		if (property_t<GetMethod, SetMethod>::is_readonly)
+		v8::AccessorGetter getter = property_<GetMethod, SetMethod>::get;
+		v8::AccessorSetter setter = property_<GetMethod, SetMethod>::set;
+		if (property_<GetMethod, SetMethod>::is_readonly)
 		{
 			setter = NULL;
 		}
