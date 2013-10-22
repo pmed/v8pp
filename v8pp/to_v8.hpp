@@ -45,7 +45,7 @@ public:
 #if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
 		instances().erase(object);
 #endif
-		objects::iterator it = items().find(object);
+		typename objects::iterator it = items().find(object);
 		if (it != items().end())
 		{
 			it->second.Dispose();
@@ -75,7 +75,7 @@ public:
 	static v8::Handle<v8::Value> find(T const* native)
 	{
 		v8::Handle<v8::Value> result;
-		objects::iterator it = items().find(native);
+		typename objects::iterator it = items().find(native);
 		if ( it != items().end() )
 		{
 			result = it->second;

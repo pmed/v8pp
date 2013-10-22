@@ -34,7 +34,7 @@ struct convertible_string : std::basic_string<Char>
 {
 	convertible_string(Char const *str, size_t len) : std::basic_string<Char>(str, len) {}
 
-	operator Char const*() const { return c_str(); }
+	operator Char const*() const { return this->c_str(); }
 };
 
 template<typename T>

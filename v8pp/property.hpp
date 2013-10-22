@@ -36,7 +36,8 @@ struct property_
 
 	static v8::Handle<v8::Value> get(v8::Local<v8::String> name, v8::AccessorInfo const& info)
 	{
-		GetProto::class_type& obj = v8pp::from_v8<GetProto::class_type&>(info.This());
+		typedef typename GetProto::class_type class_type;
+		class_type& obj = v8pp::from_v8<class_type&>(info.This());
 		property_ const prop = detail::get_external_data<property_>(info.Data());
 		assert(prop.get_);
 		try
@@ -51,12 +52,13 @@ struct property_
 
 	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::AccessorInfo const& info)
 	{
-		SetProto::class_type& obj = v8pp::from_v8<SetProto::class_type&>(info.This());
+		typedef typename SetProto::class_type class_type;
+		class_type& obj = v8pp::from_v8<class_type&>(info.This());
 		property_ const prop = detail::get_external_data<property_>(info.Data());
 		assert(prop.set_);
 		try
 		{
-			typedef typename boost::mpl::at_c<SetProto::arguments, 0>::type value_type;
+			typedef typename boost::mpl::at_c<typename SetProto::arguments, 0>::type value_type;
 			(obj.*prop.set_)(v8pp::from_v8<value_type>(value));
 		}
 		catch (std::exception const&)
@@ -81,7 +83,8 @@ struct property_<Get, Get>
 
 	static v8::Handle<v8::Value> get(v8::Local<v8::String> name, v8::AccessorInfo const& info)
 	{
-		GetProto::class_type& obj = v8pp::from_v8<GetProto::class_type&>(info.This());
+		typedef typename GetProto::class_type class_type;
+		class_type& obj = v8pp::from_v8<class_type&>(info.This());
 		property_ const prop = detail::get_external_data<property_>(info.Data());
 		assert(prop.get_);
 		try

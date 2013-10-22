@@ -3,6 +3,8 @@
 
 #include <boost/mpl/front.hpp>
 #include <boost/type_traits/is_member_object_pointer.hpp>
+#include <boost/type_traits/is_same.hpp>
+#include <boost/utility/enable_if.hpp>
 
 #include "v8pp/factory.hpp"
 #include "v8pp/forward.hpp"
@@ -93,27 +95,17 @@ template<typename T, typename Factory>
 class class_singleton
 	: public class_singleton_factory<class_singleton<T, Factory>, Factory>
 {
-	template <typename C, typename F>
-	struct arg_factory
+	typedef typename Factory::template instance<T> factory_type;
+ 
+	static T* create(v8::Arguments const& args, boost::false_type)
 	{
-		typedef typename F::template instance<C> factory_type;
+		return call_from_v8<factory_type>(&factory_type::create, args);
+	}
 
-		static typename factory_type::return_type create(v8::Arguments const& args)
-		{
-			return call_from_v8<factory_type>(&factory_type::create, args);
-		}
-	};
-
-	template<typename C>
-	struct arg_factory<C, v8_args_factory>
+	static T* create(v8::Arguments const& args, boost::true_type)
 	{
-		typedef typename v8_args_factory::template instance<C> factory_type;
-
-		static C* create(v8::Arguments const& args)
-		{
-			return new C(args);
-		}
-	};
+		return factory_type::create(args);
+	}
 
 public:
 	class_singleton()
@@ -131,7 +123,7 @@ public:
 #if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
 		static class_singleton& instance_ = singleton_registry::get<class_singleton>();
 #else
-		class_singleton instance_;
+		static class_singleton instance_;
 #endif
 		return instance_;
 	}
@@ -171,18 +163,18 @@ public:
 
 	v8::Persistent<v8::Object> wrap_object(v8::Arguments const& args)
 	{
-		T* wrap = arg_factory<T, Factory>::create(args);
+		T* wrap = create(args, boost::is_same<Factory, v8_args_factory>());
 		return wrap_object(wrap);
 	}
 
 	void destroy_objects()
 	{
-		detail::object_registry<T>::remove_all(Factory::instance<T>::destroy);
+		detail::object_registry<T>::remove_all(&factory_type::destroy);
 	}
 
 	static void destroy_object(T* obj)
 	{
-		detail::object_registry<T>::remove(obj, Factory::instance<T>::destroy);
+		detail::object_registry<T>::remove(obj, &factory_type::destroy);
 	}
 
 private:
