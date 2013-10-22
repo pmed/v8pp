@@ -19,7 +19,7 @@ class object_registry
 {
 public:
 #if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
-	typedef boost::unordered_map<void const*, v8::Persistent<v8::Value>> objects;
+	typedef boost::unordered_map<void*, v8::Persistent<v8::Value>> objects;
 
 	// use additional set to distiguish instances of T in the global registry
 	static boost::unordered_set<T*>& instances()
@@ -29,7 +29,7 @@ public:
 	}
 
 #else
-	typedef boost::unordered_map<T const*, v8::Persistent<v8::Value>> objects;
+	typedef boost::unordered_map<T*, v8::Persistent<v8::Value>> objects;
 #endif
 
 	static void add(T* object, v8::Persistent<v8::Value> value)
@@ -75,7 +75,7 @@ public:
 	static v8::Handle<v8::Value> find(T const* native)
 	{
 		v8::Handle<v8::Value> result;
-		typename objects::iterator it = items().find(native);
+		typename objects::iterator it = items().find(const_cast<T*>(native));
 		if ( it != items().end() )
 		{
 			result = it->second;
