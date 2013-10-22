@@ -5,9 +5,9 @@
 #include <boost/type_traits/is_same.hpp>
 #include <boost/type_traits/remove_const.hpp>
 
-#include "proto.hpp"
-#include "to_v8.hpp"
-#include "from_v8.hpp"
+#include "v8pp/proto.hpp"
+#include "v8pp/to_v8.hpp"
+#include "v8pp/from_v8.hpp"
 
 namespace v8pp {
 

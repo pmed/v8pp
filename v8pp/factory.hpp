@@ -11,7 +11,7 @@
 #       include <boost/mpl/vector.hpp>
 
 #       include <v8.h>
-
+#       include "v8pp/config.hpp"
 
 #       ifndef V8PP_FACTORY_MAX_SIZE
 #         define V8PP_FACTORY_MAX_SIZE V8PP_MAX_ARG_LIMIT
@@ -65,7 +65,7 @@ struct v8_args_factory
 } //namespace v8pp
 
 #       define BOOST_PP_ITERATION_LIMITS (0, V8PP_FACTORY_MAX_SIZE - 1)
-#       define BOOST_PP_FILENAME_1       "factory.hpp"
+#       define BOOST_PP_FILENAME_1       "v8pp/factory.hpp"
 #       include BOOST_PP_ITERATE()
 #   endif // V8PP_FACTORY_HPP_INCLUDED
 

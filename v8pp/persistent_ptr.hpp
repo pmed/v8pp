@@ -3,8 +3,8 @@
 
 #include <cassert>
 
-#include "from_v8.hpp"
-#include "to_v8.hpp"
+#include "v8pp/from_v8.hpp"
+#include "v8pp/to_v8.hpp"
 
 namespace v8pp {
 

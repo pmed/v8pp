@@ -1,11 +1,11 @@
 #ifndef V8PP_FORWARD_HPP_INCLUDED
 #define V8PP_FORWARD_HPP_INCLUDED
 
-#include "from_v8.hpp"
-#include "call_from_v8.hpp"
-#include "proto.hpp"
-#include "throw_ex.hpp"
-#include "to_v8.hpp"
+#include "v8pp/from_v8.hpp"
+#include "v8pp/call_from_v8.hpp"
+#include "v8pp/proto.hpp"
+#include "v8pp/throw_ex.hpp"
+#include "v8pp/to_v8.hpp"
 
 namespace v8pp {
 

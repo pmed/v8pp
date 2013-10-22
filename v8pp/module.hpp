@@ -3,7 +3,7 @@
 
 #include <v8.h>
 
-#include "forward.hpp"
+#include "v8pp/forward.hpp"
 
 namespace v8pp {
 

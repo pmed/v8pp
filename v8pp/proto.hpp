@@ -15,7 +15,7 @@
 
 #       include <boost/utility/enable_if.hpp>
 
-#       include "config.hpp"
+#       include "v8pp/config.hpp"
 #       ifndef V8PP_PROTO_MAX_SIZE
 #         define V8PP_PROTO_MAX_SIZE V8PP_MAX_ARG_LIMIT
 #       endif
@@ -40,7 +40,7 @@ struct mem_object_ptr<R C::*>
 
 }} // namespace v8pp::detail
 #       define BOOST_PP_ITERATION_LIMITS (0, V8PP_PROTO_MAX_SIZE - 1)
-#       define BOOST_PP_FILENAME_1       "proto.hpp"
+#       define BOOST_PP_FILENAME_1       "v8pp/proto.hpp"
 #       include BOOST_PP_ITERATE()
 #    endif // V8PP_DETAIL_FROM_V8_ARGUMENTS_HPP_INCLUDED
 

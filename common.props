@@ -14,7 +14,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(BOOST_INCLUDE);$(V8_INCLUDE);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(BOOST_INCLUDE);$(V8_INCLUDE);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4190</DisableSpecificWarnings>
       <PreprocessorDefinitions>V8_USE_UNSAFE_HANDLES;V8_DISABLE_DEPRECATIONS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>

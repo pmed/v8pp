@@ -4,9 +4,9 @@
 #include <boost/mpl/front.hpp>
 #include <boost/type_traits/is_member_object_pointer.hpp>
 
-#include "factory.hpp"
-#include "forward.hpp"
-#include "property.hpp"
+#include "v8pp/factory.hpp"
+#include "v8pp/forward.hpp"
+#include "v8pp/property.hpp"
 
 namespace v8pp {
 

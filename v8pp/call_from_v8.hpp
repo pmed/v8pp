@@ -10,8 +10,8 @@
 
 #       include <v8.h>
 
-#       include "config.hpp"
-#       include "from_v8.hpp"
+#       include "v8pp/config.hpp"
+#       include "v8pp/from_v8.hpp"
 
 #       ifndef V8PP_CALL_FROM_V8_MAX_SIZE
 #         define V8PP_CALL_FROM_V8_MAX_SIZE V8PP_MAX_ARG_LIMIT
@@ -62,7 +62,7 @@ call_from_v8(T& obj, typename P::method_type ptr, v8::Arguments const& args)
 } // namespace v8pp
 
 #       define BOOST_PP_ITERATION_LIMITS (0, V8PP_CALL_FROM_V8_MAX_SIZE - 1)
-#       define BOOST_PP_FILENAME_1       "call_from_v8.hpp"
+#       define BOOST_PP_FILENAME_1       "v8pp/call_from_v8.hpp"
 #       include BOOST_PP_ITERATE()
 #   endif // V8PP_CALL_FROM_V8_HPP_INCLUDED
 

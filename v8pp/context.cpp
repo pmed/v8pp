@@ -1,7 +1,8 @@
-#include "class.hpp"
-#include "context.hpp"
-#include "throw_ex.hpp"
-#include "module.hpp"
+
+#include "v8pp/class.hpp"
+#include "v8pp/context.hpp"
+#include "v8pp/throw_ex.hpp"
+#include "v8pp/module.hpp"
 
 #include <fstream>
 

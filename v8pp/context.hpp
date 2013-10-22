@@ -10,7 +10,7 @@
 
 #include <v8.h>
 
-#include "config.hpp"
+#include "v8pp/config.hpp"
 
 namespace v8pp {
 
