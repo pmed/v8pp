@@ -4,6 +4,7 @@
 #include <v8.h>
 
 #include <string>
+#include <iterator>
 #include <cstdint>
 
 #include <boost/unordered_map.hpp>
@@ -110,6 +111,15 @@ inline typename object_registry<T>::objects& object_registry<T>::items()
 }
 #endif
 
+template<typename Iterator>
+struct is_random_access_iterator :
+	boost::is_same<
+		typename std::iterator_traits<Iterator>::iterator_category,
+		std::random_access_iterator_tag
+	>::type
+{
+};
+
 } // detail
 
 template<typename T>
@@ -197,8 +207,23 @@ typename boost::enable_if<boost::is_class<T>, v8::Handle<v8::Value> >::type to_v
 	return to_v8(&src);
 }
 
-template<typename ForwardIterator>
-v8::Handle<v8::Value> to_v8(ForwardIterator begin, ForwardIterator end)
+template<typename Iterator>
+typename boost::enable_if<detail::is_random_access_iterator<Iterator>, v8::Handle<v8::Value>>::type
+to_v8(Iterator begin, Iterator end)
+{
+	v8::HandleScope scope;
+
+	v8::Handle<v8::Array> result = v8::Array::New(end - begin);
+	for (uint32_t idx = 0; begin != end; ++begin, ++idx)
+	{
+		result->Set(idx, to_v8(*begin));
+	}
+	return scope.Close(result);
+}
+
+template<typename Iterator>
+typename boost::disable_if<detail::is_random_access_iterator<Iterator>, v8::Handle<v8::Value>>::type
+to_v8(Iterator begin, Iterator end)
 {
 	v8::HandleScope scope;
 
