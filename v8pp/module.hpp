@@ -15,14 +15,8 @@ class module
 public:
 	module() : obj_(v8::ObjectTemplate::New()) {}
 
-	// Set InvocationCallback into the module
-	module& set(char const* name, v8::InvocationCallback callback)
-	{
-		v8::HandleScope scope;
-
-		obj_->Set(v8::String::NewSymbol(name), v8::FunctionTemplate::New(callback));
-		return *this;
-	}
+	// Create a module with existing V8 ObjectTemplate
+	explicit module(v8::Handle<v8::ObjectTemplate> obj) : obj_(obj) {}
 
 	// Set C++ class into the module
 	template<typename T, typename F>
@@ -60,7 +54,7 @@ public:
 		return *this;
 	}
 
-	// Set value as a read-only property
+	// Set a value convertible to JavaScript as a read-only property
 	template<typename Value>
 	module& set_const(char const* name, Value value)
 	{
@@ -71,7 +65,7 @@ public:
 		return *this;
 	}
 
-	// this is a local handle so make it persistent if needs be
+	// Create a new module instance, this is a local handle so make it persistent if needs be
 	v8::Local<v8::Object> new_instance() { return obj_->NewInstance(); }
 
 private:
