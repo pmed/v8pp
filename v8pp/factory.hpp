@@ -32,7 +32,7 @@ struct no_factory
 	{
 		static void destroy(C* object)
 		{
-			v8::V8::AdjustAmountOfExternalAllocatedMemory(-sizeof(C));
+			v8::V8::AdjustAmountOfExternalAllocatedMemory(-static_cast<intptr_t>(sizeof(C)));
 			delete object;
 		}
 	};
@@ -50,13 +50,13 @@ struct v8_args_factory
 	{
 		static C* create(v8::Arguments const& args)
 		{
-			v8::V8::AdjustAmountOfExternalAllocatedMemory(sizeof(C));
+			v8::V8::AdjustAmountOfExternalAllocatedMemory(static_cast<intptr_t>(sizeof(C)));
 			return new C(args);
 		}
 
 		static void destroy(C* object)
 		{
-			v8::V8::AdjustAmountOfExternalAllocatedMemory(-sizeof(C));
+			v8::V8::AdjustAmountOfExternalAllocatedMemory(-static_cast<intptr_t>(sizeof(C)));
 			delete object;
 		}
 	};
@@ -97,13 +97,13 @@ struct factory<
 
 		static C* create(BOOST_PP_ENUM(n, V8PP_FACTORY_args, ~))
 		{
-			v8::V8::AdjustAmountOfExternalAllocatedMemory(sizeof(C));
+			v8::V8::AdjustAmountOfExternalAllocatedMemory(static_cast<intptr_t>(sizeof(C)));
 			return new C(BOOST_PP_ENUM_PARAMS(n,arg));
 		}
 
 		static void destroy(C* object)
 		{
-			v8::V8::AdjustAmountOfExternalAllocatedMemory(-sizeof(C));
+			v8::V8::AdjustAmountOfExternalAllocatedMemory(-static_cast<intptr_t>(sizeof(C)));
 			delete object;
 		}
 	};
