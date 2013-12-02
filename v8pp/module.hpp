@@ -18,15 +18,21 @@ public:
 	// Create a module with existing V8 ObjectTemplate
 	explicit module(v8::Handle<v8::ObjectTemplate> obj) : obj_(obj) {}
 
+	// Set a V8 value
+	module& set(char const* name, v8::Handle<v8::Data> value)
+	{
+		obj_->Set(v8::String::NewSymbol(name), value);
+		return *this;
+	}
+
 	// Set C++ class into the module
 	template<typename T, typename F>
 	module& set(char const* name, class_<T, F>& cl)
 	{
 		v8::HandleScope scope;
 
-		obj_->Set(v8::String::NewSymbol(name), cl.js_function_template()->GetFunction());
 		cl.class_function_template()->SetClassName(v8::String::NewSymbol(name));
-		return *this;
+		return set(name, cl.js_function_template()->GetFunction());
 	}
 
 	// Set any C++ function into the module
@@ -41,8 +47,7 @@ public:
 		v8::InvocationCallback callback = forward_function<FunctionProto>;
 		v8::Handle<v8::Value> data = detail::set_external_data(f);
 
-		obj_->Set(v8::String::NewSymbol(name), v8::FunctionTemplate::New(callback, data));
-		return *this;
+		return set(name, v8::FunctionTemplate::New(callback, data));
 	}
 
 	// Set another module in the module
@@ -50,8 +55,7 @@ public:
 	{
 		v8::HandleScope scope;
 
-		obj_->Set(v8::String::NewSymbol(name), m.new_instance());
-		return *this;
+		return set(name, m.new_instance());
 	}
 
 	// Set a value convertible to JavaScript as a read-only property
