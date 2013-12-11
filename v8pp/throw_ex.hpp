@@ -7,15 +7,18 @@
 
 namespace v8pp {
 
-inline v8::Handle<v8::Primitive> throw_ex(char const* str)
+inline v8::Handle<v8::Value> throw_ex(char const* str,
+	v8::Local<v8::Value> (*exception_ctor)(v8::Handle<v8::String>) = v8::Exception::Error)
 {
-	v8::ThrowException(v8::String::New(str));
-	return v8::Undefined();
+	v8::HandleScope scope;
+	v8::Handle<v8::Value> exception = exception_ctor(v8::String::New(str));
+	return v8::ThrowException(exception);
 }
 
-inline v8::Handle<v8::Primitive> throw_ex(std::string const& str)
+inline v8::Handle<v8::Value> throw_ex(std::string const& str,
+	v8::Local<v8::Value> (*exception_ctor)(v8::Handle<v8::String>) = v8::Exception::Error)
 {
-	return throw_ex(str.c_str());
+	return throw_ex(str.c_str(), exception_ctor);
 }
 
 } // namespace v8pp
