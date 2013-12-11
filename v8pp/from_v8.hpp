@@ -142,23 +142,23 @@ template<>
 struct from_v8<wchar_t const * const> : from_v8<convertible_string<wchar_t>> {};
 #endif
 
-template<>
-struct from_v8< v8::Handle<v8::Function> >
+template<typename T>
+struct from_v8< v8::Handle<T> >
 {
-	typedef v8::Handle<v8::Function> result_type;
+	typedef v8::Handle<T> result_type;
 
 	static result_type exec(v8::Handle<v8::Value> value, result_type def_value)
 	{
-		return value->IsFunction()? exec(value) : def_value;
+		return v8::Handle<T>::Cast(value)? exec(value) : def_value;
 	}
 
 	static result_type exec(v8::Handle<v8::Value> value)
 	{
-		if (value->IsFunction())
+		if (!v8::Handle<T>::Cast(value).IsEmpty())
 		{
-			return value.As<v8::Function>();
+			return value.As<T>();
 		}
-		throw std::runtime_error("expected Function");
+		throw std::runtime_error("expected V8 Data");
 	}
 };
 
