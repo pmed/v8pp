@@ -247,6 +247,21 @@ v8::Handle<v8::Value> to_v8(std::vector<T> const& src)
 	return to_v8(src.begin(), src.end());
 }
 
+template<typename Key, typename Value, typename Less, typename Alloc>
+v8::Handle<v8::Value> to_v8(std::map<Key, Value, Less, Alloc> const& src)
+{
+	v8::HandleScope scope;
+
+	v8::Handle<v8::Object> result = v8::Object::New();
+
+	typedef std::map<Key, Value, Less, Alloc>::const_iterator const_iterator;
+	for (const_iterator it = src.begin(), end = src.end(); it != end; ++it)
+	{
+		result->Set(to_v8(it->first), to_v8(it->second));
+	}
+	return scope.Close(result);
+}
+
 } // namespace v8pp
 
 #endif // V8PP_TO_V8_HPP_INCLUDED
