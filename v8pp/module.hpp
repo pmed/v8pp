@@ -4,6 +4,7 @@
 #include <v8.h>
 
 #include "v8pp/forward.hpp"
+#include "v8pp/property.hpp"
 
 namespace v8pp {
 
@@ -56,6 +57,29 @@ public:
 		v8::HandleScope scope;
 
 		return set(name, m.new_instance());
+	}
+
+	// Set property
+	template<typename GetFunction, typename SetFunction>
+	typename boost::enable_if<boost::mpl::and_<
+		detail::is_function_pointer<GetFunction>,
+		detail::is_function_pointer<SetFunction>>, module&>::type
+	set(char const *name, property_<GetFunction, SetFunction> prop)
+	{
+		v8::HandleScope scope;
+
+		v8::AccessorGetter getter = property_<GetFunction, SetFunction>::get;
+		v8::AccessorSetter setter = property_<GetFunction, SetFunction>::set;
+		if (property_<GetFunction, SetFunction>::is_readonly)
+		{
+			setter = NULL;
+		}
+
+		v8::Handle<v8::Value> data = detail::set_external_data(prop);
+		v8::PropertyAttribute const prop_attrs = v8::PropertyAttribute(v8::DontDelete | (setter? 0 : v8::ReadOnly));
+
+		obj_->SetAccessor(v8::String::NewSymbol(name), getter, setter, data, v8::DEFAULT, prop_attrs);
+		return *this;
 	}
 
 	// Set a value convertible to JavaScript as a read-only property

@@ -53,6 +53,7 @@ namespace v8pp { namespace detail {
 template<typename R BOOST_PP_COMMA_IF(n) BOOST_PP_ENUM_PARAMS(n, typename A)>
 struct function_ptr<R (*)( BOOST_PP_ENUM_PARAMS(n, A) )>
 {
+	typedef void class_type;
 	typedef R return_type;
 	typedef boost::mpl::vector<BOOST_PP_ENUM_PARAMS(n, A)> arguments;
 	typedef R (*function_type)(BOOST_PP_ENUM_PARAMS(n, A));
