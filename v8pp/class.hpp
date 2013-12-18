@@ -225,6 +225,23 @@ public:
 		return *this;
 	}
 
+	// Set static class method with any prototype
+	template<typename Function>
+	typename boost::enable_if<detail::is_function_pointer<Function>, class_&>::type
+	set(char const *name, Function function)
+	{
+		v8::HandleScope scope;
+
+		typedef typename detail::function_ptr<Function> FunctionProto;
+
+		v8::InvocationCallback callback = forward_function<FunctionProto>;
+		v8::Handle<v8::Value> data = detail::set_external_data(function);
+
+		js_function_template()->Set(v8::String::NewSymbol(name),
+			v8::FunctionTemplate::New(callback, data));
+		return *this;
+	}
+
 	// Set class attribute
 	template<typename Attribute>
 	typename boost::enable_if<boost::is_member_object_pointer<Attribute>, class_&>::type
