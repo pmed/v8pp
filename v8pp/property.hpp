@@ -19,7 +19,7 @@ namespace detail {
 template<typename Get, typename Set>
 struct r_property_impl
 {
-	typedef property_<typename Get, typename Set> Property;
+	typedef property_<Get, Set> Property;
 
 	typedef typename boost::mpl::if_<is_function_pointer<Get>,
 		function_ptr<Get>, mem_function_ptr<Get>>::type GetProto;
@@ -27,11 +27,7 @@ struct r_property_impl
 	static_assert(boost::mpl::size<typename GetProto::arguments>::value == 0,
 		"property get function must have no arguments");
 
-	template<bool is_function_ptr>
-	static v8::Handle<v8::Value> get_impl(v8::Local<v8::String> name, v8::AccessorInfo const& info);
-
-	template<>
-	static v8::Handle<v8::Value> get_impl<false>(v8::Local<v8::String> name, v8::AccessorInfo const& info)
+	static v8::Handle<v8::Value> get_impl(v8::Local<v8::String> name, v8::AccessorInfo const& info, boost::mpl::false_)
 	{
 		typedef typename GetProto::class_type class_type;
 		class_type& obj = v8pp::from_v8<class_type&>(info.This());
@@ -51,8 +47,7 @@ struct r_property_impl
 		return v8::Undefined();
 	}
 
-	template<>
-	static v8::Handle<v8::Value> get_impl<true>(v8::Local<v8::String> name, v8::AccessorInfo const& info)
+	static v8::Handle<v8::Value> get_impl(v8::Local<v8::String> name, v8::AccessorInfo const& info, boost::mpl::true_)
 	{
 		Property const prop = detail::get_external_data<Property>(info.Data());
 		assert(prop.get_);
@@ -70,7 +65,7 @@ struct r_property_impl
 
 	static v8::Handle<v8::Value> get(v8::Local<v8::String> name, v8::AccessorInfo const& info)
 	{
-		return get_impl<is_function_pointer<Get>::value>(name, info);
+		return get_impl(name, info, is_function_pointer<Get>());
 	}
 
 	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::AccessorInfo const& info)
@@ -89,17 +84,13 @@ struct rw_property_impl : r_property_impl<Get, Set>
 
 	static_assert(boost::mpl::size<typename SetProto::arguments>::value == 1,
 		"property set method must have single argument");
-
+/*
 	static_assert(boost::is_same<
 		typename boost::remove_const<typename GetProto::class_type>::type,
 		typename boost::remove_const<typename SetProto::class_type>::type>::value,
 		"property get and set methods must be in the same class");
-
-	template<bool is_function_ptr>
-	static void set_impl(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::AccessorInfo const& info);
-
-	template<>
-	static void set_impl<false>(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::AccessorInfo const& info)
+*/
+	static void set_impl(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::AccessorInfo const& info, boost::mpl::false_)
 	{
 		typedef typename SetProto::class_type class_type;
 		class_type& obj = v8pp::from_v8<class_type&>(info.This());
@@ -119,8 +110,7 @@ struct rw_property_impl : r_property_impl<Get, Set>
 		}
 	}
 
-	template<>
-	static void set_impl<true>(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::AccessorInfo const& info)
+	static void set_impl(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::AccessorInfo const& info, boost::mpl::true_)
 	{
 		Property const prop = detail::get_external_data<Property>(info.Data());
 		assert(prop.set_);
@@ -139,7 +129,7 @@ struct rw_property_impl : r_property_impl<Get, Set>
 
 	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::AccessorInfo const& info)
 	{
-		return set_impl<is_function_pointer<Set>::value>(name, value, info);
+		return set_impl(name, value, info, is_function_pointer<Set>());
 	}
 };
 

@@ -254,7 +254,7 @@ v8::Handle<v8::Value> to_v8(std::map<Key, Value, Less, Alloc> const& src)
 
 	v8::Handle<v8::Object> result = v8::Object::New();
 
-	typedef std::map<Key, Value, Less, Alloc>::const_iterator const_iterator;
+	typedef typename std::map<Key, Value, Less, Alloc>::const_iterator const_iterator;
 	for (const_iterator it = src.begin(), end = src.end(); it != end; ++it)
 	{
 		result->Set(to_v8(it->first), to_v8(it->second));
