@@ -104,9 +104,9 @@ struct rw_property_impl : r_property_impl<Get, Set>
 			typedef typename boost::mpl::at_c<typename SetProto::arguments, 0>::type value_type;
 			(obj.*prop.set_)(v8pp::from_v8<value_type>(value));
 		}
-		catch (std::exception const&)
+		catch (std::exception const& ex)
 		{
-			//?? return throw_ex(ex.what());
+			throw_ex(ex.what());
 		}
 	}
 
@@ -121,9 +121,9 @@ struct rw_property_impl : r_property_impl<Get, Set>
 			typedef typename boost::mpl::at_c<typename SetProto::arguments, 0>::type value_type;
 			(*prop.set_)(v8pp::from_v8<value_type>(value));
 		}
-		catch (std::exception const&)
+		catch (std::exception const& ex)
 		{
-			//?? return throw_ex(ex.what());
+			throw_ex(ex.what());
 		}
 	}
 
