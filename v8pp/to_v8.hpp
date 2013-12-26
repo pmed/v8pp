@@ -134,6 +134,12 @@ inline v8::Handle<T> to_v8(v8::Local<T> src)
 	return src;
 }
 
+template<typename T>
+inline v8::Handle<T> to_v8(v8::Persistent<T> src)
+{
+	return src;
+}
+
 inline v8::Handle<v8::Value> to_v8(std::string const& src)
 {
 	return v8::String::New(src.data(), (int)src.length());
