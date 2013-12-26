@@ -18,6 +18,11 @@ T get_object_field(v8::Handle<v8::Value> value)
 	while (value->IsObject())
 	{
 		v8::Local<v8::Object> obj = value->ToObject();
+		if (obj->InternalFieldCount() != 1)
+		{
+			// no internal field, it's not a wrapped C++ object
+			return nullptr;
+		}
 		T native = reinterpret_cast<T>(obj->GetAlignedPointerFromInternalField(0));
 		if (native)
 		{
@@ -327,7 +332,9 @@ struct from_v8< std::vector<T, A> >
 	{
 		if (value->IsArray())
 		{
-			v8::Array* array = v8::Array::Cast(*value);
+			v8::HandleScope scope;
+
+			v8::Handle<v8::Array> array = value.As<v8::Array>();
 
 			result_type result;
 			result.reserve(array->Length());
@@ -366,20 +373,13 @@ struct from_v8_ptr
 
 	static result_type exec(v8::Handle<v8::Value> value, result_type def_value)
 	{
-		return value->IsObject()? exec(value) : def_value;
+		T* result = exec(value);
+		return result? result : def_value;
 	}
 
 	static result_type exec(v8::Handle<v8::Value> value)
 	{
-		if (value->IsObject())
-		{
-			if (T* obj_ptr = get_object_field<T*>(value))
-			{
-				return obj_ptr;
-			}
-			throw std::runtime_error(std::string("expected C++ wrapped object ") + typeid(T).name());
-		}
-		return nullptr;
+		return get_object_field<T*>(value);
 	}
 };
 
@@ -398,17 +398,15 @@ struct from_v8_ref
 
 	static result_type exec(v8::Handle<v8::Value> value, result_type def_value)
 	{
-		return value->IsObject()? exec(value) : def_value;
+		T* result = get_object_field<T*>(value);
+		return result? *result : def_value;
 	}
 
 	static result_type exec(v8::Handle<v8::Value> value)
 	{
-		if (value->IsObject())
+		if (T* obj_ptr = get_object_field<T*>(value))
 		{
-			if (T* obj_ptr = get_object_field<T*>(value))
-			{
-				return *obj_ptr;
-			}
+			return *obj_ptr;
 		}
 		throw std::runtime_error(std::string("expected C++ wrapped object ") + typeid(T).name());
 	}
