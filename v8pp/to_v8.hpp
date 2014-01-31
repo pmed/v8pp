@@ -20,7 +20,7 @@ class object_registry
 {
 public:
 #if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
-	typedef boost::unordered_map<void*, v8::Persistent<v8::Value>> objects;
+	typedef boost::unordered_map<void*, v8::Persistent<v8::Value> > objects;
 
 	// use additional set to distiguish instances of T in the global registry
 	static boost::unordered_set<T*>& instances()
@@ -30,7 +30,7 @@ public:
 	}
 
 #else
-	typedef boost::unordered_map<T*, v8::Persistent<v8::Value>> objects;
+	typedef boost::unordered_map<T*, v8::Persistent<v8::Value> > objects;
 #endif
 
 	static void add(T* object, v8::Persistent<v8::Value> value)
@@ -220,7 +220,7 @@ typename boost::enable_if<boost::is_class<T>, v8::Handle<v8::Value> >::type to_v
 }
 
 template<typename Iterator>
-typename boost::enable_if<detail::is_random_access_iterator<Iterator>, v8::Handle<v8::Value>>::type
+typename boost::enable_if<detail::is_random_access_iterator<Iterator>, v8::Handle<v8::Value> >::type
 to_v8(Iterator begin, Iterator end)
 {
 	v8::HandleScope scope;
@@ -234,7 +234,7 @@ to_v8(Iterator begin, Iterator end)
 }
 
 template<typename Iterator>
-typename boost::disable_if<detail::is_random_access_iterator<Iterator>, v8::Handle<v8::Value>>::type
+typename boost::disable_if<detail::is_random_access_iterator<Iterator>, v8::Handle<v8::Value> >::type
 to_v8(Iterator begin, Iterator end)
 {
 	v8::HandleScope scope;

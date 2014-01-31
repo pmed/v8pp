@@ -36,7 +36,7 @@ public:
 private:
 	v8::Persistent<v8::Context> impl_;
 
-	typedef std::pair<void*, v8::Persistent<v8::Value>> dynamic_module;
+	typedef std::pair<void*, v8::Persistent<v8::Value> > dynamic_module;
 	typedef boost::unordered_map<std::string, dynamic_module> dynamic_modules;
 
 	static context* get(v8::Handle<v8::Object> obj);

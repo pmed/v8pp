@@ -63,7 +63,7 @@ public:
 	template<typename GetFunction, typename SetFunction>
 	typename boost::enable_if<boost::mpl::and_<
 		detail::is_function_pointer<GetFunction>,
-		detail::is_function_pointer<SetFunction>>, module&>::type
+		detail::is_function_pointer<SetFunction> >, module&>::type
 	set(char const *name, property_<GetFunction, SetFunction> prop)
 	{
 		v8::HandleScope scope;

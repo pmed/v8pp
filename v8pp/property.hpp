@@ -22,7 +22,7 @@ struct r_property_impl
 	typedef property_<Get, Set> Property;
 
 	typedef typename boost::mpl::if_<is_function_pointer<Get>,
-		function_ptr<Get>, mem_function_ptr<Get>>::type GetProto;
+		function_ptr<Get>, mem_function_ptr<Get> >::type GetProto;
 
 	static_assert(boost::mpl::size<typename GetProto::arguments>::value == 0,
 		"property get function must have no arguments");
@@ -80,7 +80,7 @@ struct rw_property_impl : r_property_impl<Get, Set>
 	typedef property_<Get, Set> Property;
 
 	typedef typename boost::mpl::if_<is_function_pointer<Set>,
-		function_ptr<Set>, mem_function_ptr<Set>>::type SetProto;
+		function_ptr<Set>, mem_function_ptr<Set> >::type SetProto;
 
 	static_assert(boost::mpl::size<typename SetProto::arguments>::value == 1,
 		"property set method must have single argument");

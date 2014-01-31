@@ -59,14 +59,14 @@ invoke(T* obj, typename P::method_type ptr, v8::Arguments const& args)
 }
 
 template<typename P>
-typename boost::disable_if<is_void_return<P>, v8::Handle<v8::Value>>::type
+typename boost::disable_if<is_void_return<P>, v8::Handle<v8::Value> >::type
 forward_ret(typename P::function_type ptr, const v8::Arguments& args)
 {
 	return to_v8(invoke<P>(ptr, args));
 }
 
 template<typename P>
-typename boost::enable_if<is_void_return<P>, v8::Handle<v8::Value>>::type
+typename boost::enable_if<is_void_return<P>, v8::Handle<v8::Value> >::type
 forward_ret(typename P::function_type ptr, const v8::Arguments& args)
 {
 	invoke<P>(ptr, args);
@@ -74,14 +74,14 @@ forward_ret(typename P::function_type ptr, const v8::Arguments& args)
 }
 
 template<typename P, typename T>
-typename boost::disable_if<is_void_return<P>, v8::Handle<v8::Value>>::type
+typename boost::disable_if<is_void_return<P>, v8::Handle<v8::Value> >::type
 forward_ret(T *obj, typename P::method_type ptr, v8::Arguments const& args)
 {
 	return to_v8(invoke<P>(obj, ptr, args));
 }
 
 template<typename P, typename T>
-typename boost::enable_if<is_void_return<P>, v8::Handle<v8::Value>>::type
+typename boost::enable_if<is_void_return<P>, v8::Handle<v8::Value> >::type
 forward_ret(T *obj, typename P::method_type ptr, v8::Arguments const& args)
 {
 	invoke<P>(obj, ptr, args);
@@ -107,14 +107,14 @@ public:
 };
 
 template<typename T>
-typename boost::enable_if_c<sizeof(T) <= sizeof(void*), v8::Handle<v8::Value>>::type
+typename boost::enable_if_c<sizeof(T) <= sizeof(void*), v8::Handle<v8::Value> >::type
 set_external_data(T value)
 {
 	return v8::External::New(pointer_cast<T>(value));
 }
 
 template<typename T>
-typename boost::disable_if_c<sizeof(T) <= sizeof(void*), v8::Handle<v8::Value>>::type
+typename boost::disable_if_c<sizeof(T) <= sizeof(void*), v8::Handle<v8::Value> >::type
 set_external_data(T value)
 {
 	return v8::External::New(new T(value));

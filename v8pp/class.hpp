@@ -270,7 +270,7 @@ public:
 	template<typename GetMethod, typename SetMethod>
 	typename boost::enable_if<boost::mpl::and_<
 		boost::is_member_function_pointer<GetMethod>,
-		boost::is_member_function_pointer<SetMethod>>, class_&>::type
+		boost::is_member_function_pointer<SetMethod> >, class_&>::type
 	set(char const *name, property_<GetMethod, SetMethod> prop)
 	{
 		v8::HandleScope scope;

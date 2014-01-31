@@ -67,7 +67,7 @@ struct from_v8<std::string>
 };
 
 template<>
-struct from_v8<convertible_string<char>>
+struct from_v8<convertible_string<char> >
 {
 	typedef convertible_string<char> result_type;
 
@@ -90,10 +90,10 @@ struct from_v8<convertible_string<char>>
 // char const * and char const * have to be copied immediately otherwise
 // the underlying memory will die due to the way v8 strings work.
 template<>
-struct from_v8<char const *> : from_v8<convertible_string<char>> {};
+struct from_v8<char const *> : from_v8<convertible_string<char> > {};
 
 template<>
-struct from_v8<char const * const> : from_v8<convertible_string<char>> {};
+struct from_v8<char const * const> : from_v8<convertible_string<char> > {};
 
 #ifdef WIN32
 static_assert(sizeof(wchar_t) == sizeof(uint16_t), "wchar_t has 16 bits");
@@ -120,7 +120,7 @@ struct from_v8<std::wstring>
 };
 
 template<>
-struct from_v8<convertible_string<wchar_t>>
+struct from_v8<convertible_string<wchar_t> >
 {
 	typedef convertible_string<wchar_t> result_type;
 
@@ -141,10 +141,10 @@ struct from_v8<convertible_string<wchar_t>>
 };
 
 template<>
-struct from_v8<wchar_t const *> : from_v8<convertible_string<wchar_t>> {};
+struct from_v8<wchar_t const *> : from_v8<convertible_string<wchar_t> > {};
 
 template<>
-struct from_v8<wchar_t const * const> : from_v8<convertible_string<wchar_t>> {};
+struct from_v8<wchar_t const * const> : from_v8<convertible_string<wchar_t> > {};
 #endif
 
 template<typename T>
