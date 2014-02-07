@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include <boost/type_traits.hpp>
+
 #include <v8.h>
 
 namespace v8pp {
@@ -42,7 +44,7 @@ struct convertible_string : std::basic_string<Char>
 	operator Char const*() const { return this->c_str(); }
 };
 
-template<typename T>
+template<typename T, typename Enabled = void>
 struct from_v8;
 
 template<>
@@ -52,7 +54,7 @@ struct from_v8<std::string>
 
 	static result_type exec(v8::Handle<v8::Value> value, result_type const& def_value)
 	{
-		return value->IsString()? exec(value) :  def_value;
+		return value->IsString()? exec(value) : def_value;
 	}
 
 	static result_type exec(v8::Handle<v8::Value> value)
@@ -126,7 +128,7 @@ struct from_v8<convertible_string<wchar_t> >
 
 	static result_type exec(v8::Handle<v8::Value> value, result_type const& def_value)
 	{
-		return value->IsString()? exec(value) :def_value;
+		return value->IsString()? exec(value) : def_value;
 	}
 
 	static result_type exec(v8::Handle<v8::Value> value)
@@ -152,16 +154,18 @@ struct from_v8< v8::Handle<T> >
 {
 	typedef v8::Handle<T> result_type;
 
-	static result_type exec(v8::Handle<v8::Value> value, result_type def_value)
+	static result_type exec(v8::Handle<v8::Value> value, result_type const& def_value)
 	{
-		return v8::Handle<T>::Cast(value)? exec(value) : def_value;
+		v8::Handle<T> result = v8::Handle<T>::Cast(value);
+		return !result.IsEmpty()? result : def_value;
 	}
 
 	static result_type exec(v8::Handle<v8::Value> value)
 	{
-		if (!v8::Handle<T>::Cast(value).IsEmpty())
+		v8::Handle<T> result = v8::Handle<T>::Cast(value);
+		if (!result.IsEmpty())
 		{
-			return value.As<T>();
+			return result;
 		}
 		throw std::runtime_error("expected V8 Data");
 	}
@@ -179,34 +183,62 @@ struct from_v8<bool>
 
 	static result_type exec(v8::Handle<v8::Value> value)
 	{
-		return value->ToBoolean()->Value();
+		if (value->IsBoolean())
+		{
+			return value->BooleanValue();
+		}
+		throw std::runtime_error("expected Boolean");
 	}
 };
 
-template<>
-struct from_v8<int32_t>
+template<typename T>
+struct from_v8<T, typename boost::enable_if<boost::is_integral<T> >::type >
 {
-	typedef int32_t result_type;
+	typedef T result_type;
+
+	static bool is_valid(v8::Handle<v8::Value> value)
+	{
+		if (sizeof(T) <= sizeof(int32_t))
+		{
+			return boost::is_signed<T>::value?
+				value->IsInt32(): value->IsUint32();
+		}
+		return value->IsNumber();
+	}
 
 	static result_type exec(v8::Handle<v8::Value> value, result_type def_value)
 	{
-		return value->IsNumber()? exec(value) : def_value;
+		return is_valid(value)? exec(value) : def_value;
 	}
 
 	static result_type exec(v8::Handle<v8::Value> value)
 	{
-		if (value->IsNumber())
+		if (is_valid(value))
 		{
-			return value->ToInt32()->Value();
+			if (sizeof(T) <= sizeof(int32_t))
+			{
+				if (boost::is_signed<T>::value)
+				{
+					return static_cast<T>(value->Int32Value());
+				}
+				else
+				{
+					return static_cast<T>(value->Uint32Value());
+				}
+			}
+			else
+			{
+				return static_cast<T>(value->IntegerValue());
+			}
 		}
 		throw std::runtime_error("expected Number");
 	}
 };
 
-template<>
-struct from_v8<uint32_t>
+template<typename T>
+struct from_v8<T, typename boost::enable_if<boost::is_floating_point<T> >::type >
 {
-	typedef uint32_t result_type;
+	typedef T result_type;
 
 	static result_type exec(v8::Handle<v8::Value> value, result_type def_value)
 	{
@@ -217,87 +249,7 @@ struct from_v8<uint32_t>
 	{
 		if (value->IsNumber())
 		{
-			return value->ToUint32()->Value();
-		}
-		throw std::runtime_error("expected Number");
-	}
-};
-
-template<>
-struct from_v8<int64_t>
-{
-	typedef int64_t result_type;
-
-	static result_type exec(v8::Handle<v8::Value> value, result_type def_value)
-	{
-		return value->IsNumber()? exec(value) : def_value;
-	}
-
-	static result_type exec(v8::Handle<v8::Value> value)
-	{
-		if (value->IsNumber())
-		{
-			return static_cast<result_type>(value->ToNumber()->Value());
-		}
-		throw std::runtime_error("expected Number");
-	}
-};
-
-template<>
-struct from_v8<uint64_t>
-{
-	typedef uint64_t result_type;
-
-	static result_type exec(v8::Handle<v8::Value> value, result_type def_value)
-	{
-		return value->IsNumber()? exec(value) : def_value;
-	}
-
-	static result_type exec(v8::Handle<v8::Value> value)
-	{
-		if (value->IsNumber())
-		{
-			return static_cast<result_type>(value->ToNumber()->Value());
-		}
-		throw std::runtime_error("expected Number");
-	}
-};
-
-template<>
-struct from_v8<float>
-{
-	typedef float result_type;
-
-	static result_type exec(v8::Handle<v8::Value> value, result_type def_value)
-	{
-		return value->IsNumber()? exec(value) : def_value;
-	}
-
-	static result_type exec(v8::Handle<v8::Value> value)
-	{
-		if (value->IsNumber())
-		{
-			return static_cast<float>(value->ToNumber()->Value());
-		}
-		throw std::runtime_error("expected Number");
-	}
-};
-
-template<>
-struct from_v8<double>
-{
-	typedef double result_type;
-
-	static result_type exec(v8::Handle<v8::Value> value, result_type def_value)
-	{
-		return value->IsNumber()? exec(value) : def_value;
-	}
-
-	static result_type exec(v8::Handle<v8::Value> value)
-	{
-		if (value->IsNumber())
-		{
-			return value->ToNumber()->Value();
+			return static_cast<T>(value->NumberValue());
 		}
 		throw std::runtime_error("expected Number");
 	}
@@ -353,9 +305,9 @@ struct from_v8< v8::Handle<v8::Value> >
 {
 	typedef v8::Handle<v8::Value> result_type;
 
-	static result_type exec(v8::Handle<v8::Value> value, v8::Handle<v8::Value> def_value)
+	static result_type exec(v8::Handle<v8::Value> value, result_type const& def_value)
 	{
-		return value.IsEmpty()? def_value : value;
+		return !value.IsEmpty()? exec(value) : def_value;
 	}
 
 	static result_type exec(v8::Handle<v8::Value> value)

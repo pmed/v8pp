@@ -1,14 +1,14 @@
 #ifndef V8PP_TO_V8_HPP_INCLUDED
 #define V8PP_TO_V8_HPP_INCLUDED
 
-#include <v8.h>
-
 #include <string>
 #include <iterator>
-#include <cstdint>
 
+#include <boost/type_traits.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
+
+#include <v8.h>
 
 namespace v8pp {
 
@@ -164,36 +164,32 @@ inline v8::Handle<v8::Value> to_v8(wchar_t const *src)
 }
 #endif
 
-inline v8::Handle<v8::Value> to_v8(int64_t const src)
+template<typename T>
+inline typename boost::enable_if<boost::is_integral<T>, v8::Handle<v8::Value> >::type
+to_v8(T const src)
 {
-	// TODO: check bounds?
-	return v8::Number::New(static_cast<double>(src));
+	if (sizeof(T) <= sizeof(int32_t))
+	{
+		if (boost::is_signed<T>::value)
+		{
+			return v8::Integer::New(src);
+		}
+		else
+		{
+			return v8::Integer::NewFromUnsigned(src);
+		}
+	}
+	else
+	{
+		return v8::Number::New(src);
+	}
 }
 
-inline v8::Handle<v8::Value> to_v8(uint64_t const src)
-{
-	// TODO: check bounds?
-	return v8::Number::New(static_cast<double>(src));
-}
-
-inline v8::Handle<v8::Value> to_v8(float const src)
+template<typename T>
+inline typename boost::enable_if<boost::is_floating_point<T>, v8::Handle<v8::Value> >::type
+to_v8(T const src)
 {
 	return v8::Number::New(src);
-}
-
-inline v8::Handle<v8::Value> to_v8(double const src)
-{
-	return v8::Number::New(src);
-}
-
-inline v8::Handle<v8::Value> to_v8(int32_t const src)
-{
-	return v8::Int32::New(src);
-}
-
-inline v8::Handle<v8::Value> to_v8(uint32_t const src)
-{
-	return v8::Uint32::New(src);
 }
 
 inline v8::Handle<v8::Value> to_v8(bool const src)
@@ -202,25 +198,25 @@ inline v8::Handle<v8::Value> to_v8(bool const src)
 }
 
 template<typename T>
-typename boost::enable_if<boost::is_enum<T>, v8::Handle<v8::Value> >::type to_v8(T const src)
+inline typename boost::enable_if<boost::is_enum<T>, v8::Handle<v8::Value> >::type to_v8(T const src)
 {
 	return v8::Int32::New(src);
 }
 
 template<typename T>
-typename boost::enable_if<boost::is_class<T>, v8::Handle<v8::Value> >::type to_v8(T const* src)
+inline typename boost::enable_if<boost::is_class<T>, v8::Handle<v8::Value> >::type to_v8(T const* src)
 {
 	return detail::object_registry<T>::find(src);
 }
 
 template<typename T>
-typename boost::enable_if<boost::is_class<T>, v8::Handle<v8::Value> >::type to_v8(T const& src)
+inline typename boost::enable_if<boost::is_class<T>, v8::Handle<v8::Value> >::type to_v8(T const& src)
 {
 	return to_v8(&src);
 }
 
 template<typename Iterator>
-typename boost::enable_if<detail::is_random_access_iterator<Iterator>, v8::Handle<v8::Value> >::type
+inline typename boost::enable_if<detail::is_random_access_iterator<Iterator>, v8::Handle<v8::Value> >::type
 to_v8(Iterator begin, Iterator end)
 {
 	v8::HandleScope scope;
@@ -234,7 +230,7 @@ to_v8(Iterator begin, Iterator end)
 }
 
 template<typename Iterator>
-typename boost::disable_if<detail::is_random_access_iterator<Iterator>, v8::Handle<v8::Value> >::type
+inline typename boost::disable_if<detail::is_random_access_iterator<Iterator>, v8::Handle<v8::Value> >::type
 to_v8(Iterator begin, Iterator end)
 {
 	v8::HandleScope scope;
@@ -247,14 +243,14 @@ to_v8(Iterator begin, Iterator end)
 	return scope.Close(result);
 }
 
-template<typename T>
-v8::Handle<v8::Value> to_v8(std::vector<T> const& src)
+template<typename T, typename Alloc>
+inline v8::Handle<v8::Value> to_v8(std::vector<T, Alloc> const& src)
 {
 	return to_v8(src.begin(), src.end());
 }
 
 template<typename Key, typename Value, typename Less, typename Alloc>
-v8::Handle<v8::Value> to_v8(std::map<Key, Value, Less, Alloc> const& src)
+inline v8::Handle<v8::Value> to_v8(std::map<Key, Value, Less, Alloc> const& src)
 {
 	v8::HandleScope scope;
 
