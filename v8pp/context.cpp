@@ -8,10 +8,8 @@
 
 #if defined(WIN32)
 #include <windows.h>
-#elif defined(__linux__)
-#include <dlfcn.h>
 #else
-#error unsupported platform yet
+#include <dlfcn.h>
 #endif
 
 namespace v8pp {
@@ -69,10 +67,8 @@ v8::Handle<v8::Value> context::load_module(const v8::Arguments& args)
 	UINT const prev_error_mode = SetErrorMode(SEM_NOOPENFILEERRORBOX);
 	HMODULE dl = LoadLibraryW(filename.native().c_str());
 	::SetErrorMode(prev_error_mode);
-#elif defined(__linux__)
-	void *dl = dlopen(filename.c_str(), RTLD_LAZY);
 #else
-	#error unsupported platform yet
+	void *dl = dlopen(filename.c_str(), RTLD_LAZY);
 #endif
 
 	if ( !dl )
@@ -83,10 +79,8 @@ v8::Handle<v8::Value> context::load_module(const v8::Arguments& args)
 
 #if defined(WIN32)
 	void *sym = ::GetProcAddress(dl, BOOST_PP_STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
-#elif defined(__linux__)
-	void *sym = dlsym(dl, BOOST_PP_STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
 #else
-	#error unsupported platform yet
+	void *sym = dlsym(dl, BOOST_PP_STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
 #endif
 
 	if ( !sym )
@@ -112,7 +106,7 @@ void context::unload_modules()
 		mod.second.Dispose();
 #if defined(WIN32)
 		::FreeLibrary((HMODULE)mod.first);
-#elif defined(__linux__)
+#else
 		dlclose(it->second.first);
 #endif
 	}
