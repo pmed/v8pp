@@ -204,6 +204,8 @@ public:
 	template<typename U, typename U_Factory>
 	explicit class_(class_<U, U_Factory>& parent)
 	{
+		static_assert(boost::is_polymorphic<T>::value == boost::is_polymorphic<U>::value,
+			"Parent class should be polymorphic too");
 		js_function_template()->Inherit(parent.class_function_template());
 	}
 
