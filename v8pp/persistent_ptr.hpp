@@ -3,8 +3,7 @@
 
 #include <cassert>
 
-#include "v8pp/from_v8.hpp"
-#include "v8pp/to_v8.hpp"
+#include "v8pp/convert.hpp"
 
 namespace v8pp {
 

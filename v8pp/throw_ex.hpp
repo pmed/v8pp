@@ -5,6 +5,10 @@
 
 #include <v8.h>
 
+#ifdef WIN32
+#include <windows.h>
+#endif
+
 namespace v8pp {
 
 inline v8::Handle<v8::Value> throw_ex(char const* str,

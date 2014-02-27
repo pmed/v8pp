@@ -6,8 +6,7 @@
 #include <boost/type_traits/remove_const.hpp>
 
 #include "v8pp/proto.hpp"
-#include "v8pp/to_v8.hpp"
-#include "v8pp/from_v8.hpp"
+#include "v8pp/convert.hpp"
 
 namespace v8pp {
 
