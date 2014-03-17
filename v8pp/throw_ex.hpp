@@ -14,7 +14,16 @@ namespace v8pp {
 inline v8::Handle<v8::Value> throw_ex(char const* str,
 	v8::Local<v8::Value> (*exception_ctor)(v8::Handle<v8::String>) = v8::Exception::Error)
 {
-	v8::HandleScope scope;
+#ifdef _WIN32
+	int const len = ::MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0);
+	if (len > 0)
+	{
+		std::vector<wchar_t> buf(len);
+		::MultiByteToWideChar(CP_ACP, 0, str, -1, &buf[0], len);
+		v8::Handle<v8::Value> exception = exception_ctor(v8::String::New(reinterpret_cast<uint16_t const*>(&buf[0]), len - 1));
+		return v8::ThrowException(exception);
+	}
+#endif
 	v8::Handle<v8::Value> exception = exception_ctor(v8::String::New(str));
 	return v8::ThrowException(exception);
 }
