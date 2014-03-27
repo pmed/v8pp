@@ -108,6 +108,13 @@ public:
 };
 
 template<typename T>
+void delete_ext_data(v8::Isolate*, v8::Persistent<v8::External>* ext, T* data)
+{
+	delete data;
+	if (ext) ext->Dispose();
+}
+
+template<typename T>
 typename boost::enable_if_c<sizeof(T) <= sizeof(void*), v8::Handle<v8::Value> >::type
 set_external_data(T value)
 {
@@ -118,7 +125,11 @@ template<typename T>
 typename boost::disable_if_c<sizeof(T) <= sizeof(void*), v8::Handle<v8::Value> >::type
 set_external_data(T value)
 {
-	return v8::External::New(new T(value));
+	T* data = new T(value);
+	v8::Persistent<v8::External> ext;
+	ext.Reset(v8::Isolate::GetCurrent(), v8::External::New(data));
+	ext.MakeWeak(data, delete_ext_data<T>);
+	return ext;
 }
 
 template<typename T>
@@ -132,7 +143,8 @@ template<typename T>
 typename boost::disable_if_c<sizeof(T) <= sizeof(void*), T>::type
 get_external_data(v8::Handle<v8::Value> value)
 {
-	return *reinterpret_cast<T*>(value.As<v8::External>()->Value());
+	T* data = static_cast<T*>(value.As<v8::External>()->Value());
+	return *data;
 }
 
 } // namespace detail
