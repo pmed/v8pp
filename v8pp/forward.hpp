@@ -47,16 +47,16 @@ invoke(typename P::function_type ptr, v8::Arguments const& args)
 
 template<typename P, typename T>
 typename boost::enable_if<pass_direct_if<P>, typename P::return_type>::type
-invoke(T* obj, typename P::method_type ptr, v8::Arguments const& args)
+invoke(T& obj, typename P::method_type ptr, v8::Arguments const& args)
 {
-	return (obj->*ptr)(args);
+	return (obj.*ptr)(args);
 }
 
 template<typename P, typename T>
 typename boost::disable_if<pass_direct_if<P>, typename P::return_type>::type
-invoke(T* obj, typename P::method_type ptr, v8::Arguments const& args)
+invoke(T& obj, typename P::method_type ptr, v8::Arguments const& args)
 {
-	return call_from_v8<P>(*obj, ptr, args);
+	return call_from_v8<P>(obj, ptr, args);
 }
 
 template<typename P>
@@ -76,14 +76,14 @@ forward_ret(typename P::function_type ptr, const v8::Arguments& args)
 
 template<typename P, typename T>
 typename boost::disable_if<is_void_return<P>, v8::Handle<v8::Value> >::type
-forward_ret(T *obj, typename P::method_type ptr, v8::Arguments const& args)
+forward_ret(T& obj, typename P::method_type ptr, v8::Arguments const& args)
 {
 	return to_v8(invoke<P>(obj, ptr, args));
 }
 
 template<typename P, typename T>
 typename boost::enable_if<is_void_return<P>, v8::Handle<v8::Value> >::type
-forward_ret(T *obj, typename P::method_type ptr, v8::Arguments const& args)
+forward_ret(T& obj, typename P::method_type ptr, v8::Arguments const& args)
 {
 	invoke<P>(obj, ptr, args);
 	return v8::Undefined();
@@ -176,7 +176,7 @@ v8::Handle<v8::Value> forward_mem_function(v8::Arguments const& args)
 		typedef typename P::class_type class_type;
 		typedef typename P::method_type method_type;
 
-		class_type* obj = detail::get_object_field<class_type*>(args.Holder());
+		class_type& obj = from_v8<class_type&>(args.Holder());
 		method_type ptr = detail::get_external_data<method_type>(args.Data());
 		return scope.Close(detail::forward_ret<P>(obj, ptr, args));
 	}
