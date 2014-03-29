@@ -19,20 +19,20 @@ namespace detail {
 
 // Get pointer to native object
 template<typename T>
-T get_object_field(v8::Handle<v8::Value> value)
+T* get_object_ptr(v8::Handle<v8::Value> value)
 {
 	while (value->IsObject())
 	{
 		v8::Handle<v8::Object> obj = value->ToObject();
-		if (obj->InternalFieldCount() != 1)
+		if (obj->InternalFieldCount() == 2)
 		{
-			// no internal field, it's not a wrapped C++ object
-			break;
-		}
-		T native = reinterpret_cast<T>(obj->GetAlignedPointerFromInternalField(0));
-		if (native)
-		{
-			return native;
+			void* ptr = obj->GetAlignedPointerFromInternalField(0);
+			type_caster* caster = static_cast<type_caster*>(obj->GetAlignedPointerFromInternalField(1));
+			if (caster && caster->can_cast())
+			{
+				caster->cast(ptr, typeid(T));
+			}
+			return static_cast<T*>(ptr);
 		}
 		value = obj->GetPrototype();
 	}
@@ -62,7 +62,7 @@ public:
 #if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
 		instances().insert(object);
 #endif
-		items().insert(std::make_pair(object, value));
+		items().insert(std::make_pair(most_derived_ptr(object), value));
 	}
 
 	static void remove(T* object, void (*destroy)(T*))
@@ -70,7 +70,7 @@ public:
 #if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
 		instances().erase(object);
 #endif
-		typename objects::iterator it = items().find(object);
+		typename objects::iterator it = items().find(most_derived_ptr(object));
 		if (it != items().end())
 		{
 			it->second.Dispose();
@@ -100,8 +100,8 @@ public:
 	static v8::Handle<v8::Value> find(T const* native)
 	{
 		v8::Handle<v8::Value> result;
-		typename objects::iterator it = items().find(const_cast<T*>(native));
-		if ( it != items().end() )
+		typename objects::iterator it = items().find(most_derived_ptr(native));
+		if (it != items().end())
 		{
 			result = it->second;
 		}
@@ -116,6 +116,18 @@ private:
 
 private:
 	static objects& items();
+
+	template<typename U>
+	static typename boost::enable_if<boost::is_polymorphic<U>, U*>::type most_derived_ptr(U const* object)
+	{
+		return reinterpret_cast<U*>(dynamic_cast<void*>(const_cast<U*>(object)));
+	}
+
+	template<typename U>
+	static typename boost::disable_if<boost::is_polymorphic<U>, U*>::type most_derived_ptr(U const* object)
+	{
+		return const_cast<U*>(object);
+	}
 };
 
 #if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
@@ -630,7 +642,7 @@ struct convert< T, typename boost::enable_if< is_wrapped_class<T> >::type >
 
 	static T& from_v8(v8::Handle<v8::Value> value)
 	{
-		if (T* obj_ptr = detail::get_object_field<T*>(value))
+		if (T* obj_ptr = detail::get_object_ptr<T>(value))
 		{
 			return *obj_ptr;
 		}
@@ -661,7 +673,7 @@ struct convert< T*, typename boost::enable_if< is_wrapped_class<T> >::type >
 
 	static T* from_v8(v8::Handle<v8::Value> value)
 	{
-		return detail::get_object_field<T*>(value);
+		return detail::get_object_ptr<T>(value);
 	}
 
 	static v8::Handle<v8::Value> to_v8(T const* value)

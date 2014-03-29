@@ -47,6 +47,12 @@ private:
 };
 #endif
 
+struct type_caster
+{
+	virtual bool can_cast() const  = 0;
+	virtual bool cast(void*& ptr, std::type_info const& type) = 0;
+};
+
 template <typename M, typename Factory>
 class class_singleton_factory
 {
@@ -94,6 +100,7 @@ public:
 template<typename T, typename Factory>
 class class_singleton
 	: public class_singleton_factory<class_singleton<T, Factory>, Factory>
+	, public type_caster
 {
 	typedef typename Factory::template instance<T> factory_type;
  
@@ -115,7 +122,7 @@ public:
 		{
 			func_->Inherit(js_function_template());
 		}
-		func_->InstanceTemplate()->SetInternalFieldCount(1);
+		func_->InstanceTemplate()->SetInternalFieldCount(2);
 	}
 
 	static class_singleton& instance()
@@ -144,6 +151,7 @@ public:
 		obj.Reset(v8::Isolate::GetCurrent(), func_->GetFunction()->NewInstance());
 
 		obj->SetAlignedPointerInInternalField(0, wrap);
+		obj->SetAlignedPointerInInternalField(1, this);
 		detail::object_registry<T>::add(wrap, obj);
 		obj.MakeWeak(wrap, on_made_weak);
 
@@ -156,6 +164,7 @@ public:
 		obj.Reset(v8::Isolate::GetCurrent(), func_->GetFunction()->NewInstance());
 
 		obj->SetAlignedPointerInInternalField(0, wrap);
+		obj->SetAlignedPointerInInternalField(1, this);
 		detail::object_registry<T>::add(wrap, obj);
 
 		return obj;
@@ -177,6 +186,20 @@ public:
 		detail::object_registry<T>::remove(obj, &factory_type::destroy);
 	}
 
+	template<typename U, typename U_Factory>
+	void inherit()
+	{
+		class_singleton<U, U_Factory>* base = &class_singleton<U, U_Factory>::instance();
+
+		base_classes::iterator it = std::find_if(bases_.begin(), bases_.end(),
+			[base](base_class const& parent) { return parent.caster == base; });
+		assert(it == bases_.end() && "duplicated inheritance");
+		if (it == bases_.end())
+		{
+			bases_.push_back(base_class(base, typeid(U), &cast_to<U>));
+		}
+	}
+
 private:
 	static void on_made_weak(v8::Isolate*, v8::Persistent<v8::Object>* obj, T* native)
 	{
@@ -185,6 +208,65 @@ private:
 	}
 
 	v8::Persistent<v8::FunctionTemplate> func_;
+
+private:
+// type_caster implementation
+
+	bool can_cast() const { return !bases_.empty(); }
+
+	bool cast(void*& ptr, std::type_info const& type)
+	{
+		if (bases_.empty() || type == typeid(T))
+		{
+			return true;
+		}
+
+		// fast way - search a direct parent
+		base_classes::const_iterator it = std::find_if(bases_.begin(), bases_.end(),
+			[&type](base_class const& parent) {return parent.type == type; });
+		if (it != bases_.end())
+		{
+			ptr = (it->cast_fn)(static_cast<T*>(ptr));
+			return true;
+		}
+
+		// slower way - walk on hierarhy
+		for (base_classes::const_iterator it = bases_.begin(), end = bases_.end(); it != end; ++it)
+		{
+			void* p = (it->cast_fn)(static_cast<T*>(ptr));
+			if (it->caster->cast(p, type))
+			{
+				ptr = p;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	typedef void* (*cast_fun)(T* obj);
+
+	template<typename U>
+	static void* cast_to(T* obj)
+	{
+		return static_cast<U*>(obj);
+	}
+
+	struct base_class
+	{
+		type_caster* caster;
+		std::type_index type;
+		cast_fun cast_fn;
+
+		base_class(type_caster* caster, std::type_info const& type, cast_fun cast_fn)
+			: caster(caster)
+			, type(type)
+			, cast_fn(cast_fn)
+		{
+		}
+	};
+
+	typedef std::vector<base_class> base_classes;
+	base_classes bases_;
 };
 
 } // namespace detail
@@ -204,9 +286,18 @@ public:
 	template<typename U, typename U_Factory>
 	explicit class_(class_<U, U_Factory>& parent)
 	{
-		static_assert(boost::is_polymorphic<T>::value == boost::is_polymorphic<U>::value,
-			"Parent class should be polymorphic too");
+		inherit(parent);
+	}
+
+	// Inhert class from parent
+	template<typename U, typename U_Factory>
+	class_& inherit(class_<U, U_Factory>& parent)
+	{
+		static_assert(boost::is_base_and_derived<U, T>::value, "Class U should be base for class T");
+		//TODO: boost::is_convertible<T*, U*> and check for duplicates in hierarchy?
+		singleton::instance().inherit<U, U_Factory>();
 		js_function_template()->Inherit(parent.class_function_template());
+		return *this;
 	}
 
 	// Set class method with any prototype
