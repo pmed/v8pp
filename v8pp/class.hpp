@@ -12,7 +12,7 @@
 
 namespace v8pp {
 
-template<typename T, typename Factory>
+template<typename T>
 class class_;
 
 namespace detail {
@@ -53,75 +53,17 @@ struct type_caster
 	virtual bool cast(void*& ptr, std::type_info const& type) = 0;
 };
 
-template <typename M, typename Factory>
-class class_singleton_factory
-{
-public:
-	enum { HAS_NULL_FACTORY = false };
-
-	class_singleton_factory()
-		: js_func_(v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New(&ctor_function)))
-	{
-	}
-
-	v8::Persistent<v8::FunctionTemplate>& js_function_template_helper()
-	{
-		return js_func_;
-	}
-
-private:
-	static v8::Handle<v8::Value> ctor_function(v8::Arguments const& args)
-	{
-		try
-		{
-			return M::instance().wrap_object(args);
-		}
-		catch (std::exception const& ex)
-		{
-			return throw_ex(ex.what());
-		}
-	}
-
-	v8::Persistent<v8::FunctionTemplate> js_func_;
-};
-
-template<typename M>
-class class_singleton_factory<M, no_factory>
-{
-public:
-	enum { HAS_NULL_FACTORY = true };
-
-	v8::Persistent<v8::FunctionTemplate>& js_function_template_helper()
-	{
-		return static_cast<M&>(*this).class_function_template();
-	}
-};
-
-template<typename T, typename Factory>
+template<typename T>
 class class_singleton
-	: public class_singleton_factory<class_singleton<T, Factory>, Factory>
-	, public type_caster
+	: public type_caster
 {
-	typedef typename Factory::template instance<T> factory_type;
- 
-	static T* create(v8::Arguments const& args, boost::false_type)
-	{
-		return call_from_v8<factory_type>(&factory_type::create, args);
-	}
-
-	static T* create(v8::Arguments const& args, boost::true_type)
-	{
-		return factory_type::create(args);
-	}
-
 public:
 	class_singleton()
 		: func_(v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New()))
+		, js_func_(v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New(&ctor_function)))
+		, create_()
+		, destroy_()
 	{
-		if ( !this->HAS_NULL_FACTORY )
-		{
-			func_->Inherit(js_function_template());
-		}
 		func_->InstanceTemplate()->SetInternalFieldCount(2);
 	}
 
@@ -137,12 +79,59 @@ public:
 
 	v8::Persistent<v8::FunctionTemplate>& class_function_template()
 	{
+		if (!create_ && !destroy_)
+		{
+			assert(false && "Specify class .ctor");
+			throw std::runtime_error("Specify class .ctor");
+		}
 		return func_;
 	}
 
 	v8::Persistent<v8::FunctionTemplate>& js_function_template()
 	{
-		return this->js_function_template_helper();
+		return js_func_.IsEmpty()? func_ : js_func_;
+	}
+
+	template<typename Factory>
+	void ctor()
+	{
+		if (create_ || destroy_)
+		{
+			assert(false && ".ctor already set");
+			throw std::runtime_error(".ctor already set");
+		}
+		create_ = create<Factory>;
+		destroy_ = destroy<Factory>;
+		func_->Inherit(js_function_template());
+	}
+
+	template<>
+	void ctor<no_factory>()
+	{
+		if (create_ || destroy_)
+		{
+			assert(false && ".ctor already set");
+			throw std::runtime_error(".ctor already set");
+		}
+		create_ = nullptr;
+		destroy_ = destroy<no_factory>;
+		js_func_.Dispose(); js_func_.Clear();
+	}
+
+	template<typename U>
+	void inherit()
+	{
+		class_singleton<U>* base = &class_singleton<U>::instance();
+
+		base_classes::iterator it = std::find_if(bases_.begin(), bases_.end(),
+			[base](base_class const& parent) { return parent.caster == base; });
+		assert(it == bases_.end() && "duplicated inheritance");
+		if (it == bases_.end())
+		{
+			bases_.push_back(base_class(base, typeid(U), &cast_to<U>));
+		}
+
+		js_function_template()->Inherit(base->class_function_template());
 	}
 
 	v8::Persistent<v8::Object> wrap_object(T* wrap)
@@ -172,42 +161,78 @@ public:
 
 	v8::Persistent<v8::Object> wrap_object(v8::Arguments const& args)
 	{
-		T* wrap = create(args, boost::is_same<Factory, v8_args_factory>());
-		return wrap_object(wrap);
+		return create_? wrap_object(create_(args)) : throw std::runtime_error("create is not allowed");
 	}
 
 	void destroy_objects()
 	{
-		detail::object_registry<T>::remove_all(&factory_type::destroy);
+		detail::object_registry<T>::remove_all(destroy_);
 	}
 
-	static void destroy_object(T* obj)
+	void destroy_object(T* obj)
 	{
-		detail::object_registry<T>::remove(obj, &factory_type::destroy);
-	}
-
-	template<typename U, typename U_Factory>
-	void inherit()
-	{
-		class_singleton<U, U_Factory>* base = &class_singleton<U, U_Factory>::instance();
-
-		base_classes::iterator it = std::find_if(bases_.begin(), bases_.end(),
-			[base](base_class const& parent) { return parent.caster == base; });
-		assert(it == bases_.end() && "duplicated inheritance");
-		if (it == bases_.end())
-		{
-			bases_.push_back(base_class(base, typeid(U), &cast_to<U>));
-		}
+		detail::object_registry<T>::remove(obj, destroy_);
 	}
 
 private:
+	typedef T* (*create_fun)(v8::Arguments const& args);
+	typedef void (*destroy_fun)(T* object);
+
+	create_fun create_;
+	destroy_fun destroy_;
+
+	template<typename Factory>
+	static T* create(v8::Arguments const& args)
+	{
+		typedef typename Factory::template instance<T> factory_type;
+		T* object = call_from_v8<factory_type>(&factory_type::create, args);
+		if (object) v8::V8::AdjustAmountOfExternalAllocatedMemory(static_cast<intptr_t>(sizeof(T)));
+		return object;
+	}
+
+	template<>
+	static T* create<v8_args_factory>(v8::Arguments const& args)
+	{
+		typedef typename v8_args_factory::template instance<T> factory_type;
+		T* object = factory_type::create(args);
+		if (object) v8::V8::AdjustAmountOfExternalAllocatedMemory(static_cast<intptr_t>(sizeof(T)));
+		return object;
+	}
+
+	template<>
+	static T* create<no_factory>(v8::Arguments const& args)
+	{
+		return nullptr;
+	}
+
+	template<typename Factory>
+	static void destroy(T* object)
+	{
+		typedef typename Factory::template instance<T> factory_type;
+		factory_type::destroy(object);
+		v8::V8::AdjustAmountOfExternalAllocatedMemory(-static_cast<intptr_t>(sizeof(T)));
+	}
+
+	static v8::Handle<v8::Value> ctor_function(v8::Arguments const& args)
+	{
+		try
+		{
+			return instance().wrap_object(args);
+		}
+		catch (std::exception const& ex)
+		{
+			return throw_ex(ex.what());
+		}
+	}
+
 	static void on_made_weak(v8::Isolate*, v8::Persistent<v8::Object>* obj, T* native)
 	{
-		destroy_object(native);
+		instance().destroy_object(native);
 //		no more need to obj->Dispose() since it's performed in destroy_object() call above
 	}
 
 	v8::Persistent<v8::FunctionTemplate> func_;
+	v8::Persistent<v8::FunctionTemplate> js_func_;
 
 private:
 // type_caster implementation
@@ -271,32 +296,48 @@ private:
 
 } // namespace detail
 
-// Interface for registering C++ classes with v8
-// T = class
-// Factory = factory for allocating c++ object
-//           by default class_ uses zero-argument constructor
-template<typename T, typename Factory = factory<> >
+template<typename Factory>
+struct ctor {};
+
+// Interface for registering C++ classes in V8
+template<typename T>
 class class_
 {
-	typedef detail::class_singleton<T, Factory> singleton;
-public:
-	class_() {}
+	typedef detail::class_singleton<T> singleton;
 
-	// Inhert class from parent
-	template<typename U, typename U_Factory>
-	explicit class_(class_<U, U_Factory>& parent)
+public:
+	class_()
 	{
-		inherit(parent);
+		singleton::instance().ctor< factory<> >();
 	}
 
+	template<typename Factory>
+	class_(ctor<Factory>)
+	{
+		singleton::instance().ctor<Factory>();
+	}
+/*
+	class_& ctor()
+	{
+		singleton::instance().ctor< factory<> >();
+		return *this;
+	}
+
+	// Define a constructor
+	template<typename Factory>
+	class_& ctor()
+	{
+		singleton::instance().ctor<Factory>();
+		return *this;
+	}
+*/
 	// Inhert class from parent
-	template<typename U, typename U_Factory>
-	class_& inherit(class_<U, U_Factory>& parent)
+	template<typename U>
+	class_& inherit()
 	{
 		static_assert(boost::is_base_and_derived<U, T>::value, "Class U should be base for class T");
 		//TODO: boost::is_convertible<T*, U*> and check for duplicates in hierarchy?
-		singleton::instance().inherit<U, U_Factory>();
-		js_function_template()->Inherit(parent.class_function_template());
+		singleton::instance().inherit<U>();
 		return *this;
 	}
 

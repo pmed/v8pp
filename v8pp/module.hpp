@@ -8,7 +8,7 @@
 
 namespace v8pp {
 
-template<typename T, typename Factory>
+template<typename T>
 class class_;
 
 class module
@@ -27,8 +27,8 @@ public:
 	}
 
 	// Set C++ class into the module
-	template<typename T, typename F>
-	module& set(char const* name, class_<T, F>& cl)
+	template<typename T>
+	module& set(char const* name, class_<T>& cl)
 	{
 		v8::HandleScope scope;
 
