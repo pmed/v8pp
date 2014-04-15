@@ -38,12 +38,17 @@ struct no_factory
 struct v8_args_factory
 {
 	template<typename C>
-	struct instance : no_factory::instance<C>
+	struct instance
 	{
 		static C* create(v8::Arguments const& args)
 		{
 			v8::V8::AdjustAmountOfExternalAllocatedMemory(static_cast<intptr_t>(sizeof(C)));
 			return new C(args);
+		}
+
+		static void destroy(C* object)
+		{
+			no_factory::instance<C>::destroy(object);
 		}
 	};
 };
@@ -79,7 +84,7 @@ template<BOOST_PP_ENUM_PARAMS(n, typename T)>
 struct factory<BOOST_PP_ENUM_PARAMS(n, T)>
 {
 	template<typename C>
-	struct instance: no_factory::instance<C>
+	struct instance
 	{
 		typedef C type;
 
@@ -92,6 +97,11 @@ struct factory<BOOST_PP_ENUM_PARAMS(n, T)>
 		{
 			v8::V8::AdjustAmountOfExternalAllocatedMemory(static_cast<intptr_t>(sizeof(C)));
 			return new C(BOOST_PP_ENUM_PARAMS(n,arg));
+		}
+
+		static void destroy(C* object)
+		{
+			no_factory::instance<C>::destroy(object);
 		}
 	};
 };

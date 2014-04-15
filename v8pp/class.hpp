@@ -208,22 +208,7 @@ public:
 			assert(false && ".ctor already set");
 			throw std::runtime_error(".ctor already set");
 		}
-		create_ = create<Factory>;
-		destroy_ = destroy<Factory>;
-		func_->Inherit(js_function_template());
-	}
-
-	template<>
-	void ctor<no_factory>()
-	{
-		if (create_ || destroy_)
-		{
-			assert(false && ".ctor already set");
-			throw std::runtime_error(".ctor already set");
-		}
-		create_ = nullptr;
-		destroy_ = destroy<no_factory>;
-		js_func_.Dispose(); js_func_.Clear();
+		use_factory(Factory());
 	}
 
 	template<typename U>
@@ -315,36 +300,35 @@ private:
 	create_fun create_;
 	destroy_fun destroy_;
 
-	template<typename Factory>
+	template<typename FactoryType>
 	static T* create(v8::Arguments const& args)
 	{
-		typedef typename Factory::template instance<T> factory_type;
-		T* object = call_from_v8<factory_type>(&factory_type::create, args);
-		if (object) v8::V8::AdjustAmountOfExternalAllocatedMemory(static_cast<intptr_t>(sizeof(T)));
-		return object;
-	}
-
-	template<>
-	static T* create<v8_args_factory>(v8::Arguments const& args)
-	{
-		typedef typename v8_args_factory::template instance<T> factory_type;
-		T* object = factory_type::create(args);
-		if (object) v8::V8::AdjustAmountOfExternalAllocatedMemory(static_cast<intptr_t>(sizeof(T)));
-		return object;
-	}
-
-	template<>
-	static T* create<no_factory>(v8::Arguments const& args)
-	{
-		return nullptr;
+		return call_from_v8<FactoryType>(&FactoryType::create, args);
 	}
 
 	template<typename Factory>
-	static void destroy(T* object)
+	void use_factory(Factory)
 	{
 		typedef typename Factory::template instance<T> factory_type;
-		factory_type::destroy(object);
-		v8::V8::AdjustAmountOfExternalAllocatedMemory(-static_cast<intptr_t>(sizeof(T)));
+		create_ = &create<factory_type>;
+		destroy_ = &factory_type::destroy;
+		func_->Inherit(js_function_template());
+	}
+
+	void use_factory(v8_args_factory)
+	{
+		typedef typename v8_args_factory::template instance<T> factory_type;
+		create_ = &factory_type::create;
+		destroy_ = &factory_type::destroy;
+		func_->Inherit(js_function_template());
+	}
+
+	void use_factory(no_factory)
+	{
+		typedef typename no_factory::template instance<T> factory_type;
+		create_ = nullptr;
+		destroy_ = &factory_type::destroy;
+		js_func_.Dispose(); js_func_.Clear();
 	}
 
 	static v8::Handle<v8::Value> ctor_function(v8::Arguments const& args)
@@ -380,8 +364,9 @@ private:
 			return true;
 		}
 
+		typedef typename base_classes::const_iterator const_iterator;
 		// fast way - search a direct parent
-		base_classes::const_iterator it = std::find_if(bases_.begin(), bases_.end(),
+		const_iterator it = std::find_if(bases_.begin(), bases_.end(),
 			[&type](base_class const& parent) {return parent.type == type; });
 		if (it != bases_.end())
 		{
@@ -390,7 +375,7 @@ private:
 		}
 
 		// slower way - walk on hierarhy
-		for (base_classes::const_iterator it = bases_.begin(), end = bases_.end(); it != end; ++it)
+		for (const_iterator it = bases_.begin(), end = bases_.end(); it != end; ++it)
 		{
 			void* p = (it->cast_fn)(static_cast<T*>(ptr));
 			if (it->caster->cast(p, type))

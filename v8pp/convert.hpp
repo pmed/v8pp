@@ -37,6 +37,9 @@ struct convertible_string : std::basic_string<Char>
 
 } // namespace detail
 
+template<typename T>
+class class_;
+
 // Generic convertor
 template<typename T, typename Enable = void>
 struct convert;
