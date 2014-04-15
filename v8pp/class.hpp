@@ -296,42 +296,38 @@ private:
 
 } // namespace detail
 
-template<typename Factory>
-struct ctor {};
-
 // Interface for registering C++ classes in V8
 template<typename T>
 class class_
 {
 	typedef detail::class_singleton<T> singleton;
-
 public:
+	// Register with default constructor
 	class_()
 	{
 		singleton::instance().ctor< factory<> >();
 	}
 
-	template<typename Factory>
-	class_(ctor<Factory>)
+	// Register with no constructor
+	explicit class_(no_ctor_t)
 	{
-		singleton::instance().ctor<Factory>();
-	}
-/*
-	class_& ctor()
-	{
-		singleton::instance().ctor< factory<> >();
-		return *this;
+		singleton::instance().ctor<no_factory>();
 	}
 
-	// Define a constructor
+	// Register with v8::Arguments constructor
+	explicit class_(v8_args_ctor_t)
+	{
+		singleton::instance().ctor<v8_args_factory>();
+	}
+
+	// Register with arbitrary constructor signature, use ctor<arg1, arg2>()
 	template<typename Factory>
-	class_& ctor()
+	explicit class_(Factory)
 	{
 		singleton::instance().ctor<Factory>();
-		return *this;
 	}
-*/
-	// Inhert class from parent
+
+	// Inhert class from class U
 	template<typename U>
 	class_& inherit()
 	{

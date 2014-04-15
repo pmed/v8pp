@@ -9,6 +9,7 @@
 #       include <boost/preprocessor/iteration/iterate.hpp>
 
 #       include <boost/mpl/vector.hpp>
+#        include <boost/mpl/void.hpp>
 
 #       include <v8.h>
 #       include "v8pp/config.hpp"
@@ -17,12 +18,7 @@
 #         define V8PP_FACTORY_MAX_SIZE V8PP_MAX_ARG_LIMIT
 #       endif
 
-#       define V8PP_FACTORY_header(z, n, data) typename BOOST_PP_CAT(T,n) = none
-
 namespace v8pp {
-
-struct none {};
-
 
 // Factory that prevents class from being constructed in JavaScript
 struct no_factory
@@ -38,29 +34,31 @@ struct no_factory
 	};
 };
 
-// primary template
-template<BOOST_PP_ENUM(V8PP_FACTORY_MAX_SIZE, V8PP_FACTORY_header, ~)>
-struct factory;
-
 // Factory that calls C++ constructor with v8::Arguments directly
 struct v8_args_factory
 {
 	template<typename C>
-	struct instance
+	struct instance : no_factory::instance<C>
 	{
 		static C* create(v8::Arguments const& args)
 		{
 			v8::V8::AdjustAmountOfExternalAllocatedMemory(static_cast<intptr_t>(sizeof(C)));
 			return new C(args);
 		}
-
-		static void destroy(C* object)
-		{
-			v8::V8::AdjustAmountOfExternalAllocatedMemory(-static_cast<intptr_t>(sizeof(C)));
-			delete object;
-		}
 	};
 };
+
+// Primary factory template
+template<BOOST_PP_ENUM_PARAMS_WITH_A_DEFAULT(V8PP_FACTORY_MAX_SIZE, typename T, boost::mpl::void_)>
+struct factory;
+
+// Enum types for no_factory and v8_args_factory tagging in class_ constructor
+enum no_ctor_t { no_ctor };
+enum v8_args_ctor_t { v8_args_ctor };
+
+// Template function to specifiy factory arguments in class_ constructor
+template<BOOST_PP_ENUM_PARAMS_Z(1, V8PP_FACTORY_MAX_SIZE, typename T)>
+factory<BOOST_PP_ENUM_PARAMS_Z(1, V8PP_FACTORY_MAX_SIZE, T)> ctor();
 
 } //namespace v8pp
 
@@ -72,21 +70,16 @@ struct v8_args_factory
 #else // BOOST_PP_IS_ITERATING
 
 #  define n BOOST_PP_ITERATION()
-#  define V8PP_FACTORY_default(z, n, data) data
 #  define V8PP_FACTORY_args(z, n, data) BOOST_PP_CAT(T,n) BOOST_PP_CAT(arg,n)
 
 namespace v8pp {
 
 // specialization pattern
 template<BOOST_PP_ENUM_PARAMS(n, typename T)>
-struct factory<
-	BOOST_PP_ENUM_PARAMS(n,T)
-	BOOST_PP_COMMA_IF(n)
-	BOOST_PP_ENUM(BOOST_PP_SUB(V8PP_FACTORY_MAX_SIZE,n), V8PP_FACTORY_default, none)
-	>
+struct factory<BOOST_PP_ENUM_PARAMS(n, T)>
 {
 	template<typename C>
-	struct instance
+	struct instance: no_factory::instance<C>
 	{
 		typedef C type;
 
@@ -100,18 +93,15 @@ struct factory<
 			v8::V8::AdjustAmountOfExternalAllocatedMemory(static_cast<intptr_t>(sizeof(C)));
 			return new C(BOOST_PP_ENUM_PARAMS(n,arg));
 		}
-
-		static void destroy(C* object)
-		{
-			v8::V8::AdjustAmountOfExternalAllocatedMemory(-static_cast<intptr_t>(sizeof(C)));
-			delete object;
-		}
 	};
 };
 
+template<BOOST_PP_ENUM_PARAMS(n, typename T)>
+inline factory<BOOST_PP_ENUM_PARAMS(n, T)>
+ctor() { return factory<BOOST_PP_ENUM_PARAMS(n, T)>(); }
+
 } // namespace v8pp
 
-#   undef V8PP_FACTORY_default
 #   undef V8PP_FACTORY_args
 #   undef n
 
