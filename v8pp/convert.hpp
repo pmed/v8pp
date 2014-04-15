@@ -17,136 +17,6 @@ namespace v8pp  {
 
 namespace detail {
 
-// Get pointer to native object
-template<typename T>
-T* get_object_ptr(v8::Handle<v8::Value> value)
-{
-	while (value->IsObject())
-	{
-		v8::Handle<v8::Object> obj = value->ToObject();
-		if (obj->InternalFieldCount() == 2)
-		{
-			void* ptr = obj->GetAlignedPointerFromInternalField(0);
-			type_caster* caster = static_cast<type_caster*>(obj->GetAlignedPointerFromInternalField(1));
-			if (caster && caster->can_cast())
-			{
-				caster->cast(ptr, typeid(T));
-			}
-			return static_cast<T*>(ptr);
-		}
-		value = obj->GetPrototype();
-	}
-	return nullptr;
-}
-
-// Native objects registry. Monostate
-template<typename T>
-class object_registry
-{
-public:
-#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
-	typedef boost::unordered_map<void*, v8::Persistent<v8::Value> > objects;
-
-	// use additional set to distiguish instances of T in the global registry
-	static boost::unordered_set<T*>& instances()
-	{
-		static boost::unordered_set<T*> instances_;
-		return instances_;
-	}
-#else
-	typedef boost::unordered_map<T*, v8::Persistent<v8::Value> > objects;
-#endif
-
-	static void add(T* object, v8::Persistent<v8::Value> value)
-	{
-#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
-		instances().insert(object);
-#endif
-		items().insert(std::make_pair(most_derived_ptr(object), value));
-	}
-
-	static void remove(T* object, void (*destroy)(T*))
-	{
-#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
-		instances().erase(object);
-#endif
-		typename objects::iterator it = items().find(most_derived_ptr(object));
-		if (it != items().end())
-		{
-			it->second.Dispose();
-			items().erase(it);
-			if (destroy)
-			{
-				destroy(object);
-			}
-		}
-	}
-
-	static void remove_all(void (*destroy)(T*))
-	{
-#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
-		while (!instances().empty())
-		{
-			remove(*instances().begin(), destroy);
-		}
-#else
-		while (!items().empty())
-		{
-			remove(items().begin()->first, destroy);
-		}
-#endif
-	}
-
-	static v8::Handle<v8::Value> find(T const* native)
-	{
-		v8::Handle<v8::Value> result;
-		typename objects::iterator it = items().find(most_derived_ptr(native));
-		if (it != items().end())
-		{
-			result = it->second;
-		}
-		return result;
-	}
-
-private:
-	object_registry();
-	~object_registry();
-	object_registry(object_registry const&);
-	object_registry& operator=(object_registry const&);
-
-private:
-	static objects& items();
-
-	template<typename U>
-	static typename boost::enable_if<boost::is_polymorphic<U>, U*>::type most_derived_ptr(U const* object)
-	{
-		return reinterpret_cast<U*>(dynamic_cast<void*>(const_cast<U*>(object)));
-	}
-
-	template<typename U>
-	static typename boost::disable_if<boost::is_polymorphic<U>, U*>::type most_derived_ptr(U const* object)
-	{
-		return const_cast<U*>(object);
-	}
-};
-
-#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
-extern V8PP_API object_registry<void>::objects global_registry_objects_;
-
-template<typename T>
-inline typename object_registry<T>::objects& object_registry<T>::items()
-{
-	return global_registry_objects_;
-}
-#else
-template<typename T>
-inline typename object_registry<T>::objects& object_registry<T>::items()
-{
-	static objects items_;
-	return items_;
-}
-#endif
-
 template<typename Iterator>
 struct is_random_access_iterator :
 	boost::is_same<
@@ -631,6 +501,28 @@ template<typename Key, typename Value, typename Less, typename Alloc>
 struct is_wrapped_class< std::map<Key, Value, Less, Alloc> > : boost::false_type {};
 
 template<typename T>
+struct convert< T*, typename boost::enable_if< is_wrapped_class<T> >::type >
+{
+	typedef T* result_type;
+	typedef typename boost::remove_cv<T>::type class_type;
+
+	static bool is_valid(v8::Handle<v8::Value> value)
+	{
+		return value->IsObject();
+	}
+
+	static T* from_v8(v8::Handle<v8::Value> value)
+	{
+		return class_<class_type>::unwrap_object(value);
+	}
+
+	static v8::Handle<v8::Value> to_v8(T const* value)
+	{
+		return class_<class_type>::find_object(value);
+	}
+};
+
+template<typename T>
 struct convert< T, typename boost::enable_if< is_wrapped_class<T> >::type >
 {
 	typedef T& result_type;
@@ -642,16 +534,16 @@ struct convert< T, typename boost::enable_if< is_wrapped_class<T> >::type >
 
 	static T& from_v8(v8::Handle<v8::Value> value)
 	{
-		if (T* obj_ptr = detail::get_object_ptr<T>(value))
+		if (T* object = convert<T*>::from_v8(value))
 		{
-			return *obj_ptr;
+			return *object;
 		}
 		throw std::runtime_error(std::string("expected C++ wrapped object ") + typeid(T).name());
 	}
 
 	static v8::Handle<v8::Value> to_v8(T const& value)
 	{
-		return detail::object_registry<T>::find(&value);
+		return convert<T*>::to_v8(&value);
 	}
 };
 
@@ -660,27 +552,6 @@ struct convert< T& > : convert<T> {};
 
 template<typename T>
 struct convert< T const& > : convert<T> {};
-
-template<typename T>
-struct convert< T*, typename boost::enable_if< is_wrapped_class<T> >::type >
-{
-	typedef T* result_type;
-
-	static bool is_valid(v8::Handle<v8::Value> value)
-	{
-		return value->IsObject();
-	}
-
-	static T* from_v8(v8::Handle<v8::Value> value)
-	{
-		return detail::get_object_ptr<T>(value);
-	}
-
-	static v8::Handle<v8::Value> to_v8(T const* value)
-	{
-		return detail::object_registry<typename boost::remove_cv<T>::type>::find(value);
-	}
-};
 
 template<typename T>
 inline typename convert<T>::result_type from_v8(v8::Handle<v8::Value> value)
