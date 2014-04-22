@@ -13,8 +13,9 @@ namespace v8pp {
 namespace detail {
 
 template<typename P>
-struct pass_direct_if : boost::is_same<v8::Arguments const&,
-	typename boost::mpl::front<typename P::arguments>::type>
+struct pass_direct_if : boost::mpl::and_<
+	boost::mpl::equal_to< boost::mpl::size<typename P::arguments>, boost::mpl::int_<1> >,
+	boost::is_same<v8::Arguments const&, typename boost::mpl::front<typename P::arguments>::type> >
 {
 };
 
