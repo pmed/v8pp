@@ -216,7 +216,7 @@ public:
 	{
 		class_singleton<U>* base = &class_singleton<U>::instance();
 
-		base_classes::iterator it = std::find_if(bases_.begin(), bases_.end(),
+		typename base_classes::iterator it = std::find_if(bases_.begin(), bases_.end(),
 			[base](base_class const& parent) { return parent.caster == base; });
 		assert(it == bases_.end() && "duplicated inheritance");
 		if (it == bases_.end())
