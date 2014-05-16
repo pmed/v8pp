@@ -424,26 +424,26 @@ public:
 	// Register with default constructor
 	class_()
 	{
-		singleton::instance().ctor< factory<> >();
+		singleton::instance().template ctor< factory<> >();
 	}
 
 	// Register with no constructor
 	explicit class_(no_ctor_t)
 	{
-		singleton::instance().ctor<no_factory>();
+		singleton::instance().template ctor<no_factory>();
 	}
 
 	// Register with v8::Arguments constructor
 	explicit class_(v8_args_ctor_t)
 	{
-		singleton::instance().ctor<v8_args_factory>();
+		singleton::instance().template ctor<v8_args_factory>();
 	}
 
 	// Register with arbitrary constructor signature, use ctor<arg1, arg2>()
 	template<typename Factory>
 	explicit class_(Factory)
 	{
-		singleton::instance().ctor<Factory>();
+		singleton::instance().template ctor<Factory>();
 	}
 
 	// Inhert class from class U
@@ -452,7 +452,7 @@ public:
 	{
 		static_assert(boost::is_base_and_derived<U, T>::value, "Class U should be base for class T");
 		//TODO: boost::is_convertible<T*, U*> and check for duplicates in hierarchy?
-		singleton::instance().inherit<U>();
+		singleton::instance().template inherit<U>();
 		return *this;
 	}
 
