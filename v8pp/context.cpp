@@ -18,7 +18,6 @@ namespace v8pp {
 namespace detail {
 
 singleton_registry::singletons singleton_registry::items_;
-object_registry<void>::objects global_registry_objects_;
 
 } // detail
 #endif

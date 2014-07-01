@@ -49,114 +49,6 @@ private:
 };
 #endif
 
-// Native objects registry. Monostate
-template<typename T>
-class object_registry
-{
-public:
-#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
-	typedef boost::unordered_map<void*, v8::Persistent<v8::Value> > objects;
-
-	// use additional set to distiguish instances of T in the global registry
-	static boost::unordered_set<T*>& instances()
-	{
-		static boost::unordered_set<T*> instances_;
-		return instances_;
-	}
-#else
-	typedef boost::unordered_map<T*, v8::Persistent<v8::Value> > objects;
-#endif
-
-	static void add(T* object, v8::Persistent<v8::Value> value)
-	{
-#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
-		instances().insert(object);
-#endif
-		items().insert(std::make_pair(most_derived_ptr(object), value));
-	}
-
-	static void remove(T* object, void (*destroy)(T*))
-	{
-#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
-		instances().erase(object);
-#endif
-		typename objects::iterator it = items().find(most_derived_ptr(object));
-		if (it != items().end())
-		{
-			it->second.Dispose();
-			items().erase(it);
-			if (destroy)
-			{
-				destroy(object);
-			}
-		}
-	}
-
-	static void remove_all(void (*destroy)(T*))
-	{
-#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
-		while (!instances().empty())
-		{
-			remove(*instances().begin(), destroy);
-		}
-#else
-		while (!items().empty())
-		{
-			remove(items().begin()->first, destroy);
-		}
-#endif
-	}
-
-	static v8::Handle<v8::Value> find(T const* native)
-	{
-		v8::Handle<v8::Value> result;
-		typename objects::iterator it = items().find(most_derived_ptr(native));
-		if (it != items().end())
-		{
-			result = it->second;
-		}
-		return result;
-	}
-
-private:
-	object_registry();
-	~object_registry();
-	object_registry(object_registry const&);
-	object_registry& operator=(object_registry const&);
-
-private:
-	static objects& items();
-
-	template<typename U>
-	static typename boost::enable_if<boost::is_polymorphic<U>, U*>::type most_derived_ptr(U const* object)
-	{
-		return reinterpret_cast<U*>(dynamic_cast<void*>(const_cast<U*>(object)));
-	}
-
-	template<typename U>
-	static typename boost::disable_if<boost::is_polymorphic<U>, U*>::type most_derived_ptr(U const* object)
-	{
-		return const_cast<U*>(object);
-	}
-};
-
-#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
-extern V8PP_API object_registry<void>::objects global_registry_objects_;
-
-template<typename T>
-inline typename object_registry<T>::objects& object_registry<T>::items()
-{
-	return global_registry_objects_;
-}
-#else
-template<typename T>
-inline typename object_registry<T>::objects& object_registry<T>::items()
-{
-	static objects items_;
-	return items_;
-}
-#endif
-
 class class_info
 {
 public:
@@ -179,6 +71,7 @@ public:
 			throw std::runtime_error(std::string("duplicated inheritance from ") + it->type->name());
 		}
 		bases_.push_back(base_class_info(info, type, cast));
+		info->derivatives_.push_back(this);
 	}
 
 	bool upcast(void*& ptr, std::type_info const& type)
@@ -212,9 +105,61 @@ public:
 		return false;
 	}
 
-private:
-	std::type_info const* type_;
+	template<typename T>
+	void add_object(T* object, v8::Persistent<v8::Value> handle)
+	{
+		assert(objects_.find(object) == objects_.end() && "duplicate object");
+		objects_.insert(std::make_pair(object, handle));
+	}
 
+	template<typename T>
+	void remove_object(T* object, void (*destroy)(T* obj))
+	{
+		objects::iterator it = objects_.find(object);
+		assert(objects_.find(object) != objects_.end() && "no object");
+		if (it != objects_.end())
+		{
+			it->second.Dispose();
+			objects_.erase(it);
+			if (destroy)
+			{
+				destroy(object);
+			}
+		}
+	}
+
+	template<typename T>
+	void remove_objects(void (*destroy)(T* obj))
+	{
+		for (objects::iterator it = objects_.begin(), end = objects_.end(); it != end; ++it)
+		{
+			it->second.Dispose();
+			if (destroy)
+			{
+				destroy(static_cast<T*>(it->first));
+			}
+		}
+		objects_.clear();
+	}
+
+	v8::Handle<v8::Value> find_object(void const* object)
+	{
+		objects::const_iterator it = objects_.find(const_cast<void*>(object));
+		if (it != objects_.end())
+		{
+			return it->second;
+		}
+
+		v8::Handle<v8::Value> result;
+		for (derivative_classes::const_iterator it = derivatives_.begin(), end = derivatives_.end();
+			it != end && result.IsEmpty(); ++it)
+		{
+			result = (*it)->find_object(object);
+		}
+		return result;
+	}
+
+private:
 	struct base_class_info
 	{
 		class_info* info;
@@ -229,9 +174,16 @@ private:
 		}
 	};
 
+	std::type_info const* type_;
+
+	typedef boost::unordered_map<void*, v8::Persistent<v8::Value> > objects;
+	objects objects_;
+
 	typedef std::vector<base_class_info> base_classes;
 	base_classes bases_;
 
+	typedef std::vector<class_info*> derivative_classes;
+	derivative_classes derivatives_;
 };
 
 template<typename T>
@@ -297,12 +249,14 @@ public:
 
 	v8::Persistent<v8::Object> wrap_external_object(T* wrap)
 	{
+		v8::HandleScope scope;
+
 		v8::Persistent<v8::Object> obj;
 		obj.Reset(v8::Isolate::GetCurrent(), func_->GetFunction()->NewInstance());
 
 		obj->SetAlignedPointerInInternalField(0, wrap);
 		obj->SetAlignedPointerInInternalField(1, this);
-		detail::object_registry<T>::add(wrap, obj);
+		class_info::add_object(wrap, obj);
 
 		return obj;
 	}
@@ -343,17 +297,17 @@ public:
 
 	v8::Handle<v8::Value> find_object(T const* obj)
 	{
-		return detail::object_registry<T>::find(obj);
+		return class_info::find_object(obj);
 	}
 
 	void destroy_objects()
 	{
-		detail::object_registry<T>::remove_all(destroy_);
+		class_info::remove_objects(destroy_);
 	}
 
 	void destroy_object(T* obj)
 	{
-		detail::object_registry<T>::remove(obj, destroy_);
+		class_info::remove_object(obj, destroy_);
 	}
 
 private:
@@ -596,11 +550,6 @@ public:
 	static void destroy_object(T* obj)
 	{
 		singleton::instance().destroy_object(obj);
-	}
-
-	static void destroy_object(v8::Handle<v8::Object> object)
-	{
-		singleton::instance().destroy_object(object);
 	}
 
 	static void destroy_objects()
