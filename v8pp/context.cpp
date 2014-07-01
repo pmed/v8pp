@@ -14,14 +14,6 @@
 
 namespace v8pp {
 
-#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
-namespace detail {
-
-singleton_registry::singletons singleton_registry::items_;
-
-} // detail
-#endif
-
 context* context::get(v8::Handle<v8::Object> obj)
 {
 	v8::Handle<v8::Value> ctx_val = obj->Get(v8::String::NewSymbol("__context"));

@@ -19,37 +19,7 @@ class class_;
 
 namespace detail {
 
-#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
-// Global singleton_registry to store class_singleton instances
-// in a single place among several DLLs
-class singleton_registry
-{
-public:
-	typedef boost::unordered_map<std::type_index, void*> singletons;
-
-	// Get existing instance or create a new one
-	template<typename T>
-	static T& get()
-	{
-		std::type_index const type_idx(typeid(T));
-		singletons::iterator it = items_.find(type_idx);
-		if ( it == items_.end())
-		{
-			it = items_.insert(std::make_pair(type_idx, new T)).first;
-		}
-		return *static_cast<T*>(it->second);
-	}
-private:
-	singleton_registry();
-	~singleton_registry();
-	singleton_registry(singleton_registry const&);
-	singleton_registry& operator=(singleton_registry const&);
-
-	static V8PP_API singletons items_;
-};
-#endif
-
-class class_info
+class class_info : boost::noncopyable
 {
 public:
 	explicit class_info(std::type_info const& type)
@@ -189,7 +159,7 @@ private:
 template<typename T>
 class class_singleton : public class_info
 {
-public:
+private:
 	class_singleton()
 		: class_info(typeid(T))
 		, func_(v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New()))
@@ -203,14 +173,54 @@ public:
 		func_->InstanceTemplate()->SetInternalFieldCount(2);
 	}
 
+public:
 	static class_singleton& instance()
 	{
-#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
-		static class_singleton& instance_ = singleton_registry::get<class_singleton>();
-#else
-		static class_singleton instance_;
-#endif
-		return instance_;
+		// In Windows class_singleton will be instantiated in each DLL where used.
+		// Thus we will have several copies for static instance_ variable below in
+		// different DLLs. To prevent this, all class_singleton instances are stored
+		// in a map with type_info = typeid(T) as a key. Fortunately, such a
+		// type_info has one single instance.
+		//
+		// But we have to have a single instance for this singletons map too.
+		// And fortunately, V8::Isolate instance allows to store a pointer to user data.
+		// We store there pointer to the singletons map.
+
+		// Thread safety is not an issue since this function should be called
+		// in the V8 thread only.
+
+		// Singletons map and class_singleton instances would never deleted.
+
+		static class_singleton* instance_ = nullptr;
+		if (!instance_)
+		{
+			// Get pointer to singletons map from v8::Isolate
+			typedef boost::unordered_map<std::type_index, void*> singletons_map;
+
+			v8::Isolate* isolate = v8::Isolate::GetCurrent();
+			singletons_map* singletons = static_cast<singletons_map*>(isolate->GetData());
+			if (!singletons)
+			{
+				// No singletons map yet, create and store it
+				singletons = new singletons_map;
+				isolate->SetData(singletons);
+			}
+
+			// Get singleton instance from the map
+			std::type_index const class_type = typeid(T);
+			singletons_map::iterator it = singletons->find(class_type);
+			if (it == singletons->end())
+			{
+				// No singleton instance, create and add it
+				instance_ = new class_singleton;
+				singletons->insert(std::make_pair(class_type, instance_));
+			}
+			else
+			{
+				instance_ = static_cast<class_singleton*>(it->second);
+			}
+		}
+		return *instance_;
 	}
 
 	v8::Persistent<v8::FunctionTemplate>& class_function_template()

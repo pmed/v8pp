@@ -30,18 +30,4 @@
 
 #define V8PP_PLUGIN_INIT extern "C" V8PP_EXPORT v8::Handle<v8::Value> V8PP_PLUGIN_INIT_PROC_NAME()
 
-#if defined(_MSC_VER) && defined(_WINDLL) && !defined(V8PP_USE_GLOBAL_OBJECTS_REGISTRY)
-	#define V8PP_USE_GLOBAL_OBJECTS_REGISTRY 1
-#endif
-
-#if V8PP_USE_GLOBAL_OBJECTS_REGISTRY
-	#ifdef V8PP_EXPORT_GLOBAL_OBJECTS_REGISTRY
-		#define V8PP_API V8PP_EXPORT
-	#else
-		#define V8PP_API V8PP_IMPORT
-	#endif
-#else
-	#define V8PP_API
-#endif
-
 #endif // V8PP_CONFIG_HPP_INCLUDED
