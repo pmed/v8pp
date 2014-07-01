@@ -245,6 +245,9 @@ public:
 		, create_()
 		, destroy_()
 	{
+		// each JavaScrpt instance has 2 internal fields:
+		//  0 - pointer to a wrapped C++ object
+		//  1 - pointer to the class_singleton
 		func_->InstanceTemplate()->SetInternalFieldCount(2);
 	}
 
@@ -292,19 +295,6 @@ public:
 		js_function_template()->Inherit(base->class_function_template());
 	}
 
-	v8::Persistent<v8::Object> wrap_object(T* wrap)
-	{
-		v8::Persistent<v8::Object> obj;
-		obj.Reset(v8::Isolate::GetCurrent(), func_->GetFunction()->NewInstance());
-
-		obj->SetAlignedPointerInInternalField(0, wrap);
-		obj->SetAlignedPointerInInternalField(1, this);
-		detail::object_registry<T>::add(wrap, obj);
-		obj.MakeWeak(wrap, on_made_weak);
-
-		return obj;
-	}
-
 	v8::Persistent<v8::Object> wrap_external_object(T* wrap)
 	{
 		v8::Persistent<v8::Object> obj;
@@ -313,6 +303,14 @@ public:
 		obj->SetAlignedPointerInInternalField(0, wrap);
 		obj->SetAlignedPointerInInternalField(1, this);
 		detail::object_registry<T>::add(wrap, obj);
+
+		return obj;
+	}
+
+	v8::Persistent<v8::Object> wrap_object(T* wrap)
+	{
+		v8::Persistent<v8::Object> obj = wrap_external_object(wrap);
+		obj.MakeWeak(wrap, on_made_weak);
 
 		return obj;
 	}
