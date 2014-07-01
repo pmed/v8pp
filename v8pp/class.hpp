@@ -1,6 +1,8 @@
 #ifndef V8PP_CLASS_HPP_INCLUDED
 #define V8PP_CLASS_HPP_INCLUDED
 
+#include <typeinfo>
+
 #include <boost/mpl/front.hpp>
 #include <boost/type_traits/is_member_object_pointer.hpp>
 #include <boost/type_traits/is_same.hpp>
@@ -155,19 +157,90 @@ inline typename object_registry<T>::objects& object_registry<T>::items()
 }
 #endif
 
-struct type_caster
+class class_info
 {
-	virtual bool can_cast() const  = 0;
-	virtual bool cast(void*& ptr, std::type_info const& type) = 0;
+public:
+	explicit class_info(std::type_info const& type)
+		: type_(&type)
+	{
+	}
+
+	typedef void* (*cast_function)(void* ptr);
+
+	bool has_bases() const { return !bases_.empty(); }
+
+	void add_base(class_info* info, std::type_info const& type, cast_function cast)
+	{
+		base_classes::iterator it = std::find_if(bases_.begin(), bases_.end(),
+			[info](base_class_info const& base) { return base.info == info; });
+		if (it != bases_.end())
+		{
+			assert(false && "duplicated inheritance");
+			throw std::runtime_error(std::string("duplicated inheritance from ") + it->type->name());
+		}
+		bases_.push_back(base_class_info(info, type, cast));
+	}
+
+	bool upcast(void*& ptr, std::type_info const& type)
+	{
+		if (bases_.empty() || type == *type_)
+		{
+			return true;
+		}
+
+		// fast way - search a direct parent
+		for (base_classes::const_iterator it = bases_.begin(), end = bases_.end(); it != end; ++it)
+		{
+			if (*it->type == *type_)
+			{
+				ptr = it->cast(ptr);
+				return true;
+			}
+		}
+
+		// slower way - walk on hierarhy
+		for (base_classes::const_iterator it = bases_.begin(), end = bases_.end(); it != end; ++it)
+		{
+			void* p = it->cast(ptr);
+			if (it->info->upcast(p, type))
+			{
+				ptr = p;
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+private:
+	std::type_info const* type_;
+
+	struct base_class_info
+	{
+		class_info* info;
+		std::type_info const* type;
+		cast_function cast;
+
+		base_class_info(class_info* info, std::type_info const& type, cast_function cast)
+			: info(info)
+			, type(&type)
+			, cast(cast)
+		{
+		}
+	};
+
+	typedef std::vector<base_class_info> base_classes;
+	base_classes bases_;
+
 };
 
 template<typename T>
-class class_singleton
-	: public type_caster
+class class_singleton : public class_info
 {
 public:
 	class_singleton()
-		: func_(v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New()))
+		: class_info(typeid(T))
+		, func_(v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New()))
 		, js_func_(v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New(&ctor_function)))
 		, create_()
 		, destroy_()
@@ -215,15 +288,7 @@ public:
 	void inherit()
 	{
 		class_singleton<U>* base = &class_singleton<U>::instance();
-
-		typename base_classes::iterator it = std::find_if(bases_.begin(), bases_.end(),
-			[base](base_class const& parent) { return parent.caster == base; });
-		assert(it == bases_.end() && "duplicated inheritance");
-		if (it == bases_.end())
-		{
-			bases_.push_back(base_class(base, typeid(U), &cast_to<U>));
-		}
-
+		add_base(base, typeid(U), &cast_to<U>);
 		js_function_template()->Inherit(base->class_function_template());
 	}
 
@@ -266,10 +331,10 @@ public:
 			if (obj->InternalFieldCount() == 2)
 			{
 				void* ptr = obj->GetAlignedPointerFromInternalField(0);
-				type_caster* caster = static_cast<type_caster*>(obj->GetAlignedPointerFromInternalField(1));
-				if (caster && caster->can_cast())
+				class_info* info = static_cast<class_info*>(obj->GetAlignedPointerFromInternalField(1));
+				if (info && info->has_bases())
 				{
-					caster->cast(ptr, typeid(T));
+					info->upcast(ptr, typeid(T));
 				}
 				return static_cast<T*>(ptr);
 			}
@@ -352,65 +417,11 @@ private:
 	v8::Persistent<v8::FunctionTemplate> func_;
 	v8::Persistent<v8::FunctionTemplate> js_func_;
 
-private:
-// type_caster implementation
-
-	bool can_cast() const { return !bases_.empty(); }
-
-	bool cast(void*& ptr, std::type_info const& type)
-	{
-		if (bases_.empty() || type == typeid(T))
-		{
-			return true;
-		}
-
-		typedef typename base_classes::const_iterator const_iterator;
-		// fast way - search a direct parent
-		const_iterator it = std::find_if(bases_.begin(), bases_.end(),
-			[&type](base_class const& parent) {return parent.type == type; });
-		if (it != bases_.end())
-		{
-			ptr = (it->cast_fn)(static_cast<T*>(ptr));
-			return true;
-		}
-
-		// slower way - walk on hierarhy
-		for (const_iterator it = bases_.begin(), end = bases_.end(); it != end; ++it)
-		{
-			void* p = (it->cast_fn)(static_cast<T*>(ptr));
-			if (it->caster->cast(p, type))
-			{
-				ptr = p;
-				return true;
-			}
-		}
-		return false;
-	}
-
-	typedef void* (*cast_fun)(T* obj);
-
 	template<typename U>
-	static void* cast_to(T* obj)
+	static void* cast_to(void* ptr)
 	{
-		return static_cast<U*>(obj);
+		return static_cast<U*>(static_cast<T*>(ptr));
 	}
-
-	struct base_class
-	{
-		type_caster* caster;
-		std::type_index type;
-		cast_fun cast_fn;
-
-		base_class(type_caster* caster, std::type_info const& type, cast_fun cast_fn)
-			: caster(caster)
-			, type(type)
-			, cast_fn(cast_fn)
-		{
-		}
-	};
-
-	typedef std::vector<base_class> base_classes;
-	base_classes bases_;
 };
 
 } // namespace detail
