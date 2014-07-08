@@ -15,7 +15,7 @@ namespace detail {
 template<typename P>
 struct pass_direct_if : boost::mpl::and_<
 	boost::mpl::equal_to< boost::mpl::size<typename P::arguments>, boost::mpl::int_<1> >,
-	boost::is_same<v8::Arguments const&, typename boost::mpl::front<typename P::arguments>::type> >
+	boost::is_same<v8::FunctionCallbackInfo<v8::Value> const&, typename boost::mpl::front<typename P::arguments>::type> >
 {
 };
 
@@ -34,60 +34,58 @@ struct is_function_pointer : boost::mpl::and_<
 
 template<typename P>
 typename boost::enable_if<pass_direct_if<P>, typename P::return_type>::type
-invoke(typename P::function_type ptr, v8::Arguments const& args)
+invoke(typename P::function_type ptr, v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	return (*ptr)(args);
 }
 
 template<typename P>
 typename boost::disable_if<pass_direct_if<P>, typename P::return_type>::type
-invoke(typename P::function_type ptr, v8::Arguments const& args)
+invoke(typename P::function_type ptr, v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	return call_from_v8<P>(ptr, args);
 }
 
 template<typename P, typename T>
 typename boost::enable_if<pass_direct_if<P>, typename P::return_type>::type
-invoke(T& obj, typename P::method_type ptr, v8::Arguments const& args)
+invoke(T& obj, typename P::method_type ptr, v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	return (obj.*ptr)(args);
 }
 
 template<typename P, typename T>
 typename boost::disable_if<pass_direct_if<P>, typename P::return_type>::type
-invoke(T& obj, typename P::method_type ptr, v8::Arguments const& args)
+invoke(T& obj, typename P::method_type ptr, v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	return call_from_v8<P>(obj, ptr, args);
 }
 
 template<typename P>
-typename boost::disable_if<is_void_return<P>, v8::Handle<v8::Value> >::type
-forward_ret(typename P::function_type ptr, const v8::Arguments& args)
+typename boost::disable_if<is_void_return<P>, void>::type
+forward_ret(typename P::function_type ptr, v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	return to_v8(invoke<P>(ptr, args));
+	args.GetReturnValue().Set(to_v8(args.GetIsolate(), invoke<P>(ptr, args)));
 }
 
 template<typename P>
-typename boost::enable_if<is_void_return<P>, v8::Handle<v8::Value> >::type
-forward_ret(typename P::function_type ptr, const v8::Arguments& args)
+typename boost::enable_if<is_void_return<P>, void>::type
+forward_ret(typename P::function_type ptr, v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	invoke<P>(ptr, args);
-	return v8::Undefined();
 }
 
 template<typename P, typename T>
-typename boost::disable_if<is_void_return<P>, v8::Handle<v8::Value> >::type
-forward_ret(T& obj, typename P::method_type ptr, v8::Arguments const& args)
+typename boost::disable_if<is_void_return<P>, void>::type
+forward_ret(T& obj, typename P::method_type ptr, v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	return to_v8(invoke<P>(obj, ptr, args));
+	args.GetReturnValue().Set(to_v8(args.GetIsolate(), invoke<P>(obj, ptr, args)));
 }
 
 template<typename P, typename T>
-typename boost::enable_if<is_void_return<P>, v8::Handle<v8::Value> >::type
-forward_ret(T& obj, typename P::method_type ptr, v8::Arguments const& args)
+typename boost::enable_if<is_void_return<P>, void>::type
+forward_ret(T& obj, typename P::method_type ptr, v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	invoke<P>(obj, ptr, args);
-	return v8::Undefined();
 }
 
 template<typename T>
@@ -109,27 +107,29 @@ public:
 };
 
 template<typename T>
-void delete_ext_data(v8::Isolate*, v8::Persistent<v8::External>* ext, T* data)
+void delete_ext_data(v8::WeakCallbackData<v8::External, T> const& data)
 {
-	delete data;
-	if (ext) ext->Dispose();
+	delete data.GetParameter();
 }
 
 template<typename T>
-typename boost::enable_if_c<sizeof(T) <= sizeof(void*), v8::Handle<v8::Value> >::type
-set_external_data(T value)
+typename boost::enable_if_c<sizeof(T) <= sizeof(void*), v8::Local<v8::Value> >::type
+set_external_data(v8::Isolate* isolate, T value)
 {
-	return v8::External::New(pointer_cast<T>(value));
+	return v8::External::New(isolate, pointer_cast<T>(value));
 }
 
 template<typename T>
-typename boost::disable_if_c<sizeof(T) <= sizeof(void*), v8::Handle<v8::Value> >::type
-set_external_data(T value)
+typename boost::disable_if_c<sizeof(T) <= sizeof(void*), v8::Local<v8::Value> >::type
+set_external_data(v8::Isolate* isolate, T value)
 {
 	T* data = new T(value);
-	v8::Persistent<v8::External> ext;
-	ext.Reset(v8::Isolate::GetCurrent(), v8::External::New(data));
-	ext.MakeWeak(data, delete_ext_data<T>);
+
+	v8::Local<v8::External> ext = v8::External::New(isolate, data);
+
+	v8::Persistent<v8::External> pext(isolate, ext);
+	pext.SetWeak(data, delete_ext_data<T>);
+
 	return ext;
 }
 
@@ -151,39 +151,41 @@ get_external_data(v8::Handle<v8::Value> value)
 } // namespace detail
 
 template<typename P>
-v8::Handle<v8::Value> forward_function(const v8::Arguments& args)
+void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	v8::HandleScope scope;
+	v8::Isolate* isolate = args.GetIsolate();
+	v8::HandleScope scope(isolate);
 
 	try
 	{
 		typedef typename P::function_type function_type;
 		function_type ptr = detail::get_external_data<function_type>(args.Data());
-		return scope.Close(detail::forward_ret<P>(ptr, args));
+		detail::forward_ret<P>(ptr, args);
 	}
 	catch (std::exception const& ex)
 	{
-		return scope.Close(throw_ex(ex.what()));
+		args.GetReturnValue().Set(throw_ex(isolate, ex.what()));
 	}
 }
 
 template<typename P>
-v8::Handle<v8::Value> forward_mem_function(v8::Arguments const& args)
+void forward_mem_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	v8::HandleScope scope;
+	v8::Isolate* isolate = args.GetIsolate();
+	v8::HandleScope scope(isolate);
 
 	try
 	{
 		typedef typename P::class_type class_type;
 		typedef typename P::method_type method_type;
 
-		class_type& obj = from_v8<class_type&>(args.Holder());
+		class_type& obj = from_v8<class_type&>(args.GetIsolate(), args.Holder());
 		method_type ptr = detail::get_external_data<method_type>(args.Data());
-		return scope.Close(detail::forward_ret<P>(obj, ptr, args));
+		detail::forward_ret<P>(obj, ptr, args);
 	}
 	catch (std::exception const& ex)
 	{
-		return scope.Close(throw_ex(ex.what()));
+		args.GetReturnValue().Set(throw_ex(isolate, ex.what()));
 	}
 }
 

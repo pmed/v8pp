@@ -21,14 +21,14 @@
 namespace v8pp {
 
 // Factory that prevents class from being constructed in JavaScript
-struct no_factory
+struct no_ctor_factory
 {
 	template<typename C>
 	struct instance
 	{
-		static void destroy(C* object)
+		static void destroy(v8::Isolate* isolate, C* object)
 		{
-			v8::V8::AdjustAmountOfExternalAllocatedMemory(-static_cast<intptr_t>(sizeof(C)));
+			isolate->AdjustAmountOfExternalAllocatedMemory(-static_cast<intptr_t>(sizeof(C)));
 			delete object;
 		}
 	};
@@ -40,15 +40,15 @@ struct v8_args_factory
 	template<typename C>
 	struct instance
 	{
-		static C* create(v8::Arguments const& args)
+		static C* create(v8::FunctionCallbackInfo<v8::Value> const& args)
 		{
-			v8::V8::AdjustAmountOfExternalAllocatedMemory(static_cast<intptr_t>(sizeof(C)));
+			args.GetIsolate()->AdjustAmountOfExternalAllocatedMemory(static_cast<intptr_t>(sizeof(C)));
 			return new C(args);
 		}
 
-		static void destroy(C* object)
+		static void destroy(v8::Isolate* isolate, C* object)
 		{
-			no_factory::instance<C>::destroy(object);
+			no_ctor_factory::instance<C>::destroy(isolate, object);
 		}
 	};
 };
@@ -75,7 +75,6 @@ factory<BOOST_PP_ENUM_PARAMS_Z(1, V8PP_FACTORY_MAX_SIZE, T)> ctor();
 #else // BOOST_PP_IS_ITERATING
 
 #  define n BOOST_PP_ITERATION()
-#  define V8PP_FACTORY_args(z, n, data) BOOST_PP_CAT(T,n) BOOST_PP_CAT(arg,n)
 
 namespace v8pp {
 
@@ -89,19 +88,19 @@ struct factory<BOOST_PP_ENUM_PARAMS(n, T)>
 		typedef C type;
 
 		// mimics to function_ptr<> to allow usage with with call_from_v8()
-		typedef boost::mpl::vector<BOOST_PP_ENUM_PARAMS(n,T)> arguments;
+		typedef boost::mpl::vector<v8::Isolate* BOOST_PP_ENUM_TRAILING_PARAMS(n, T)> arguments;
 		typedef C* return_type;
-		typedef C* (*function_type)(BOOST_PP_ENUM(n, V8PP_FACTORY_args, ~));
+		typedef C* (*function_type)(v8::Isolate* isolate BOOST_PP_ENUM_TRAILING_BINARY_PARAMS(n, T, arg));
 
-		static C* create(BOOST_PP_ENUM(n, V8PP_FACTORY_args, ~))
+		static C* create(v8::Isolate* isolate BOOST_PP_ENUM_TRAILING_BINARY_PARAMS(n, T, arg))
 		{
-			v8::V8::AdjustAmountOfExternalAllocatedMemory(static_cast<intptr_t>(sizeof(C)));
-			return new C(BOOST_PP_ENUM_PARAMS(n,arg));
+			isolate->AdjustAmountOfExternalAllocatedMemory(static_cast<intptr_t>(sizeof(C)));
+			return new C(BOOST_PP_ENUM_PARAMS(n, arg));
 		}
 
-		static void destroy(C* object)
+		static void destroy(v8::Isolate* isolate, C* object)
 		{
-			no_factory::instance<C>::destroy(object);
+			no_ctor_factory::instance<C>::destroy(isolate, object);
 		}
 	};
 };
@@ -112,7 +111,6 @@ ctor() { return factory<BOOST_PP_ENUM_PARAMS(n, T)>(); }
 
 } // namespace v8pp
 
-#   undef V8PP_FACTORY_args
 #   undef n
 
 #endif
