@@ -33,7 +33,7 @@ protected:
 	std::fstream stream_;
 };
 
-class file_writer : file_base
+class file_writer : public file_base
 {
 public:
 	explicit file_writer(v8::Arguments const& args)
@@ -70,7 +70,7 @@ public:
 	}
 };
 
-class file_reader : file_base
+class file_reader : public file_base
 {
 public:
 	explicit file_reader(char const* path)
@@ -104,7 +104,7 @@ v8::Handle<v8::Value> init()
 	v8::HandleScope scope;
 
 	// no_factory argument disallow object creation in JavaScript
-	v8pp::class_<file_base, v8pp::no_factory> file_base_class;
+	v8pp::class_<file_base> file_base_class(v8pp::no_ctor);
 	file_base_class
 		.set("close", &file_base::close)
 		.set("good", &file_base::good)
@@ -115,8 +115,9 @@ v8::Handle<v8::Value> init()
 	// file_writer inherits from file_base_class
 	// Second template argument is a factory. v8_args_factory passes
 	// the v8::Arguments directly to constructor of file_writer
-	v8pp::class_<file_writer, v8pp::v8_args_factory> file_writer_class(file_base_class);
+	v8pp::class_<file_writer> file_writer_class(v8pp::v8_args_ctor);
 	file_writer_class
+		.inherit<file_base>()
 		.set("open", &file_writer::open)
 		.set("print", &file_writer::print)
 		.set("println", &file_writer::println)
@@ -125,8 +126,9 @@ v8::Handle<v8::Value> init()
 	// file_reader also inherits from file_base
 	// This factory calls file_reader(char const* ) constructor.
 	// It converts v8::Arguments to the appropriate C++ arguments.
-	v8pp::class_< file_reader, v8pp::factory<char const*> > file_reader_class(file_base_class);
+	v8pp::class_<file_reader> file_reader_class(v8pp::ctor<char const*>());
 	file_reader_class
+		.inherit<file_base>()
 		.set("open", &file_reader::open)
 		.set("getln", &file_reader::getline)
 		;
