@@ -30,8 +30,6 @@ public:
 
 	typedef void* (*cast_function)(void* ptr);
 
-	bool has_bases() const { return !bases_.empty(); }
-
 	void add_base(class_info* info, std::type_info const& type, cast_function cast)
 	{
 		base_classes::iterator it = std::find_if(bases_.begin(), bases_.end(),
@@ -45,9 +43,9 @@ public:
 		info->derivatives_.emplace_back(this);
 	}
 
-	bool upcast(void*& ptr, std::type_info const& type)
+	bool cast(void*& ptr, std::type_info const& type)
 	{
-		if (bases_.empty() || type == *type_)
+		if (type == *type_)
 		{
 			return true;
 		}
@@ -55,7 +53,7 @@ public:
 		// fast way - search a direct parent
 		for (base_classes::const_iterator it = bases_.begin(), end = bases_.end(); it != end; ++it)
 		{
-			if (*it->type == *type_)
+			if (*it->type == type)
 			{
 				ptr = it->cast(ptr);
 				return true;
@@ -66,7 +64,7 @@ public:
 		for (base_classes::const_iterator it = bases_.begin(), end = bases_.end(); it != end; ++it)
 		{
 			void* p = it->cast(ptr);
-			if (it->info->upcast(p, type))
+			if (it->info->cast(p, type))
 			{
 				ptr = p;
 				return true;
@@ -289,11 +287,10 @@ public:
 			{
 				void* ptr = obj->GetAlignedPointerFromInternalField(0);
 				class_info* info = static_cast<class_info*>(obj->GetAlignedPointerFromInternalField(1));
-				if (info && info->has_bases())
+				if (info && info->cast(ptr, typeid(T)))
 				{
-					info->upcast(ptr, typeid(T));
+					return static_cast<T*>(ptr);
 				}
-				return static_cast<T*>(ptr);
 			}
 			value = obj->GetPrototype();
 		}
