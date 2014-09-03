@@ -7,6 +7,8 @@
 #       include <boost/mpl/vector.hpp>
 #       include <boost/mpl/at.hpp>
 #       include <boost/mpl/size.hpp>
+#       include <boost/mpl/equal_to.hpp>
+#       include <boost/mpl/greater.hpp>
 
 #       include <v8.h>
 
