@@ -98,13 +98,13 @@ struct r_property_impl
 		"property get function must be either T() or \
 			void (v8::PropertyCallbackInfo<v8::Value> const&) or T(v8::Isolate*)");
 
+	template<typename T>
 	static void get_impl(v8::Local<v8::String> name, v8::PropertyCallbackInfo<v8::Value> const& info,
 		boost::mpl::false_ is_fun_ptr, getter_tag)
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
-		typedef typename GetProto::class_type class_type;
-		class_type& obj = v8pp::from_v8<class_type&>(isolate, info.This());
+		T& obj = v8pp::from_v8<T&>(isolate, info.This());
 
 		Property const prop = detail::get_external_data<Property>(info.Data());
 		assert(prop.get_);
@@ -120,13 +120,13 @@ struct r_property_impl
 		}
 	}
 
+	template<typename T>
 	static void get_impl(v8::Local<v8::String> name, v8::PropertyCallbackInfo<v8::Value> const& info,
 		boost::mpl::false_ is_fun_ptr, direct_getter_tag)
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
-		typedef typename GetProto::class_type class_type;
-		class_type& obj = v8pp::from_v8<class_type&>(isolate, info.This());
+		T& obj = v8pp::from_v8<T&>(isolate, info.This());
 
 		Property const prop = detail::get_external_data<Property>(info.Data());
 		assert(prop.get_);
@@ -142,13 +142,13 @@ struct r_property_impl
 		}
 	}
 
+	template<typename T>
 	static void get_impl(v8::Local<v8::String> name, v8::PropertyCallbackInfo<v8::Value> const& info,
 		boost::mpl::false_ is_fun_ptr, isolate_getter_tag)
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
-		typedef typename GetProto::class_type class_type;
-		class_type& obj = v8pp::from_v8<class_type&>(isolate, info.This());
+		T& obj = v8pp::from_v8<T&>(isolate, info.This());
 
 		Property const prop = detail::get_external_data<Property>(info.Data());
 		assert(prop.get_);
@@ -164,6 +164,7 @@ struct r_property_impl
 		}
 	}
 
+	template<typename T>
 	static void get_impl(v8::Local<v8::String> name, v8::PropertyCallbackInfo<v8::Value> const& info,
 		boost::mpl::true_ is_fun_ptr, getter_tag)
 	{
@@ -183,6 +184,7 @@ struct r_property_impl
 		}
 	}
 
+	template<typename T>
 	static void get_impl(v8::Local<v8::String> name, v8::PropertyCallbackInfo<v8::Value> const& info,
 		boost::mpl::true_ is_fun_ptr, direct_getter_tag)
 	{
@@ -202,6 +204,7 @@ struct r_property_impl
 		}
 	}
 
+	template<typename T>
 	static void get_impl(v8::Local<v8::String> name, v8::PropertyCallbackInfo<v8::Value> const& info,
 		boost::mpl::true_ is_fun_ptr, isolate_getter_tag)
 	{
@@ -221,11 +224,13 @@ struct r_property_impl
 		}
 	}
 
+	template<typename T>
 	static void get(v8::Local<v8::String> name, v8::PropertyCallbackInfo<v8::Value> const& info)
 	{
-		get_impl(name, info, is_function_pointer<Get>(), select_getter_tag<GetProto>());
+		get_impl<T>(name, info, is_function_pointer<Get>(), select_getter_tag<GetProto>());
 	}
 
+	template<typename T>
 	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info)
 	{
 		assert(false && "never should be called");
@@ -253,13 +258,13 @@ struct rw_property_impl : r_property_impl<Get, Set>
 		typename boost::remove_const<typename SetProto::class_type>::type>::value,
 		"property get and set methods must be in the same class");
 
+	template<typename T>
 	static void set_impl(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
 		boost::mpl::false_ is_fun_ptr, setter_tag)
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
-		typedef typename SetProto::class_type class_type;
-		class_type& obj = v8pp::from_v8<class_type&>(isolate, info.This());
+		T& obj = v8pp::from_v8<T&>(isolate, info.This());
 
 		Property const prop = detail::get_external_data<Property>(info.Data());
 		assert(prop.set_);
@@ -276,13 +281,13 @@ struct rw_property_impl : r_property_impl<Get, Set>
 		}
 	}
 
+	template<typename T>
 	static void set_impl(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
 		boost::mpl::false_ is_fun_ptr, direct_setter_tag)
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
-		typedef typename SetProto::class_type class_type;
-		class_type& obj = v8pp::from_v8<class_type&>(isolate, info.This());
+		T& obj = v8pp::from_v8<T&>(isolate, info.This());
 
 		Property const prop = detail::get_external_data<Property>(info.Data());
 		assert(prop.set_);
@@ -298,13 +303,13 @@ struct rw_property_impl : r_property_impl<Get, Set>
 		}
 	}
 
+	template<typename T>
 	static void set_impl(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
 		boost::mpl::false_ is_fun_ptr, isolate_setter_tag)
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
-		typedef typename SetProto::class_type class_type;
-		class_type& obj = v8pp::from_v8<class_type&>(isolate, info.This());
+		T& obj = v8pp::from_v8<T&>(isolate, info.This());
 
 		Property const prop = detail::get_external_data<Property>(info.Data());
 		assert(prop.set_);
@@ -321,6 +326,7 @@ struct rw_property_impl : r_property_impl<Get, Set>
 		}
 	}
 
+	template<typename T>
 	static void set_impl(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
 		boost::mpl::true_ is_fun_ptr, setter_tag)
 	{
@@ -341,6 +347,7 @@ struct rw_property_impl : r_property_impl<Get, Set>
 		}
 	}
 
+	template<typename T>
 	static void set_impl(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
 		boost::mpl::true_ is_fun_ptr, direct_setter_tag)
 	{
@@ -360,6 +367,7 @@ struct rw_property_impl : r_property_impl<Get, Set>
 		}
 	}
 
+	template<typename T>
 	static void set_impl(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
 		boost::mpl::true_ is_fun_ptr, isolate_setter_tag)
 	{
@@ -380,9 +388,10 @@ struct rw_property_impl : r_property_impl<Get, Set>
 		}
 	}
 
+	template<typename T>
 	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info)
 	{
-		set_impl(name, value, info, is_function_pointer<Set>(), select_setter_tag<SetProto>());
+		set_impl<T>(name, value, info, is_function_pointer<Set>(), select_setter_tag<SetProto>());
 	}
 };
 

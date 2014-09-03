@@ -76,8 +76,8 @@ public:
 	{
 		v8::HandleScope scope(isolate_);
 
-		v8::AccessorGetterCallback getter = property_<GetFunction, SetFunction>::get;
-		v8::AccessorSetterCallback setter = property_<GetFunction, SetFunction>::set;
+		v8::AccessorGetterCallback getter = property_<GetFunction, SetFunction>::template get<void>;
+		v8::AccessorSetterCallback setter = property_<GetFunction, SetFunction>::template set<void>;
 		if (property_<GetFunction, SetFunction>::is_readonly)
 		{
 			setter = NULL;

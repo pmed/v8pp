@@ -496,8 +496,8 @@ public:
 	{
 		v8::HandleScope scope(isolate());
 
-		v8::AccessorGetterCallback getter = property_<GetMethod, SetMethod>::get;
-		v8::AccessorSetterCallback setter = property_<GetMethod, SetMethod>::set;
+		v8::AccessorGetterCallback getter = property_<GetMethod, SetMethod>::template get<T>;
+		v8::AccessorSetterCallback setter = property_<GetMethod, SetMethod>::template set<T>;
 		if (property_<GetMethod, SetMethod>::is_readonly)
 		{
 			setter = NULL;
