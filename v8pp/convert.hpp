@@ -90,11 +90,13 @@ struct convert< std::basic_string<Char, Traits, Alloc>,
 	{
 		if (sizeof(Char) == 1)
 		{
-			return v8::String::NewFromUtf8(isolate, reinterpret_cast<char const*>(value.data()), v8::String::kNormalString, value.length());
+			return v8::String::NewFromUtf8(isolate, reinterpret_cast<char const*>(value.data()),
+				v8::String::kNormalString, static_cast<int>(value.length()));
 		}
 		else
 		{
-			return v8::String::NewFromTwoByte(isolate, reinterpret_cast<uint16_t const*>(value.data()), v8::String::kNormalString, value.length());
+			return v8::String::NewFromTwoByte(isolate, reinterpret_cast<uint16_t const*>(value.data()),
+				v8::String::kNormalString, static_cast<int>(value.length()));
 		}
 	}
 };
@@ -340,7 +342,7 @@ struct convert< std::map<Key, Value, Less, Alloc> >
 		{
 			v8::Handle<v8::Value> key = prop_names->Get(i);
 			v8::Handle<v8::Value> val = object->Get(key);
-			result.insert(std::make_pair(convert<Key>::from_v8(key), convert<Value>::from_v8(isolate, val)));
+			result.insert(std::make_pair(convert<Key>::from_v8(isolate, key), convert<Value>::from_v8(isolate, val)));
 		}
 		return result;
 	}
@@ -550,7 +552,7 @@ inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char const* str, int l
 	return v8::String::NewFromUtf8(isolate, str, v8::String::kNormalString, len);
 }
 
-#if OS(WINDOWS)
+#ifdef WIN32
 inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, wchar_t const* str, int len = -1)
 {
 	return v8::String::NewFromTwoByte(isolate, reinterpret_cast<uint16_t const*>(str), v8::String::kNormalString, len);
