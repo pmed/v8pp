@@ -36,9 +36,9 @@ protected:
 class file_writer : public file_base
 {
 public:
-	explicit file_writer(v8::Arguments const& args)
+	explicit file_writer(v8::FunctionCallbackInfo<v8::Value> const& args)
 	{
-		if ( args.Length() == 1)
+		if (args.Length() == 1)
 		{
 			v8::String::Utf8Value str(args[0]);
 			open(*str);
@@ -51,9 +51,9 @@ public:
 		return stream_.good();
 	}
 
-	void print(v8::Arguments const& args)
+	void print(v8::FunctionCallbackInfo<v8::Value> const& args)
 	{
-		v8::HandleScope scope;
+		v8::HandleScope scope(args.GetIsolate());
 
 		for (int i = 0; i < args.Length(); ++i)
 		{
@@ -63,7 +63,7 @@ public:
 		}
 	}
 
-	void println(v8::Arguments const& args)
+	void println(v8::FunctionCallbackInfo<v8::Value> const& args)
 	{
 		print(args);
 		stream_ << std::endl;
@@ -84,27 +84,27 @@ public:
 		return stream_.good();
 	}
 
-	v8::Handle<v8::Value> getline()
+	v8::Handle<v8::Value> getline(v8::Isolate* isolate)
 	{
 		if ( stream_.good() && ! stream_.eof())
 		{
 			std::string line;
 			std::getline(stream_, line);
-			return v8pp::to_v8(line);
+			return v8pp::to_v8(isolate, line);
 		}
 		else
 		{
-			return v8::Undefined();
+			return v8::Undefined(isolate);
 		}
 	}
 };
 
-v8::Handle<v8::Value> init()
+v8::Handle<v8::Value> init(v8::Isolate* isolate)
 {
-	v8::HandleScope scope;
+	v8::EscapableHandleScope scope(isolate);
 
 	// no_factory argument disallow object creation in JavaScript
-	v8pp::class_<file_base> file_base_class(v8pp::no_ctor);
+	v8pp::class_<file_base> file_base_class(isolate, v8pp::no_ctor);
 	file_base_class
 		.set("close", &file_base::close)
 		.set("good", &file_base::good)
@@ -115,7 +115,7 @@ v8::Handle<v8::Value> init()
 	// file_writer inherits from file_base_class
 	// Second template argument is a factory. v8_args_factory passes
 	// the v8::Arguments directly to constructor of file_writer
-	v8pp::class_<file_writer> file_writer_class(v8pp::v8_args_ctor);
+	v8pp::class_<file_writer> file_writer_class(isolate, v8pp::v8_args_ctor);
 	file_writer_class
 		.inherit<file_base>()
 		.set("open", &file_writer::open)
@@ -126,7 +126,7 @@ v8::Handle<v8::Value> init()
 	// file_reader also inherits from file_base
 	// This factory calls file_reader(char const* ) constructor.
 	// It converts v8::Arguments to the appropriate C++ arguments.
-	v8pp::class_<file_reader> file_reader_class(v8pp::ctor<char const*>());
+	v8pp::class_<file_reader> file_reader_class(isolate, v8pp::ctor<char const*>());
 	file_reader_class
 		.inherit<file_base>()
 		.set("open", &file_reader::open)
@@ -135,19 +135,19 @@ v8::Handle<v8::Value> init()
 
 	// Create a module to add classes and functions to and return a
 	// new instance of the module to be embedded into the v8 context
-	v8pp::module m;
+	v8pp::module m(isolate);
 	m.set("rename", rename)
 	 .set("mkdir", mkdir)
 	 .set("writer", file_writer_class)
 	 .set("reader", file_reader_class)
 		;
 
-	return scope.Close(m.new_instance());
+	return scope.Escape(m.new_instance());
 }
 
 } // namespace file
 
-V8PP_PLUGIN_INIT
+V8PP_PLUGIN_INIT()
 {
-	return file::init();
+	return file::init(isolate);
 }

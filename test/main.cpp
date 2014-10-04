@@ -52,7 +52,10 @@ int main(int argc, char const * argv[])
 
 	try
 	{
-		v8pp::context ctx(lib_path);
+		v8::Isolate* isolate = v8::Isolate::New();
+		v8::Isolate::Scope scope(isolate);
+
+		v8pp::context ctx(isolate, lib_path);
 		for (script_names::const_iterator it = scripts.begin(), end = scripts.end(); it != end; ++it)
 		{
 			ctx.run(it->c_str());
