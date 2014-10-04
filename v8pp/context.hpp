@@ -20,9 +20,12 @@ class module;
 class context
 {
 public:
-	explicit context(boost::filesystem::path const& lib_path = V8PP_PLUGIN_LIB_PATH);
+	explicit context(v8::Isolate* isolate, boost::filesystem::path const& lib_path = V8PP_PLUGIN_LIB_PATH);
 
 	~context();
+
+	// V8 isolate associated with this context
+	v8::Isolate* isolate() { return isolate_; }
 
 	// Run file, returns false on failure, use v8::TryCatch around it to find out why.
 	bool run(char const *filename);
@@ -34,16 +37,20 @@ public:
 	void add(char const *name, module& m);
 
 private:
+	v8::Isolate* isolate_;
 	v8::Persistent<v8::Context> impl_;
 
-	typedef std::pair<void*, v8::Persistent<v8::Value> > dynamic_module;
+	struct dynamic_module
+	{
+		void* handle;
+		v8::CopyablePersistentTraits<v8::Value>::CopyablePersistent exports;
+	};
 	typedef boost::unordered_map<std::string, dynamic_module> dynamic_modules;
 
-	static context* get(v8::Handle<v8::Object> obj);
-	static v8::Handle<v8::Value> load_module(const v8::Arguments& args);
+	static void load_module(v8::FunctionCallbackInfo<v8::Value> const& args);
 	void unload_modules();
 
-	static v8::Handle<v8::Value> run_file(const v8::Arguments& args);
+	static void run_file(v8::FunctionCallbackInfo<v8::Value> const& args);
 
 	dynamic_modules modules_;
 	boost::filesystem::path lib_path_;
