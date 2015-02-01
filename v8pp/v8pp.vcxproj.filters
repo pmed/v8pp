@@ -8,13 +8,13 @@
     <ClInclude Include="config.hpp" />
     <ClInclude Include="module.hpp" />
     <ClInclude Include="throw_ex.hpp" />
-    <ClInclude Include="to_v8.hpp" />
-    <ClInclude Include="from_v8.hpp" />
     <ClInclude Include="class.hpp" />
     <ClInclude Include="factory.hpp" />
     <ClInclude Include="call_from_v8.hpp" />
     <ClInclude Include="call_v8.hpp" />
-    <ClInclude Include="proto.hpp" />
-    <ClInclude Include="forward.hpp" />
+    <ClInclude Include="utility.hpp" />
+    <ClInclude Include="convert.hpp" />
+    <ClInclude Include="property.hpp" />
+    <ClInclude Include="function.hpp" />
   </ItemGroup>
 </Project>

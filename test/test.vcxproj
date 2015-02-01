@@ -20,11 +20,25 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="test_call_from_v8.cpp" />
+    <ClCompile Include="test_call_v8.cpp" />
+    <ClCompile Include="test_class.cpp" />
+    <ClCompile Include="test_context.cpp" />
+    <ClCompile Include="test_convert.cpp" />
+    <ClCompile Include="test_factory.cpp" />
+    <ClCompile Include="test_function.cpp" />
+    <ClCompile Include="test_module.cpp" />
+    <ClCompile Include="test_property.cpp" />
+    <ClCompile Include="test_throw_ex.cpp" />
+    <ClCompile Include="test_utility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\v8pp\v8pp.vcxproj">
       <Project>{2e6cfc3d-5a08-4909-8d1a-3469063d169b}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="test.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{69779536-9D04-48B2-B853-4E1B761A7A50}</ProjectGuid>

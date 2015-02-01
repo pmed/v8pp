@@ -1,72 +1,135 @@
 #include <iostream>
+#include <algorithm>
+#include <memory>
 #include <vector>
 #include <exception>
-#include <cstdlib>
+#include <string>
 
-#include <v8.h>
+#include "v8.h"
+#include "libplatform/libplatform.h"
 
-#include <boost/program_options.hpp>
+#include "v8pp/context.hpp"
 
-#include <v8pp/context.hpp>
+void run_tests()
+{
+	void test_utility();
+	void test_context();
+	void test_convert();
+	void test_throw_ex();
+	void test_call_v8();
+	void test_call_from_v8();
+	void test_function();
+	void test_factory();
+	void test_module();
+	void test_class();
+	void test_property();
+
+	test_class();
+
+	std::pair<char const*, void(*)()> tests[] =
+	{
+		{ "test_utility", test_utility },
+		{ "test_context", test_context },
+		{ "test_convert", test_convert },
+		{ "test_throw_ex", test_throw_ex },
+		{ "test_function", test_function },
+		{ "test_call_v8", test_call_v8 },
+		{ "test_call_from_v8", test_call_from_v8 },
+		{ "test_factory", test_factory },
+		{ "test_module", test_module },
+		{ "test_class", test_class },
+		{ "test_property", test_property },
+	};
+
+	for (auto const& test : tests)
+	{
+		std::cout << test.first;
+		try
+		{
+			test.second();
+			std::cout << " ok";
+		}
+		catch (std::exception const& ex)
+		{
+			std::cerr << " error: " << ex.what();
+		}
+		std::cout << std::endl;
+	}
+}
 
 int main(int argc, char const * argv[])
 {
-	typedef std::vector<std::string> script_names;
-	script_names scripts;
+	std::vector<std::string> scripts;
 	std::string lib_path;
+	bool do_tests = false;
 
-	namespace po = boost::program_options;
-	po::options_description desc("allowed options");
-	po::positional_options_description positionals;
-	positionals.add("script", -1);
-	desc.add_options()
-		("help,h", "print this help message.")
-		("script,s", po::value(&scripts), "script to run.")
-		("library-path,l", po::value(&lib_path)->default_value(V8PP_PLUGIN_LIB_PATH), "path containing plugin libraries.")
-		;
-
-	po::variables_map vm;
-	try
+	for (int i = 1; i < argc; ++i)
 	{
-		po::store(po::command_line_parser(argc, argv).options(desc).positional(positionals).run(), vm);
-	}
-	catch (po::error const& ex)
-	{
-		std::cerr << ex.what() << '\n' << desc << std::endl;
-		return EXIT_FAILURE;
-	}
-
-	if ( vm.count("help") )
-	{
-		std::cout << desc << std::endl;
-		return EXIT_SUCCESS;
-	}
-
-	po::notify(vm);
-
-	if ( scripts.empty() )
-	{
-		std::cerr << "must supply at least one script\n" << std::endl;
-		return EXIT_FAILURE;
-	}
-
-	try
-	{
-		v8::Isolate* isolate = v8::Isolate::New();
-		v8::Isolate::Scope scope(isolate);
-
-		v8pp::context ctx(isolate, lib_path);
-		for (script_names::const_iterator it = scripts.begin(), end = scripts.end(); it != end; ++it)
+		std::string const arg = argv[i];
+		if (arg == "-h" || arg == "--help")
 		{
-			ctx.run(it->c_str());
+			std::cout << "Usage: " << argv[0] << " [arguments] [script]\n"
+				<< "Arguments:\n"
+				<< "  --help,-h           Print this message and exit\n"
+				<< "  --version,-v        Print V8 version\n"
+				<< "  --lib-path <dir>    Set <dir> for plugins library path\n"
+				<< "  --run-tests         Run library tests\n"
+				;
+			return EXIT_SUCCESS;
+		}
+		else if (arg == "-v" || arg == "--version")
+		{
+			std::cout << "V8 version " << v8::V8::GetVersion() << std::endl;
+		}
+		else if (arg == "--lib-path")
+		{
+			++i;
+			if (i < argc) lib_path = argv[i];
+		}
+		else if (arg == "--run-tests")
+		{
+			do_tests = true;
+		}
+		else
+		{
+			scripts.push_back(arg);
+		}
+	}
+
+	v8::V8::InitializeICU();
+	v8::Platform* platform = v8::platform::CreateDefaultPlatform();
+	v8::V8::InitializePlatform(platform);
+	v8::V8::Initialize();
+
+	if (do_tests || scripts.empty())
+	{
+		run_tests();
+	}
+
+	int result = EXIT_SUCCESS;
+	try
+	{
+		v8pp::context context;
+
+		if (!lib_path.empty())
+		{
+			context.set_lib_path(lib_path);
+		}
+		for (std::string const& script : scripts)
+		{
+			v8::HandleScope scope(context.isolate());
+			context.run_file(script);
 		}
 	}
 	catch (std::exception & ex)
 	{
 		std::cerr << ex.what() << std::endl;
-		return EXIT_FAILURE;
+		result = EXIT_FAILURE;
 	}
 
 	v8::V8::Dispose();
-	return EXIT_SUCCESS;
+	v8::V8::ShutdownPlatform();
+	delete platform;
+
+	return result;
 }

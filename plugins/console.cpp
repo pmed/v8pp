@@ -1,5 +1,6 @@
 #include <iostream>
 #include <v8pp/module.hpp>
+#include <v8pp/config.hpp>
 
 namespace console {
 
@@ -19,13 +20,13 @@ void log(v8::FunctionCallbackInfo<v8::Value> const& args)
 v8::Handle<v8::Value> init(v8::Isolate* isolate)
 {
 	v8pp::module m(isolate);
-	m.set("log", log);
+	m.set("log", &log);
 	return m.new_instance();
 }
 
 } // namespace console
 
-V8PP_PLUGIN_INIT()
+V8PP_PLUGIN_INIT(v8::Isolate* isolate)
 {
 	return console::init(isolate);
 }

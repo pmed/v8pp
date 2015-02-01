@@ -1,10 +1,6 @@
 #ifndef V8PP_CONFIG_HPP_INCLUDED
 #define V8PP_CONFIG_HPP_INCLUDED
 
-#include <boost/preprocessor/stringize.hpp>
-
-#define V8PP_MAX_ARG_LIMIT 10
-
 #define V8PP_PLUGIN_LIB_PATH "./"
 
 #define V8PP_PLUGIN_INIT_PROC_NAME v8pp_module_init
@@ -28,6 +24,6 @@
 	#define V8PP_IMPORT
 #endif
 
-#define V8PP_PLUGIN_INIT() extern "C" V8PP_EXPORT v8::Handle<v8::Value> V8PP_PLUGIN_INIT_PROC_NAME(v8::Isolate* isolate)
+#define V8PP_PLUGIN_INIT(isolate) extern "C" V8PP_EXPORT v8::Handle<v8::Value> V8PP_PLUGIN_INIT_PROC_NAME(isolate)
 
 #endif // V8PP_CONFIG_HPP_INCLUDED

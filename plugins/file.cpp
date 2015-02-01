@@ -1,29 +1,19 @@
 #include <v8pp/module.hpp>
 #include <v8pp/class.hpp>
+#include <v8pp/config.hpp>
 
 #include <fstream>
-#include <boost/filesystem/operations.hpp>
 
 namespace file {
 
 bool rename(char const* src, char const* dest)
 {
-	boost::system::error_code err;
-	boost::filesystem::rename(src, dest, err);
-	return !err;
-}
-
-bool mkdir(char const* name)
-{
-	boost::system::error_code err;
-	boost::filesystem::create_directories(name, err);
-	return !err;
+	return std::rename(src, dest) == 0;
 }
 
 class file_base
 {
 public:
-
 	bool is_open() const { return stream_.is_open(); }
 	bool good() const { return stream_.good(); }
 	bool eof() const { return stream_.eof(); }
@@ -103,8 +93,8 @@ v8::Handle<v8::Value> init(v8::Isolate* isolate)
 {
 	v8::EscapableHandleScope scope(isolate);
 
-	// no_factory argument disallow object creation in JavaScript
-	v8pp::class_<file_base> file_base_class(isolate, v8pp::no_ctor);
+	// file_base binding, no .ctor() specified, object creation disallowed in JavaScript
+	v8pp::class_<file_base> file_base_class(isolate);
 	file_base_class
 		.set("close", &file_base::close)
 		.set("good", &file_base::good)
@@ -112,22 +102,22 @@ v8::Handle<v8::Value> init(v8::Isolate* isolate)
 		.set("eof", &file_base::eof)
 		;
 
+	// .ctor<> template arguments declares types of file_writer constructor
 	// file_writer inherits from file_base_class
-	// Second template argument is a factory. v8_args_factory passes
-	// the v8::Arguments directly to constructor of file_writer
-	v8pp::class_<file_writer> file_writer_class(isolate, v8pp::v8_args_ctor);
+	v8pp::class_<file_writer> file_writer_class(isolate);
 	file_writer_class
+		.ctor<v8::FunctionCallbackInfo<v8::Value> const&>()
 		.inherit<file_base>()
 		.set("open", &file_writer::open)
 		.set("print", &file_writer::print)
 		.set("println", &file_writer::println)
 		;
 
-	// file_reader also inherits from file_base
-	// This factory calls file_reader(char const* ) constructor.
-	// It converts v8::Arguments to the appropriate C++ arguments.
-	v8pp::class_<file_reader> file_reader_class(isolate, v8pp::ctor<char const*>());
+	// .ctor<> template arguments declares types of file_reader constructor.
+	// file_base inherits from file_base_class
+	v8pp::class_<file_reader> file_reader_class(isolate);
 	file_reader_class
+		.ctor<char const*>()
 		.inherit<file_base>()
 		.set("open", &file_reader::open)
 		.set("getln", &file_reader::getline)
@@ -136,8 +126,7 @@ v8::Handle<v8::Value> init(v8::Isolate* isolate)
 	// Create a module to add classes and functions to and return a
 	// new instance of the module to be embedded into the v8 context
 	v8pp::module m(isolate);
-	m.set("rename", rename)
-	 .set("mkdir", mkdir)
+	m.set("rename", &rename)
 	 .set("writer", file_writer_class)
 	 .set("reader", file_reader_class)
 		;
@@ -147,7 +136,7 @@ v8::Handle<v8::Value> init(v8::Isolate* isolate)
 
 } // namespace file
 
-V8PP_PLUGIN_INIT()
+V8PP_PLUGIN_INIT(v8::Isolate* isolate)
 {
 	return file::init(isolate);
 }

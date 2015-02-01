@@ -1,57 +1,59 @@
-#ifndef V8PP_PERSISTENT_PTR_HPP_INCLUDED
-#define V8PP_PERSISTENT_PTR_HPP_INCLUDED
+#ifndef V8PP_PERSISTENT_HPP_INCLUDED
+#define V8PP_PERSISTENT_HPP_INCLUDED
 
-#include <cassert>
+#include <v8.h>
 
-#include <boost/config.hpp>
 #include "v8pp/convert.hpp"
 
 namespace v8pp {
 
-/// Moveable unique persistent
+/// Moveable unique V8 persistent handle.
+/// Due to v8::UniquePersistent has no move constructor
+/// and assign operator defined, it cannot be stored in
+/// std::map, std::unordered_map.
+/// To resolve this issue add move support in dervied class.
+/// See https://groups.google.com/d/topic/v8-users/KV_LZqz41Ac/discussion
 template<typename T>
-struct persistent : public v8::UniquePersistent<T>
+struct moveable_persistent : public v8::UniquePersistent<T>
 {
-	typedef v8::UniquePersistent<T> base_class;
+	using base_class = v8::UniquePersistent<T>;
 
-	persistent()
+	moveable_persistent()
 		: base_class()
 	{
 	}
 
 	template<typename S>
-	persistent(v8::Isolate* isolate, v8::Handle<S> const& handle)
+	moveable_persistent(v8::Isolate* isolate, v8::Handle<S> const& handle)
 		: base_class(isolate, handle)
 	{
 	}
 
 	template<typename S>
-	persistent(v8::Isolate* isolate, v8::PersistentBase<S> const& handle)
+	moveable_persistent(v8::Isolate* isolate, v8::PersistentBase<S> const& handle)
 		: base_class(isolate, handle)
 	{
 	}
 
-#ifndef BOOST_NO_CXX11_DELETED_FUNCTIONS
-	persistent(persistent const&) = delete;
-	persistent& operator=(persistent const&) = delete;
-#endif
-
-	persistent(persistent&& src)
+	moveable_persistent(moveable_persistent&& src)
 		: base_class(src.Pass())
 	{
 	}
 
-	persistent& operator=(persistent&& src)
+	moveable_persistent& operator=(moveable_persistent&& src)
 	{
 		if (&src != this)
-		{
+		{	
 			base_class::operator=(src.Pass());
 		}
 		return *this;
 	}
+
+	moveable_persistent(moveable_persistent const&) = delete;
+	moveable_persistent& operator=(moveable_persistent const&) = delete;
 };
 
-/// Pointer to C++ object wrapped in V8 with Persistent handle
+/// Pointer to C++ object wrapped in V8 with v8::UniquePersistent handle
 template<typename T>
 class persistent_ptr
 {
@@ -109,8 +111,7 @@ public:
 			value_ = value;
 			if (value_)
 			{
-				handle_.Reset(isolate, v8pp::to_v8(isolate, value_));
-				assert(!handle_.IsEmpty());
+				handle_.Reset(isolate, to_v8(isolate, value_));
 			}
 		}
 	}
@@ -152,9 +153,11 @@ public:
 
 private:
 	T* value_;
-	v8pp::persistent<v8::Value> handle_;
+	v8::UniquePersistent<v8::Value> handle_;
 };
 
 } // namespace v8pp
 
-#endif // V8PP_PERSISTENT_PTR_HPP_INCLUDED
+#endif // V8PP_PERSISTENT_HPP_INCLUDED
+
+

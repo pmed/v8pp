@@ -2,58 +2,72 @@
 #define V8PP_CONTEXT_HPP_INCLUDED
 
 #include <string>
-#include <utility>
-
-#include <boost/filesystem/path.hpp>
-#include <boost/noncopyable.hpp>
-#include <boost/unordered_map.hpp>
+#include <map>
 
 #include <v8.h>
 
-#include "v8pp/config.hpp"
+#include "v8pp/convert.hpp"
 
 namespace v8pp {
 
 class module;
 
-// V8 context
+template<typename T>
+class class_;
+
+/// V8 isolate and context wrapper
 class context
 {
 public:
-	explicit context(v8::Isolate* isolate, boost::filesystem::path const& lib_path = V8PP_PLUGIN_LIB_PATH);
-
+	/// Create context with optional existing v8::Isolate
+	explicit context(v8::Isolate* isolate = nullptr);
 	~context();
 
-	// V8 isolate associated with this context
+	/// V8 isolate associated with this context
 	v8::Isolate* isolate() { return isolate_; }
 
-	// Run file, returns false on failure, use v8::TryCatch around it to find out why.
-	bool run(char const *filename);
+	/// Library search path
+	std::string const& lib_path() const { return lib_path_; }
 
-	// Same as run but for use inside a pre-existing handle scope.
-	bool run_in_scope(char const *filename);
+	/// Set new library search path
+	void set_lib_path(std::string const& lib_path) { lib_path_ = lib_path; }
 
-	// Add module to the context
-	void add(char const *name, module& m);
+	/// Run script file, returns script result
+	/// or empty handle on failure, use v8::TryCatch around it to find out why.
+	/// Must be invoked in a v8::HandleScope
+	v8::Handle<v8::Value> run_file(std::string const& filename);
+
+	/// The same as run_file but uses string as the script source
+	v8::Handle<v8::Value> run_script(std::string const& source, std::string const& filename = "");
+
+	/// Set a V8 value in the context global object with specified name
+	context& set(char const* name, v8::Handle<v8::Value> value);
+
+	/// Set module to the context global object
+	context& set(char const *name, module& m);
+
+	/// Set class to the context global object
+	template<typename T>
+	context& set(char const* name, class_<T>& cl)
+	{
+		v8::HandleScope scope(isolate_);
+		cl.class_function_template()->SetClassName(v8pp::to_v8(isolate_, name));
+		return set(name, cl.js_function_template()->GetFunction());
+	}
 
 private:
+	bool own_isolate_;
 	v8::Isolate* isolate_;
 	v8::Persistent<v8::Context> impl_;
 
-	struct dynamic_module
-	{
-		void* handle;
-		v8::CopyablePersistentTraits<v8::Value>::CopyablePersistent exports;
-	};
-	typedef boost::unordered_map<std::string, dynamic_module> dynamic_modules;
+	struct dynamic_module;
+	using dynamic_modules = std::map<std::string, dynamic_module>;
 
 	static void load_module(v8::FunctionCallbackInfo<v8::Value> const& args);
-	void unload_modules();
-
 	static void run_file(v8::FunctionCallbackInfo<v8::Value> const& args);
 
 	dynamic_modules modules_;
-	boost::filesystem::path lib_path_;
+	std::string lib_path_;
 };
 
 } // namespace v8pp

@@ -2,6 +2,7 @@
 #define V8PP_THROW_EX_HPP_INCLUDED
 
 #include <string>
+#include <vector>
 
 #include <v8.h>
 

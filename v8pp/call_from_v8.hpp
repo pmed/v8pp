@@ -1,145 +1,184 @@
-#ifndef BOOST_PP_IS_ITERATING
-#   ifndef V8PP_CALL_FROM_V8_HPP_INCLUDED
-#   define V8PP_CALL_FROM_V8_HPP_INCLUDED
-#       include <boost/preprocessor/repetition.hpp>
-#       include <boost/preprocessor/iteration/iterate.hpp>
+#ifndef V8PP_CALL_FROM_V8_HPP_INCLUDED
+#define V8PP_CALL_FROM_V8_HPP_INCLUDED
 
-#       include <boost/mpl/vector.hpp>
-#       include <boost/mpl/at.hpp>
-#       include <boost/mpl/size.hpp>
-#       include <boost/mpl/equal_to.hpp>
-#       include <boost/mpl/greater.hpp>
+#include <functional>
 
-#       include <v8.h>
+#include <v8.h>
 
-#       include "v8pp/config.hpp"
-#       include "v8pp/convert.hpp"
-
-#       ifndef V8PP_CALL_FROM_V8_MAX_SIZE
-#         define V8PP_CALL_FROM_V8_MAX_SIZE V8PP_MAX_ARG_LIMIT
-#       endif
-
-namespace v8pp {
-
-namespace detail {
-
-template <typename P, size_t N>
-struct call_from_v8_helper_function;
-
-template <typename P, typename T, size_t N>
-struct call_from_v8_helper_mem_function;
-
-template<typename P>
-struct isolate_is_first_arg : boost::mpl::and_<
-	boost::mpl::greater< boost::mpl::size<typename P::arguments>, boost::mpl::int_<0> >,
-	boost::is_same<v8::Isolate*, typename boost::mpl::at_c<typename P::arguments, 0>::type> >
-{};
-
-} // namespace detail
-
-template<typename P>
-typename P::return_type
-call_from_v8(typename P::function_type ptr, v8::FunctionCallbackInfo<v8::Value> const& args)
-{
-	typedef typename P::arguments args_tl;
-	typedef typename detail::isolate_is_first_arg<P> pass_isolate;
-
-	enum { arg_count = boost::mpl::size<args_tl>::value - pass_isolate::value };
-
-	if (args.Length() != arg_count)
-	{
-		throw std::runtime_error("argument count does not match function definition");
-	}
-
-	return detail::call_from_v8_helper_function<P, arg_count>::exec(ptr, args, pass_isolate());
-}
-
-template<typename P, typename T>
-typename P::return_type
-call_from_v8(T& obj, typename P::method_type ptr, v8::FunctionCallbackInfo<v8::Value> const& args)
-{
-	typedef typename P::arguments args_tl;
-	typedef typename detail::isolate_is_first_arg<P> pass_isolate;
-
-	enum { arg_count = boost::mpl::size<args_tl>::value - pass_isolate::value };
-
-	if (args.Length() != arg_count)
-	{
-		throw std::runtime_error("argument count does not match function definition");
-	}
-
-	return detail::call_from_v8_helper_mem_function<P, T, arg_count>::exec(obj, ptr, args, pass_isolate());
-}
-
-} // namespace v8pp
-
-#       define BOOST_PP_ITERATION_LIMITS (0, V8PP_CALL_FROM_V8_MAX_SIZE - 1)
-#       define BOOST_PP_FILENAME_1       "v8pp/call_from_v8.hpp"
-#       include BOOST_PP_ITERATE()
-#   endif // V8PP_CALL_FROM_V8_HPP_INCLUDED
-
-#else // BOOST_PP_IS_ITERATING
-
-#  define n BOOST_PP_ITERATION()
-#  define V8PP_CALL_V8_from_v8_args(z, n, data) v8pp::from_v8<typename boost::mpl::at_c<args_tl, n + data>::type>(isolate, args[ n ])
+#include "v8pp/convert.hpp"
+#include "v8pp/utility.hpp"
 
 namespace v8pp { namespace detail {
 
-template<typename P>
-struct call_from_v8_helper_function<P, n>
+template<typename F, size_t Offset = 0>
+struct call_from_v8_traits
 {
-	static typename P::return_type
-	exec(typename P::function_type ptr, v8::FunctionCallbackInfo<v8::Value> const& args, boost::mpl::false_ pass_isolate)
+	static bool const is_mem_fun = std::is_member_function_pointer<F>::value;
+	using arguments = typename function_traits<F>::arguments;
+
+	static size_t const arg_count = std::tuple_size<arguments>::value - is_mem_fun - Offset;
+
+	template<size_t Index, bool>
+	struct tuple_element
 	{
-		v8::Isolate* isolate = args.GetIsolate();
-		typedef typename P::arguments args_tl;
-		(void)args;
-		(void)isolate;
-		(void)pass_isolate;
-		return (*ptr)(BOOST_PP_ENUM(n, V8PP_CALL_V8_from_v8_args, 0));
+		using type = typename std::tuple_element<Index, arguments>::type;
+	};
+
+	template<size_t Index>
+	struct tuple_element<Index, false>
+	{
+		using type = void;
+	};
+
+	template<size_t Index>
+	using arg_type = typename tuple_element<Index + is_mem_fun,
+		Index < (arg_count + Offset)>::type;
+
+	template<size_t Index>
+	using convert_type = typename convert<arg_type<Index>>::from_type;
+
+	template<size_t Index>
+	static convert_type<Index>
+	arg_from_v8(v8::FunctionCallbackInfo<v8::Value> const& args)
+	{
+		return convert<arg_type<Index>>::from_v8(args.GetIsolate(), args[Index - Offset]);
 	}
 
-	static typename P::return_type
-	exec(typename P::function_type ptr, v8::FunctionCallbackInfo<v8::Value> const& args, boost::mpl::true_ pass_isolate)
+	static void check(v8::FunctionCallbackInfo<v8::Value> const& args)
 	{
-		v8::Isolate* isolate = args.GetIsolate();
-		typedef typename P::arguments args_tl;
-		(void)args;
-		(void)isolate;
-		(void)pass_isolate;
-		return (*ptr)(isolate BOOST_PP_ENUM_TRAILING(n, V8PP_CALL_V8_from_v8_args, 1));
+		if (args.Length() != arg_count)
+		{
+			throw std::runtime_error("argument count does not match function definition");
+		}
 	}
 };
 
-template<typename P, typename T>
-struct call_from_v8_helper_mem_function<P, T, n>
+template<typename F>
+using isolate_arg_call_traits = call_from_v8_traits<F, 1>;
+
+template<typename F, size_t Offset = 0>
+struct v8_args_call_traits : call_from_v8_traits<F, Offset>
 {
-	static typename P::return_type
-	exec(T& obj, typename P::method_type ptr, v8::FunctionCallbackInfo<v8::Value> const& args, boost::mpl::false_ pass_isolate)
+	template<size_t Index>
+	using arg_type = v8::FunctionCallbackInfo<v8::Value> const&;
+
+	template<size_t Index>
+	using convert_type = v8::FunctionCallbackInfo<v8::Value> const&;
+
+	template<size_t Index>
+	static v8::FunctionCallbackInfo<v8::Value> const&
+	arg_from_v8(v8::FunctionCallbackInfo<v8::Value> const& args)
 	{
-		v8::Isolate* isolate = args.GetIsolate();
-		typedef typename P::arguments args_tl;
-		(void)args;
-		(void)isolate;
-		(void)pass_isolate;
-		return (obj.*ptr)(BOOST_PP_ENUM(n, V8PP_CALL_V8_from_v8_args, 0));
+		return args;
 	}
 
-	static typename P::return_type
-	exec(T& obj, typename P::method_type ptr, v8::FunctionCallbackInfo<v8::Value> const& args, boost::mpl::true_ pass_isolate)
+	static void check(v8::FunctionCallbackInfo<v8::Value> const&)
 	{
-		v8::Isolate* isolate = args.GetIsolate();
-		typedef typename P::arguments args_tl;
-		(void)args;
-		(void)isolate;
-		(void)pass_isolate;
-		return (obj.*ptr)(isolate BOOST_PP_ENUM_TRAILING(n, V8PP_CALL_V8_from_v8_args, 1));
 	}
 };
 
-}} // namespace v8pp::detail
+template<typename F>
+using isolate_v8_args_call_traits = v8_args_call_traits<F, 1>;
 
-#   undef V8PP_CALL_V8_from_v8_args
-#   undef n
+template<typename F, size_t Offset>
+using is_direct_args = std::integral_constant<bool,
+	call_from_v8_traits<F>::arg_count == (Offset + 1) &&
+	std::is_same<typename call_from_v8_traits<F>::template arg_type<Offset>,
+		v8::FunctionCallbackInfo<v8::Value> const&>::value>;
 
-#endif
+template<typename F>
+using is_first_arg_isolate = std::integral_constant<bool,
+	call_from_v8_traits<F>::arg_count != 0 &&
+	std::is_same<typename call_from_v8_traits<F>::template arg_type<0>,
+		v8::Isolate*>::value>;
+
+/*
+template<typename F>
+using select_call_traits = typename std::conditional<is_direct_args<F>::value,
+	v8_args_call_traits<F>,
+	typename std::conditional<is_first_arg_isolate<F>::value,
+		isolate_arg_call_traits<F>,
+		call_from_v8_traits<F>
+	>::type
+>::type;
+*/
+
+template<typename F>
+using select_call_traits = typename std::conditional<is_first_arg_isolate<F>::value,
+	typename std::conditional<is_direct_args<F, 1>::value,
+		isolate_v8_args_call_traits<F>, isolate_arg_call_traits<F>>::type,
+	typename std::conditional<is_direct_args<F, 0>::value,
+		v8_args_call_traits<F>, call_from_v8_traits<F>>::type
+>::type;
+
+template<typename F, typename CallTraits, size_t ...Indices>
+typename function_traits<F>::return_type
+call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
+	CallTraits, index_sequence<Indices...>)
+{
+	return func(CallTraits::template arg_from_v8<Indices>(args)...);
+}
+
+template<typename T, typename F, typename CallTraits, size_t ...Indices>
+typename function_traits<F>::return_type
+call_from_v8_impl(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
+	CallTraits, index_sequence<Indices...>)
+{
+	return (obj.*func)(CallTraits::template arg_from_v8<Indices>(args)...);
+}
+
+template<typename F, size_t ...Indices>
+typename function_traits<F>::return_type
+call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
+	isolate_arg_call_traits<F>, index_sequence<Indices...>)
+{
+	return func(args.GetIsolate(), isolate_arg_call_traits<F>::template arg_from_v8<Indices + 1>(args)...);
+}
+
+template<typename T, typename F, size_t ...Indices>
+typename function_traits<F>::return_type
+call_from_v8_impl(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
+	isolate_arg_call_traits<F>, index_sequence<Indices...>)
+{
+	return (obj.*func)(args.GetIsolate(), isolate_arg_call_traits<F>::template arg_from_v8<Indices + 1>(args)...);
+}
+
+template<typename F, size_t ...Indices>
+typename function_traits<F>::return_type
+call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
+	isolate_v8_args_call_traits<F>, index_sequence<Indices...>)
+{
+	return func(args.GetIsolate(), args);
+}
+
+template<typename T, typename F, size_t ...Indices>
+typename function_traits<F>::return_type
+call_from_v8_impl(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
+	isolate_v8_args_call_traits<F>, index_sequence<Indices...>)
+{
+	return (obj.*func)(args.GetIsolate(), args);
+}
+
+template<typename F>
+typename function_traits<F>::return_type
+call_from_v8(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args)
+{
+	using call_traits = select_call_traits<F>;
+	call_traits::check(args);
+	return call_from_v8_impl(std::forward<F>(func), args,
+		call_traits(), make_index_sequence<call_traits::arg_count>());
+}
+
+template<typename T, typename F>
+typename function_traits<F>::return_type
+call_from_v8(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args)
+{
+	using call_traits = select_call_traits<F>;
+	call_traits::check(args);
+	return call_from_v8_impl(obj, std::forward<F>(func), args,
+		call_traits(), make_index_sequence<call_traits::arg_count>());
+}
+
+}} // v8pp::detail
+
+#endif // V8PP_CALL_FROM_V8_HPP_INCLUDED

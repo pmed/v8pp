@@ -1,6 +1,6 @@
-cxx = g++
+cxx = c++
 cxxflags = -Wall -Wextra -Wno-return-type-c-linkage -std=c++11 -fPIC -I. -I./v8pp
-ldflags = -L. -lv8pp -lv8 -lboost_system -lboost_program_options -lboost_filesystem -ldl
+ldflags = -L. -lv8pp -lv8 -ldl
 
 rule cxx
   command = $cxx $cxxflags -c $in -o $out
@@ -18,12 +18,23 @@ rule plugin
   command = $cxx $cxxflags $in -o $out $ldflags -shared
   description = plugin $out
 
-build v8pp_test: link test/main.o || libv8pp.a file.so console.so
+build v8pp_test: link test/main.o test/test_call_from_v8.o test/test_call_v8.o test/test_class.o test/test_context.o test/test_convert.o test/test_factory.o test/test_function.o test/test_module.o test/test_property.o test/test_throw_ex.o test/test_utility.o || libv8pp.a file.so console.so
 
 build libv8pp.a: ar v8pp/context.o
 build console.so: plugin plugins/console.cpp || libv8pp.a
 build file.so: plugin plugins/file.cpp || libv8pp.a
 
 build v8pp/context.o: cxx v8pp/context.cpp
-build test/main.o: cxx test/main.cpp
 
+build test/main.o: cxx test/main.cpp
+build test/test_call_from_v8.o: cxx test/test_call_from_v8.cpp
+build test/test_call_v8.o: cxx test/test_call_v8.cpp
+build test/test_class.o: cxx test/test_class.cpp
+build test/test_context.o: cxx test/test_context.cpp
+build test/test_convert.o: cxx test/test_convert.cpp
+build test/test_factory.o: cxx test/test_factory.cpp
+build test/test_function.o: cxx test/test_function.cpp
+build test/test_module.o: cxx test/test_module.cpp
+build test/test_property.o: cxx test/test_property.cpp
+build test/test_throw_ex.o: cxx test/test_throw_ex.cpp
+build test/test_utility.o: cxx test/test_utility.cpp

@@ -1,27 +1,40 @@
-
-#include "v8pp/class.hpp"
 #include "v8pp/context.hpp"
+#include "v8pp/config.hpp"
 #include "v8pp/convert.hpp"
-#include "v8pp/throw_ex.hpp"
+#include "v8pp/function.hpp"
 #include "v8pp/module.hpp"
+#include "v8pp/throw_ex.hpp"
 
 #include <fstream>
 
 #if defined(WIN32)
 #include <windows.h>
+static char const path_sep = '\\';
 #else
 #include <dlfcn.h>
+static char const path_sep = '/';
 #endif
+
+#define STRINGIZE(s) STRINGIZE0(s)
+#define STRINGIZE0(s) #s
 
 namespace v8pp {
 
-static const int32_t context_slot = 1;
-
-static context* get_context(std::string const& function_name, v8::Isolate* isolate)
+struct context::dynamic_module
 {
-	context* ctx = static_cast<context*>(isolate->GetData(context_slot));
-	return ctx ? ctx : throw std::runtime_error(function_name + ": context is set up incorrectly");
-}
+	void* handle;
+	v8::UniquePersistent<v8::Value> exports;
+
+	dynamic_module() = default;
+	dynamic_module(dynamic_module&& other)
+		: handle(other.handle)
+		, exports(std::move(other.exports))
+	{
+		other.handle = nullptr;
+	}
+
+	dynamic_module(dynamic_module const&) = delete;
+};
 
 void context::load_module(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
@@ -31,30 +44,38 @@ void context::load_module(v8::FunctionCallbackInfo<v8::Value> const& args)
 	v8::Local<v8::Value> result;
 	try
 	{
-		if (args.Length() != 1 || !args[0]->IsString())
+		std::string const name = from_v8<std::string>(isolate, args[0], "");
+		if (name.empty())
 		{
 			throw std::runtime_error("load_module: require module name string argument");
 		}
 
-		std::string const name = *v8::String::Utf8Value(args[0]);
-
-		context* ctx = get_context("load_module", isolate);
+		context* ctx = detail::get_external_data<context*>(args.Data());
+		context::dynamic_modules::iterator it = ctx->modules_.find(name);
 
 		// check if module is already loaded
-		context::dynamic_modules::iterator it = ctx->modules_.find(name);
 		if (it != ctx->modules_.end())
 		{
 			result = v8::Local<v8::Value>::New(isolate, it->second.exports);
 		}
 		else
 		{
-			boost::filesystem::path filename = ctx->lib_path_ / name;
-			filename.replace_extension(V8PP_PLUGIN_SUFFIX);
+			std::string filename = name;
+			if (!ctx->lib_path_.empty())
+			{
+				filename = ctx->lib_path_ + path_sep + name;
+			}
+			std::string const suffix = V8PP_PLUGIN_SUFFIX;
+			if (filename.size() >= suffix.size()
+				&& filename.compare(filename.size() - suffix.size(), suffix.size(), suffix) != 0)
+			{
+				filename += suffix;
+			}
 
 			dynamic_module module;
 #if defined(WIN32)
 			UINT const prev_error_mode = SetErrorMode(SEM_NOOPENFILEERRORBOX);
-			module.handle = LoadLibraryW(filename.native().c_str());
+			module.handle = LoadLibraryA(filename.c_str());
 			::SetErrorMode(prev_error_mode);
 #else
 			module.handle = dlopen(filename.c_str(), RTLD_LAZY);
@@ -62,28 +83,24 @@ void context::load_module(v8::FunctionCallbackInfo<v8::Value> const& args)
 
 			if (!module.handle)
 			{
-				throw std::runtime_error("load_module(" + name + "): could not load shared library "
-					+ filename.string());
+				throw std::runtime_error("load_module(" + name + "): could not load shared library " + filename);
 			}
-
 #if defined(WIN32)
-			void *sym = ::GetProcAddress((HMODULE)module.handle, BOOST_PP_STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
+			void *sym = ::GetProcAddress((HMODULE)module.handle, STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
 #else
-			void *sym = dlsym(module.handle, BOOST_PP_STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
+			void *sym = dlsym(module.handle, STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
 #endif
-
 			if (!sym)
 			{
 				throw std::runtime_error("load_module(" + name + "): initialization function "
-					BOOST_PP_STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME) " not found in " + filename.string());
+					STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME) " not found in " + filename);
 			}
 
-			typedef v8::Handle<v8::Value>(*module_init_proc)(v8::Isolate*);
+			using module_init_proc = v8::Handle<v8::Value>(*)(v8::Isolate*);
 			module_init_proc init_proc = reinterpret_cast<module_init_proc>(sym);
 			result = init_proc(isolate);
 			module.exports.Reset(isolate, result);
-
-			ctx->modules_.emplace(name, module);
+			ctx->modules_.emplace(name, std::move(module));
 		}
 	}
 	catch (std::exception const& ex)
@@ -91,21 +108,6 @@ void context::load_module(v8::FunctionCallbackInfo<v8::Value> const& args)
 		result = throw_ex(isolate, ex.what());
 	}
 	args.GetReturnValue().Set(scope.Escape(result));
-}
-
-void context::unload_modules()
-{
-	for (dynamic_modules::iterator it = modules_.begin(), end = modules_.end(); it != end; ++it)
-	{
-		dynamic_module& module = it->second;
-		module.exports.Reset();
-#if defined(WIN32)
-		::FreeLibrary((HMODULE)module.handle);
-#else
-		dlclose(module.handle);
-#endif
-	}
-	modules_.clear();
 }
 
 void context::run_file(v8::FunctionCallbackInfo<v8::Value> const& args)
@@ -116,15 +118,14 @@ void context::run_file(v8::FunctionCallbackInfo<v8::Value> const& args)
 	v8::Local<v8::Value> result;
 	try
 	{
-		if (args.Length() != 1 || !args[0]->IsString())
+		std::string const filename = from_v8<std::string>(isolate, args[0], "");
+		if (filename.empty())
 		{
 			throw std::runtime_error("run_file: require filename string argument");
 		}
 
-		context* ctx = get_context("load_module", isolate);
-
-		v8::String::Utf8Value const filename(args[0]);
-		result = ctx->run(*filename) ? v8::True(isolate) : v8::False(isolate);
+		context* ctx = detail::get_external_data<context*>(args.Data());
+		result = to_v8(isolate, ctx->run_file(filename));
 	}
 	catch (std::exception const& ex)
 	{
@@ -133,66 +134,94 @@ void context::run_file(v8::FunctionCallbackInfo<v8::Value> const& args)
 	args.GetReturnValue().Set(scope.Escape(result));
 }
 
-context::context(v8::Isolate* isolate, boost::filesystem::path const& lib_path)
-	: isolate_(isolate)
-	, lib_path_(lib_path)
+context::context(v8::Isolate* isolate)
 {
-	if (isolate->GetData(context_slot))
+	own_isolate_ = (isolate == nullptr);
+	if (own_isolate_)
 	{
-		throw std::runtime_error("Isolate data has already set");
+		isolate = v8::Isolate::New();
+		isolate->Enter();
 	}
-	isolate->SetData(context_slot, this);
+	isolate_ = isolate;
 
-	v8::HandleScope scope(isolate);
+	v8::HandleScope scope(isolate_);
 
-	v8::Handle<v8::ObjectTemplate> global_template = v8::ObjectTemplate::New(isolate);
+	v8::Handle<v8::Value> data = detail::set_external_data(isolate_, this);
+	v8::Handle<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate_);
 
-	global_template->Set(to_v8(isolate, "require"), v8::FunctionTemplate::New(isolate, load_module));
-	global_template->Set(to_v8(isolate, "run"), v8::FunctionTemplate::New(isolate, run_file));
+	global->Set(isolate_, "require", v8::FunctionTemplate::New(isolate_, context::load_module, data));
+	global->Set(isolate_, "run", v8::FunctionTemplate::New(isolate_, context::run_file, data));
 
-	impl_.Reset(isolate, v8::Context::New(isolate, nullptr, global_template));
+	v8::Handle<v8::Context> impl = v8::Context::New(isolate_, nullptr, global);
+	impl->Enter();
+	impl_.Reset(isolate_, impl);
 }
 
 context::~context()
 {
-	if (!impl_.IsEmpty())
+	for (auto& kv : modules_)
 	{
-		unload_modules();
-		impl_.Reset();
+		dynamic_module& module = kv.second;
+		module.exports.Reset();
+		if (module.handle)
+		{
+#if defined(WIN32)
+			::FreeLibrary((HMODULE)module.handle);
+#else
+			dlclose(module.handle);
+#endif
+		}
+	}
+	modules_.clear();
+
+	v8::Local<v8::Context> impl = to_local(isolate_, impl_);
+	impl->Exit();
+
+	impl_.Reset();
+	if (own_isolate_)
+	{
+		isolate_->Exit();
+		isolate_->Dispose();
 	}
 }
 
-void context::add(char const *name, module& m)
+context& context::set(char const* name, v8::Handle<v8::Value> value)
 {
 	v8::HandleScope scope(isolate_);
-	v8::Local<v8::Object> global = isolate_->GetCurrentContext()->Global();
-	global->Set(to_v8(isolate_, name), m.new_instance());
+	to_local(isolate_, impl_)->Global()->Set(to_v8(isolate_, name), value);
+	return *this;
 }
 
-bool context::run(char const *filename)
+context& context::set(char const* name, module& m)
 {
-	v8::HandleScope scope(isolate_);
-	v8::Local<v8::Context> ctx = v8::Local<v8::Context>::New(isolate_, impl_);
-	v8::Context::Scope context_scope(ctx);
-	return run_in_scope(filename);
+	return set(name, m.new_instance());
 }
 
-bool context::run_in_scope(char const *filename)
+v8::Handle<v8::Value> context::run_file(std::string const& filename)
 {
-	std::ifstream stream(filename);
-	if ( !stream )
+	std::ifstream stream(filename.c_str());
+	if (!stream)
 	{
-		throw std::runtime_error(std::string("could not locate file ") + filename);
+		throw std::runtime_error("could not locate file " + filename);
 	}
 
 	std::istreambuf_iterator<char> begin(stream), end;
-	std::string const source(begin, end);
+	return run_script(std::string(begin, end), filename);
+}
 
-	v8::Handle<v8::Script> script = v8::Script::Compile(
-		to_v8(isolate_, source.data(), static_cast<int>(source.length())),
-		to_v8(isolate_, filename));
+v8::Handle<v8::Value> context::run_script(std::string const& source, std::string const& filename)
+{
+	v8::EscapableHandleScope scope(isolate_);
 
-	return !script.IsEmpty() && !script->Run().IsEmpty();
+	v8::Local<v8::Script> script = v8::Script::Compile(
+		to_v8(isolate_, source), to_v8(isolate_, filename));
+
+	v8::Local<v8::Value> result;
+	if (!script.IsEmpty())
+	{
+		result = script->Run();
+	}
+	return scope.Escape(result);
 }
 
 } // namespace v8pp

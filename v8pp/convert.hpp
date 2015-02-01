@@ -3,28 +3,17 @@
 
 #include <v8.h>
 
+#include <climits>
 #include <string>
 #include <vector>
 #include <map>
 #include <iterator>
-
-#include <boost/type_traits.hpp>
-#include <boost/utility/enable_if.hpp>
-#include <boost/unordered_map.hpp>
-#include <boost/unordered_set.hpp>
+#include <type_traits>
+#include <typeinfo>
 
 namespace v8pp  {
 
 namespace detail {
-
-template<typename Iterator>
-struct is_random_access_iterator :
-	boost::is_same<
-		typename std::iterator_traits<Iterator>::iterator_category,
-		std::random_access_iterator_tag
-	>::type
-{
-};
 
 // A string that converts to Char const * (useful for fusion::invoke)
 template<typename Char>
@@ -45,31 +34,34 @@ template<typename T, typename Enable = void>
 struct convert;
 /*
 {
-	typedef T result_type;
+	using from_type = T;
+	using to_type = v8::Handle<v8::Value>;
 
 	static bool is_valid(v8::Isolate* isolate, v8::Handle<v8::Value> value);
 
-	static result_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value);
-
-	static v8::Handle<v8::Value> to_v8(v8::Isolate* isolate, T const& value);
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value);
+	static to_type to_v8(v8::Isolate* isolate, T const& value);
 };
 */
 
 // converter specializations for string types
 template<typename Char, typename Traits, typename Alloc>
-struct convert< std::basic_string<Char, Traits, Alloc>,
-	typename boost::enable_if_c<sizeof(Char) <= sizeof(uint16_t)>::type >
+struct convert< std::basic_string<Char, Traits, Alloc>>
 {
-	typedef std::basic_string<Char, Traits, Alloc> result_type;
+	static_assert(sizeof(Char) <= sizeof(uint16_t),
+		"only UTF-8 and UTF-16 strings are supported");
+
+	using from_type = std::basic_string<Char, Traits, Alloc>;
+	using to_type = v8::Handle<v8::String>;
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
-		return value->IsString();
+		return !value.IsEmpty() && value->IsString();
 	}
 
-	static result_type from_v8(v8::Isolate*, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
-		if (!value->IsString())
+		if (!is_valid(isolate, value))
 		{
 			throw std::invalid_argument("expected String");
 		}
@@ -77,16 +69,16 @@ struct convert< std::basic_string<Char, Traits, Alloc>,
 		if (sizeof(Char) == 1)
 		{
 			v8::String::Utf8Value const str(value);
-			return result_type(reinterpret_cast<Char const*>(*str), str.length());
+			return from_type(reinterpret_cast<Char const*>(*str), str.length());
 		}
 		else
 		{
 			v8::String::Value const str(value);
-			return result_type(reinterpret_cast<Char const*>(*str), str.length());
+			return from_type(reinterpret_cast<Char const*>(*str), str.length());
 		}
 	}
 
-	static v8::Handle<v8::Value> to_v8(v8::Isolate* isolate, result_type const& value)
+	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
 	{
 		if (sizeof(Char) == 1)
 		{
@@ -102,19 +94,22 @@ struct convert< std::basic_string<Char, Traits, Alloc>,
 };
 
 template<typename Char>
-struct convert<Char const*,
-	typename boost::enable_if_c<sizeof(Char) <= sizeof(uint16_t)>::type >
+struct convert<Char const*>
 {
-	typedef detail::convertible_string<Char> result_type;
+	static_assert(sizeof(Char) <= sizeof(uint16_t),
+		"only UTF-8 and UTF-16 strings are supported");
+
+	using from_type = detail::convertible_string<Char>;
+	using to_type = v8::Handle<v8::String>;
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
-		return value->IsString();
+		return !value.IsEmpty() && value->IsString();
 	}
 
-	static result_type from_v8(v8::Isolate*, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
-		if (!value->IsString())
+		if (!is_valid(isolate, value))
 		{
 			throw std::invalid_argument("expected String");
 		}
@@ -122,16 +117,16 @@ struct convert<Char const*,
 		if (sizeof(Char) == 1)
 		{
 			v8::String::Utf8Value const str(value);
-			return result_type(reinterpret_cast<Char const*>(*str), str.length());
+			return from_type(reinterpret_cast<Char const*>(*str), str.length());
 		}
 		else
 		{
 			v8::String::Value const str(value);
-			return result_type(reinterpret_cast<Char const*>(*str), str.length());
+			return from_type(reinterpret_cast<Char const*>(*str), str.length());
 		}
 	}
 
-	static v8::Handle<v8::Value> to_v8(v8::Isolate* isolate, Char const* value)
+	static to_type to_v8(v8::Isolate* isolate, Char const* value)
 	{
 		if (sizeof(Char) == 1)
 		{
@@ -148,39 +143,45 @@ struct convert<Char const*,
 template<>
 struct convert<bool>
 {
-	typedef bool result_type;
+	using from_type = bool;
+	using to_type = v8::Handle<v8::Boolean>;
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
-		return value->IsBoolean();
+		return !value.IsEmpty() && value->IsBoolean();
 	}
 
-	static bool from_v8(v8::Isolate*, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
+		if (!is_valid(isolate, value))
+		{
+			throw std::invalid_argument("expected Boolean");
+		}
 		return value->ToBoolean()->Value();
 	}
 
-	static v8::Handle<v8::Value> to_v8(v8::Isolate* isolate, bool value)
+	static to_type to_v8(v8::Isolate* isolate, bool value)
 	{
 		return v8::Boolean::New(isolate, value);
 	}
 };
 
 template<typename T>
-struct convert< T, typename boost::enable_if< boost::is_integral<T> >::type >
+struct convert<T, typename std::enable_if<std::is_integral<T>::value>::type>
 {
-	typedef T result_type;
+	using from_type = T;
+	using to_type = v8::Handle<v8::Number>;
 
-	enum { bits = sizeof(T) * CHAR_BIT, is_signed = boost::is_signed<T>::value };
+	enum { bits = sizeof(T) * CHAR_BIT, is_signed = std::is_signed<T>::value };
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
-		return value->IsNumber();
+		return !value.IsEmpty() && value->IsNumber();
 	}
 
-	static T from_v8(v8::Isolate*, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
-		if (!value->IsNumber())
+		if (!is_valid(isolate, value))
 		{
 			throw std::invalid_argument("expected Number");
 		}
@@ -202,7 +203,7 @@ struct convert< T, typename boost::enable_if< boost::is_integral<T> >::type >
 		}
 	}
 
-	static v8::Handle<v8::Value> to_v8(v8::Isolate* isolate, T value)
+	static to_type to_v8(v8::Isolate* isolate, T value)
 	{
 		if (bits <= 32)
 		{
@@ -223,45 +224,47 @@ struct convert< T, typename boost::enable_if< boost::is_integral<T> >::type >
 };
 
 template<typename T>
-struct convert< T, typename boost::enable_if< boost::is_enum<T> >::type >
+struct convert<T, typename std::enable_if<std::is_enum<T>::value>::type>
 {
-	typedef T result_type;
+	using underlying_type = typename std::underlying_type<T>::type;
 
-#if __cplusplus < 201103L
-	typedef int underlying_type;
-#else
-	typedef typename std::underlying_type<T>::type underlying_type;
-#endif
+	using from_type = T;
+	using to_type = typename convert<underlying_type>::to_type;
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
-		return value->IsNumber();
+		return !value.IsEmpty() && value->IsNumber();
 	}
 
-	static T from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
+		if (!is_valid(isolate, value))
+		{
+			throw std::invalid_argument("expected Number");
+		}
 		return static_cast<T>(convert<underlying_type>::from_v8(isolate, value));
 	}
 
-	static v8::Handle<v8::Value> to_v8(v8::Isolate* isolate, T value)
+	static to_type to_v8(v8::Isolate* isolate, T value)
 	{
 		return convert<underlying_type>::to_v8(isolate, value);
 	}
 };
 
 template<typename T>
-struct convert< T, typename boost::enable_if< boost::is_floating_point<T> >::type >
+struct convert<T, typename std::enable_if<std::is_floating_point<T>::value>::type>
 {
-	typedef T result_type;
+	using from_type = T;
+	using to_type = v8::Handle<v8::Number>;
 
-	static bool is_valid(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
-		return value->IsNumber();
+		return !value.IsEmpty() && value->IsNumber();
 	}
 
-	static T from_v8(v8::Isolate*, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
-		if (!value->IsNumber())
+		if (!is_valid(isolate, value))
 		{
 			throw std::invalid_argument("expected Number");
 		}
@@ -269,7 +272,7 @@ struct convert< T, typename boost::enable_if< boost::is_floating_point<T> >::typ
 		return static_cast<T>(value->NumberValue());
 	}
 
-	static v8::Handle<v8::Value> to_v8(v8::Isolate* isolate, T value)
+	static to_type to_v8(v8::Isolate* isolate, T value)
 	{
 		return v8::Number::New(isolate, value);
 	}
@@ -277,92 +280,101 @@ struct convert< T, typename boost::enable_if< boost::is_floating_point<T> >::typ
 
 // convert Array <-> std::vector
 template<typename T, typename Alloc>
-struct convert< std::vector<T, Alloc> >
+struct convert<std::vector<T, Alloc>>
 {
-	typedef std::vector<T, Alloc> result_type;
+	using from_type = std::vector<T, Alloc>;
+	using to_type = v8::Handle<v8::Array>;
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
-		return value->IsArray();
+		return !value.IsEmpty() && value->IsArray();
 	}
 
-	static result_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
-		if (!value->IsArray())
+		if (!is_valid(isolate, value))
 		{
 			throw std::invalid_argument("expected Array");
 		}
 
-		v8::Handle<v8::Array> array = value.As<v8::Array>();
+		v8::HandleScope scope(isolate);
+		v8::Local<v8::Array> array = value.As<v8::Array>();
 
-		result_type result;
+		from_type result;
 		result.reserve(array->Length());
 		for (uint32_t i = 0, count = array->Length(); i < count; ++i)
 		{
-			result.push_back(convert<T>::from_v8(isolate, array->Get(i)));
+			result.emplace_back(convert<T>::from_v8(isolate, array->Get(i)));
 		}
 		return result;
 	}
 
-	static v8::Handle<v8::Value> to_v8(v8::Isolate* isolate, result_type const& value)
+	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
 	{
+		v8::EscapableHandleScope scope(isolate);
+
 		uint32_t const size = static_cast<uint32_t>(value.size());
 		v8::Local<v8::Array> result = v8::Array::New(isolate, size);
 		for (uint32_t i = 0; i < size; ++i)
 		{
 			result->Set(i, convert<T>::to_v8(isolate, value[i]));
 		}
-		return result;
+		return scope.Escape(result);
 	}
 };
 
 // convert Object <-> std::map
 template<typename Key, typename Value, typename Less, typename Alloc>
-struct convert< std::map<Key, Value, Less, Alloc> >
+struct convert<std::map<Key, Value, Less, Alloc>>
 {
-	typedef std::map<Key, Value, Less, Alloc> result_type;
+	using from_type = std::map<Key, Value, Less, Alloc>;
+	using to_type = v8::Handle<v8::Object>;
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
-		return value->IsObject();
+		return !value.IsEmpty() && value->IsObject();
 	}
 
-	static result_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
-		if (!value->IsObject())
+		if (!is_valid(isolate, value))
 		{
 			throw std::invalid_argument("expected Object");
 		}
 
-		v8::Handle<v8::Object> object = value.As<v8::Object>();
-		v8::Handle<v8::Array> prop_names = object->GetPropertyNames();
+		v8::HandleScope scope(isolate);
+		v8::Local<v8::Object> object = value.As<v8::Object>();
+		v8::Local<v8::Array> prop_names = object->GetPropertyNames();
 
-		result_type result;
+		from_type result;
 		for (uint32_t i = 0, count = prop_names->Length(); i < count; ++i)
 		{
-			v8::Handle<v8::Value> key = prop_names->Get(i);
-			v8::Handle<v8::Value> val = object->Get(key);
-			result.insert(std::make_pair(convert<Key>::from_v8(isolate, key), convert<Value>::from_v8(isolate, val)));
+			v8::Local<v8::Value> key = prop_names->Get(i);
+			v8::Local<v8::Value> val = object->Get(key);
+			result.emplace(convert<Key>::from_v8(isolate, key), convert<Value>::from_v8(isolate, val));
 		}
 		return result;
 	}
 
-	static v8::Handle<v8::Value> to_v8(v8::Isolate* isolate, result_type const& value)
+	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
 	{
-		v8::Handle<v8::Object> result = v8::Object::New(isolate);
-		for (typename result_type::const_iterator it = value.begin(), end = value.end(); it != end; ++it)
+		v8::EscapableHandleScope scope(isolate);
+
+		v8::Local<v8::Object> result = v8::Object::New(isolate);
+		for (auto const& item: value)
 		{
-			result->Set(convert<Key>::to_v8(isolate, it->first), convert<Value>::to_v8(isolate, it->second));
+			result->Set(convert<Key>::to_v8(isolate, item.first), convert<Value>::to_v8(isolate, item.second));
 		}
-		return result;
+		return scope.Escape(result);
 	}
 };
 
 // converter specializations for V8 Handles
 template<typename T>
-struct convert< v8::Handle<T> >
+struct convert<v8::Handle<T>>
 {
-	typedef v8::Handle<T> result_type;
+	using from_type = v8::Handle<T>;
+	using to_type = v8::Handle<T>;
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
@@ -374,16 +386,17 @@ struct convert< v8::Handle<T> >
 		return value.As<T>();
 	}
 
-	static v8::Handle<v8::Value> to_v8(v8::Isolate*, v8::Handle<T> value)
+	static v8::Handle<T> to_v8(v8::Isolate*, v8::Handle<T> value)
 	{
 		return value;
 	}
 };
 
 template<typename T>
-struct convert< v8::Local<T> >
+struct convert<v8::Local<T>>
 {
-	typedef v8::Handle<T> result_type;
+	using from_type = v8::Handle<T>;
+	using to_type = v8::Handle<T>;
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
@@ -395,16 +408,17 @@ struct convert< v8::Local<T> >
 		return value.As<T>();
 	}
 
-	static v8::Handle<v8::Value> to_v8(v8::Isolate*, v8::Local<T> value)
+	static v8::Handle<T> to_v8(v8::Isolate*, v8::Local<T> value)
 	{
 		return value;
 	}
 };
 
 template<typename T>
-struct convert< v8::Persistent<T> >
+struct convert<v8::Persistent<T>>
 {
-	typedef v8::Handle<T> result_type;
+	using from_type = v8::Handle<T>;
+	using to_type = v8::Handle<T>;
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
@@ -416,7 +430,7 @@ struct convert< v8::Persistent<T> >
 		return value.As<T>();
 	}
 
-	static v8::Handle<v8::Value> to_v8(v8::Isolate*, v8::Persistent<T> value)
+	static v8::Handle<T> to_v8(v8::Isolate*, v8::Persistent<T> value)
 	{
 		return value;
 	}
@@ -424,127 +438,99 @@ struct convert< v8::Persistent<T> >
 
 // convert specialization for wrapped user classes
 template<typename T>
-struct is_wrapped_class	: boost::is_class<T> {};
+struct is_wrapped_class : std::is_class<T> {};
 
 template<typename T>
-struct is_wrapped_class< v8::Handle<T> > : boost::false_type {};
+struct is_wrapped_class<v8::Handle<T>> : std::false_type {};
 
 template<typename T>
-struct is_wrapped_class< v8::Local<T> > : boost::false_type {};
+struct is_wrapped_class<v8::Local<T>> : std::false_type {};
 
 template<typename T>
-struct is_wrapped_class< v8::Persistent<T> > : boost::false_type {};
+struct is_wrapped_class<v8::Persistent<T>> : std::false_type {};
 
 template<typename Char, typename Traits, typename Alloc>
-struct is_wrapped_class< std::basic_string<Char, Traits, Alloc> > : boost::false_type {};
+struct is_wrapped_class<std::basic_string<Char, Traits, Alloc>> : std::false_type {};
 
 template<typename T, typename Alloc>
-struct is_wrapped_class< std::vector<T, Alloc> > : boost::false_type {};
+struct is_wrapped_class<std::vector<T, Alloc>> : std::false_type {};
 
 template<typename Key, typename Value, typename Less, typename Alloc>
-struct is_wrapped_class< std::map<Key, Value, Less, Alloc> > : boost::false_type {};
+struct is_wrapped_class<std::map<Key, Value, Less, Alloc>> : std::false_type {};
 
 template<typename T>
-struct convert< T*, typename boost::enable_if< is_wrapped_class<T> >::type >
+struct convert<T*, typename std::enable_if<is_wrapped_class<T>::value>::type>
 {
-	typedef T* result_type;
-	typedef typename boost::remove_cv<T>::type class_type;
+	using from_type = T*;
+	using to_type = v8::Handle<v8::Object>;
+	using class_type = typename std::remove_cv<T>::type;
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
-		return value->IsObject();
+		return !value.IsEmpty() && value->IsObject();
 	}
 
-	static T* from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
+		if (!is_valid(isolate, value))
+		{
+			throw std::invalid_argument("expected Object");
+		}
 		return class_<class_type>::unwrap_object(isolate, value);
 	}
 
-	static v8::Handle<v8::Value> to_v8(v8::Isolate* isolate, T const* value)
+	static to_type to_v8(v8::Isolate* isolate, T const* value)
 	{
 		return class_<class_type>::find_object(isolate, value);
 	}
 };
 
 template<typename T>
-struct convert< T, typename boost::enable_if< is_wrapped_class<T> >::type >
+struct convert<T, typename std::enable_if<is_wrapped_class<T>::value>::type>
 {
-	typedef T& result_type;
+	using from_type = T&;
+	using to_type = v8::Handle<v8::Object>;
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
-		return value->IsObject();
+		return !value.IsEmpty() && value->IsObject();
 	}
 
-	static T& from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
+		if (!is_valid(isolate, value))
+		{
+			throw std::invalid_argument("expected Object");
+		}
 		if (T* object = convert<T*>::from_v8(isolate, value))
 		{
 			return *object;
 		}
-		throw std::runtime_error(std::string("expected C++ wrapped object ") + typeid(T).name());
+		throw std::runtime_error(std::string("expected C++ wrapped object"));
 	}
 
-	static v8::Handle<v8::Value> to_v8(v8::Isolate* isolate, T const& value)
+	static to_type to_v8(v8::Isolate* isolate, T const& value)
 	{
 		return convert<T*>::to_v8(isolate, &value);
 	}
 };
 
 template<typename T>
-struct convert< T& > : convert<T> {};
+struct convert<T&> : convert<T> {};
 
 template<typename T>
-struct convert< T const& > : convert<T> {};
+struct convert<T const&> : convert<T> {};
 
 template<typename T>
-inline typename convert<T>::result_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+typename convert<T>::from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 {
 	return convert<T>::from_v8(isolate, value);
 }
 
 template<typename T, typename U>
-inline typename convert<T>::result_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value, U const& default_value)
+typename convert<T>::from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value, U const& default_value)
 {
 	return convert<T>::is_valid(isolate, value)? convert<T>::from_v8(isolate, value) : default_value;
-}
-
-template<typename T>
-inline typename boost::disable_if<boost::is_class<T>, v8::Handle<v8::Value> >::type
-to_v8(v8::Isolate* isolate, T value)
-{
-	return convert<T>::to_v8(isolate, value);
-}
-
-template<typename T>
-inline typename boost::enable_if<boost::is_class<T>, v8::Handle<v8::Value> >::type
-to_v8(v8::Isolate* isolate, T const& value)
-{
-	return convert<T>::to_v8(isolate, value);
-}
-
-template<typename Iterator>
-inline typename boost::enable_if<detail::is_random_access_iterator<Iterator>, v8::Handle<v8::Value> >::type
-to_v8(v8::Isolate* isolate, Iterator begin, Iterator end)
-{
-	v8::Handle<v8::Array> result = v8::Array::New(isolate, end - begin);
-	for (uint32_t idx = 0; begin != end; ++begin, ++idx)
-	{
-		result->Set(idx, to_v8(isolate, *begin));
-	}
-	return result;
-}
-
-template<typename Iterator>
-inline typename boost::disable_if<detail::is_random_access_iterator<Iterator>, v8::Handle<v8::Value> >::type
-to_v8(v8::Isolate* isolate, Iterator begin, Iterator end)
-{
-	v8::Handle<v8::Array> result = v8::Array::New(isolate);
-	for (uint32_t idx = 0; begin != end; ++begin, ++idx)
-	{
-		result->Set(idx, to_v8(isolate, *begin));
-	}
-	return result;
 }
 
 inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char const* str, int len = -1)
@@ -558,6 +544,25 @@ inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, wchar_t const* str, in
 	return v8::String::NewFromTwoByte(isolate, reinterpret_cast<uint16_t const*>(str), v8::String::kNormalString, len);
 }
 #endif
+
+template<typename T>
+typename convert<T>::to_type to_v8(v8::Isolate* isolate, T const& value)
+{
+	return convert<T>::to_v8(isolate, value);
+}
+
+template<typename Iterator>
+v8::Handle<v8::Array> to_v8(v8::Isolate* isolate, Iterator begin, Iterator end)
+{
+	v8::EscapableHandleScope scope(isolate);
+
+	v8::Local<v8::Array> result = v8::Array::New(isolate);
+	for (uint32_t idx = 0; begin != end; ++begin, ++idx)
+	{
+		result->Set(idx, to_v8(isolate, *begin));
+	}
+	return scope.Escape(result);
+}
 
 template<typename T>
 v8::Local<T> to_local(v8::Isolate* isolate, v8::PersistentBase<T> const& handle)

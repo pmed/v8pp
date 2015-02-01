@@ -1,8 +1,8 @@
 /bin
 /*.*sdf
 /*.suo
+*.user
 
 *.so
 *.o
 *.a
-/v8pp_test
