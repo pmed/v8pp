@@ -3,6 +3,7 @@
 
 #include <v8.h>
 
+#include "v8pp/config.hpp"
 #include "v8pp/function.hpp"
 #include "v8pp/property.hpp"
 

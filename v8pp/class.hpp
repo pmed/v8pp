@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "v8pp/config.hpp"
 #include "v8pp/factory.hpp"
 #include "v8pp/function.hpp"
 #include "v8pp/persistent.hpp"
@@ -202,12 +203,13 @@ public:
 		// Get pointer to singleton instances from v8::Isolate
 		using singleton_instances = std::vector<void*>;
 
-		singleton_instances* singletons = static_cast<singleton_instances*>(isolate->GetData(0));
+		singleton_instances* singletons =
+			static_cast<singleton_instances*>(isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
 		if (!singletons)
 		{
 			// No singletons map yet, create and store it
 			singletons = new singleton_instances;
-			isolate->SetData(0, singletons);
+			isolate->SetData(V8PP_ISOLATE_DATA_SLOT, singletons);
 		}
 
 		// Get singleton instance from the the list by class_type

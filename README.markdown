@@ -101,7 +101,6 @@ void RegisterModule(v8::Handle<v8::Object> exports)
 #include <iostream>
 
 #include <v8pp/module.hpp>
-#include <v8pp/config.hpp>
 
 namespace console {
 
@@ -142,7 +141,6 @@ V8PP_PLUGIN_INIT(v8::Isolate* isolate)
 ```c++
 #include <v8pp/module.hpp>
 #include <v8pp/class.hpp>
-#include <v8pp/config.hpp>
 
 #include <fstream>
 
@@ -336,6 +334,14 @@ v8::Handle<v8::Value> val = my_class_wrapper::reference_external(&my_class::inst
 typedef v8pp::class_<my_class> my_class_wrapper(isolate);
 v8::Handle<v8::Value> val = my_class_wrapper::import_external(new my_class);
 ```
+
+## Compile-time configuration
+
+The library uses several preprocessor macros, defined in `v8pp/config.hpp` file:
+
+  * `V8PP_ISOLATE_DATA_SLOT` - A v8::Isolate data slot number, used to store v8pp internal data
+  * `V8PP_PLUGIN_INIT_PROC_NAME` - Plugin initialization procedure name that should be exported from a v8pp plugin.
+  * `V8PP_PLUGIN_SUFFIX` - Plugin filename suffix that would be added if the plugin name used in `require()` doesn't end with it.
 
 ## v8pp alternatives
 

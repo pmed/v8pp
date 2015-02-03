@@ -1,10 +1,17 @@
 #ifndef V8PP_CONFIG_HPP_INCLUDED
 #define V8PP_CONFIG_HPP_INCLUDED
 
-#define V8PP_PLUGIN_LIB_PATH "./"
+/// v8::Isolate data slot number, used in v8pp
+#if !defined(V8PP_ISOLATE_DATA_SLOT)
+#define V8PP_ISOLATE_DATA_SLOT 0
+#endif
 
+/// v8pp plugin initialization procedure name
+#if !defined(V8PP_PLUGIN_INIT_PROC_NAME)
 #define V8PP_PLUGIN_INIT_PROC_NAME v8pp_module_init
+#endif
 
+/// v8pp plugin filename suffix
 #if !defined(V8PP_PLUGIN_SUFFIX)
 	#if defined(WIN32)
 	#define V8PP_PLUGIN_SUFFIX ".dll"
