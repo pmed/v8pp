@@ -1,28 +1,27 @@
 #include <node.h>
+#include <v8pp/function.hpp>
+#include <v8pp/object.hpp>
 
 using namespace v8;
 
-void MyFunction(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-  args.GetReturnValue().Set(String::NewFromUtf8(isolate, "hello world"));
+std::string MyFunction() {
+  return "hello world";
 }
 
-void CreateFunction(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
+Handle<Function> CreateFunction(Isolate* isolate) {
+  EscapableHandleScope scope(isolate);
 
-  Local<FunctionTemplate> tpl = FunctionTemplate::New(isolate, MyFunction);
+  Local<FunctionTemplate> tpl = v8pp::wrap_function_template(isolate, &MyFunction);
   Local<Function> fn = tpl->GetFunction();
 
   // omit this to make it anonymous
-  fn->SetName(String::NewFromUtf8(isolate, "theFunction"));
-
-  args.GetReturnValue().Set(fn);
+  fn->SetName(v8pp::to_v8(isolate, "theFunction"));
+  return scope.Escape(fn);
 }
 
 void Init(Handle<Object> exports, Handle<Object> module) {
-  NODE_SET_METHOD(module, "exports", CreateFunction);
+  Isolate* isolate = Isolate::GetCurrent();
+  v8pp::set_option(isolate, module, "exports", v8pp::wrap_function(isolate, "exports", &CreateFunction));
 }
 
 NODE_MODULE(addon, Init)

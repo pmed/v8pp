@@ -1,18 +1,22 @@
 #include <node.h>
+#include <v8pp/class.hpp>
+#include <v8pp/function.hpp>
+#include <v8pp/object.hpp>
+
 #include "myobject.h"
 
 using namespace v8;
 
-void CreateObject(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-  MyObject::NewInstance(args);
+static Handle<Object> CreateObject(const FunctionCallbackInfo<Value>& args) {
+  MyObject* obj = new MyObject(args);
+  return v8pp::class_<MyObject>::import_external(args.GetIsolate(), obj);
 }
 
 void InitAll(Handle<Object> exports, Handle<Object> module) {
   MyObject::Init();
 
-  NODE_SET_METHOD(module, "exports", CreateObject);
+  Isolate* isolate = Isolate::GetCurrent();
+  v8pp::set_option(isolate, module, "exports", v8pp::wrap_function(isolate, "exports", &CreateObject));
 }
 
 NODE_MODULE(addon, InitAll)

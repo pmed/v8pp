@@ -1,31 +1,16 @@
 #include <node.h>
+#include <v8pp/module.hpp>
 
 using namespace v8;
 
-void Add(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-
-  if (args.Length() < 2) {
-    isolate->ThrowException(Exception::TypeError(
-        String::NewFromUtf8(isolate, "Wrong number of arguments")));
-    return;
-  }
-
-  if (!args[0]->IsNumber() || !args[1]->IsNumber()) {
-    isolate->ThrowException(Exception::TypeError(
-        String::NewFromUtf8(isolate, "Wrong arguments")));
-    return;
-  }
-
-  double value = args[0]->NumberValue() + args[1]->NumberValue();
-  Local<Number> num = Number::New(isolate, value);
-
-  args.GetReturnValue().Set(num);
+double Add(double arg1, double arg2) {
+  return arg1 + arg2;
 }
 
 void Init(Handle<Object> exports) {
-  NODE_SET_METHOD(exports, "add", Add);
+  v8pp::module addon(Isolate::GetCurrent());
+  addon.set("add", &Add);
+  exports->SetPrototype(addon.new_instance());
 }
 
 NODE_MODULE(addon, Init)

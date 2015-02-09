@@ -1,19 +1,22 @@
 #include <node.h>
+#include <v8pp/object.hpp>
+#include <v8pp/function.hpp>
+
+#include <node.h>
 
 using namespace v8;
 
-void CreateObject(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
+Handle<Object> CreateObject(v8::Isolate* isolate, std::string const& msg) {
+  EscapableHandleScope scope(isolate);
 
   Local<Object> obj = Object::New(isolate);
-  obj->Set(String::NewFromUtf8(isolate, "msg"), args[0]->ToString());
-
-  args.GetReturnValue().Set(obj);
+  v8pp::set_option(isolate, obj, "msg", msg);
+  return scope.Escape(obj);
 }
 
 void Init(Handle<Object> exports, Handle<Object> module) {
-  NODE_SET_METHOD(module, "exports", CreateObject);
+  Isolate* isolate = Isolate::GetCurrent();
+  v8pp::set_option(isolate, module, "exports", v8pp::wrap_function(isolate, "exports", &CreateObject));
 }
 
 NODE_MODULE(addon, Init)

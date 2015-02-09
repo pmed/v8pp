@@ -1,19 +1,20 @@
 #include <node.h>
 
+#include <v8pp/call_v8.hpp>
+#include <v8pp/function.hpp>
+#include <v8pp/object.hpp>
+
 using namespace v8;
 
-void RunCallback(const FunctionCallbackInfo<Value>& args) {
+void RunCallback(Local<Function> cb) {
   Isolate* isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
 
-  Local<Function> cb = Local<Function>::Cast(args[0]);
-  const unsigned argc = 1;
-  Local<Value> argv[argc] = { String::NewFromUtf8(isolate, "hello world") };
-  cb->Call(isolate->GetCurrentContext()->Global(), argc, argv);
+  v8pp::call_v8(isolate, cb, isolate->GetCurrentContext()->Global(), "hello world");
 }
 
 void Init(Handle<Object> exports, Handle<Object> module) {
-  NODE_SET_METHOD(module, "exports", RunCallback);
+  Isolate* isolate = Isolate::GetCurrent();
+  v8pp::set_option(isolate, module, "exports", v8pp::wrap_function(isolate, "exports", &RunCallback));
 }
 
 NODE_MODULE(addon, Init)

@@ -1,15 +1,16 @@
 #include <node.h>
+#include <v8pp/module.hpp>
 
 using namespace v8;
 
-void Method(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-  args.GetReturnValue().Set(String::NewFromUtf8(isolate, "world"));
+char const* Method() {
+  return "world";
 }
 
 void init(Handle<Object> exports) {
-  NODE_SET_METHOD(exports, "hello", Method);
+  v8pp::module addon(Isolate::GetCurrent());
+  addon.set("hello", &Method);
+  exports->SetPrototype(addon.new_instance());
 }
 
 NODE_MODULE(addon, init)
