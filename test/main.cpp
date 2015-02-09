@@ -23,8 +23,7 @@ void run_tests()
 	void test_module();
 	void test_class();
 	void test_property();
-
-	test_class();
+	void test_object();
 
 	std::pair<char const*, void(*)()> tests[] =
 	{
@@ -39,6 +38,7 @@ void run_tests()
 		{ "test_module", test_module },
 		{ "test_class", test_class },
 		{ "test_property", test_property },
+		{ "test_object", test_object },
 	};
 
 	for (auto const& test : tests)

@@ -16,5 +16,6 @@
     <ClInclude Include="convert.hpp" />
     <ClInclude Include="property.hpp" />
     <ClInclude Include="function.hpp" />
+    <ClInclude Include="object.hpp" />
   </ItemGroup>
 </Project>

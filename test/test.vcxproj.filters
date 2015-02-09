@@ -13,6 +13,7 @@
     <ClCompile Include="test_property.cpp" />
     <ClCompile Include="test_function.cpp" />
     <ClCompile Include="test_module.cpp" />
+    <ClCompile Include="test_object.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="test.hpp" />
