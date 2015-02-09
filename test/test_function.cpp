@@ -13,12 +13,12 @@ void test_function()
 	v8::Isolate* isolate = context.isolate();
 	v8::HandleScope scope(isolate);
 
-	context.set("f", v8pp::wrap_function(isolate, &f));
+	context.set("f", v8pp::wrap_function(isolate, "f", &f));
 	check_eq("f", run_script<int>(context, "f(1)"), 1);
 
-	context.set("g", v8pp::wrap_function(isolate, &g));
+	context.set("g", v8pp::wrap_function(isolate, "g", &g));
 	check_eq("g", run_script<std::string>(context, "g('abc')"), "abc");
 
-	context.set("h", v8pp::wrap_function(isolate, &h));
+	context.set("h", v8pp::wrap_function(isolate, "h", &h));
 	check_eq("h", run_script<int>(context, "h(1, 2)"), 3);
 }

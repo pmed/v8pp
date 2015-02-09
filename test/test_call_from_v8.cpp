@@ -42,10 +42,10 @@ void test_call_from_v8()
 	v8::Isolate* isolate = context.isolate();
 	v8::HandleScope scope(isolate);
 
-	context.set("x", v8pp::wrap_function(isolate, &x));
-	context.set("y", v8pp::wrap_function(isolate, &y));
-	context.set("z", v8pp::wrap_function(isolate, &z));
-	context.set("w", v8pp::wrap_function(isolate, &w));
+	context.set("x", v8pp::wrap_function(isolate, "x", &x));
+	context.set("y", v8pp::wrap_function(isolate, "y", &y));
+	context.set("z", v8pp::wrap_function(isolate, "z", &z));
+	context.set("w", v8pp::wrap_function(isolate, "w", &w));
 
 	check_eq("x", run_script<int>(context, "x()"), 0);
 	check_eq("y", run_script<int>(context, "y(1)"), 1);

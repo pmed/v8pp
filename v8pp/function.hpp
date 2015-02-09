@@ -83,7 +83,7 @@ typename std::enable_if<is_function_pointer<F>::value,
 	typename function_traits<F>::return_type>::type
 invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	F&& f = get_external_data<F>(args.Data());
+	F f = get_external_data<F>(args.Data());
 	return call_from_v8(std::forward<F>(f), args);
 }
 
@@ -140,18 +140,25 @@ void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 
 /// Wrap C++ function into new V8 function template
 template<typename F>
-v8::Handle<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&& func)
+v8::Handle<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F func)
 {
 	return v8::FunctionTemplate::New(isolate, &detail::forward_function<F>,
 		detail::set_external_data(isolate, func));
 }
 
 /// Wrap C++ function into new V8 function
+/// Set nullptr or empty string for name
+/// to make the function anonymous
 template<typename F>
-v8::Handle<v8::Function> wrap_function(v8::Isolate* isolate, F&& func)
+v8::Handle<v8::Function> wrap_function(v8::Isolate* isolate, char const* name, F func)
 {
-	return v8::Function::New(isolate, &detail::forward_function<F>,
+	v8::Handle<v8::Function> fn = v8::Function::New(isolate, &detail::forward_function<F>,
 		detail::set_external_data(isolate, func));
+	if (name && *name)
+	{
+		fn->SetName(to_v8(isolate, name));
+	}
+	return fn;
 }
 
 } // namespace v8pp
