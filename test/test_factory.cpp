@@ -81,7 +81,7 @@ void test_factory()
 	v8::HandleScope scope(isolate);
 	v8::Handle<v8::Function> fun = v8::Function::New(isolate, test_factories);
 
-	v8pp::call_v8(isolate, fun);
+	v8pp::call_v8(isolate, fun, fun);
 	check_eq("all ctors called", ctor_types, 0x0F);
 	check_eq("ctor count", ctor_count, 5);
 	check_eq("dtor count", dtor_count, 5);

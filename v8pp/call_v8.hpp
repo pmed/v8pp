@@ -7,8 +7,11 @@
 
 namespace v8pp {
 
-namespace detail {
-
+/// Call a V8 function, converting C++ arguments to v8::Value arguments
+/// @param isolate V8 isolate instance
+/// @param func  V8 function to call
+/// @param recv V8 object used as `this` in the function
+/// @param args...  C++ arguments to convert to JS arguments using to_v8
 template<typename ...Args>
 v8::Handle<v8::Value> call_v8(v8::Isolate* isolate, v8::Handle<v8::Function> func,
 	v8::Handle<v8::Value> recv, Args... args)
@@ -22,30 +25,6 @@ v8::Handle<v8::Value> call_v8(v8::Isolate* isolate, v8::Handle<v8::Function> fun
 	v8::Local<v8::Value> result = func->Call(recv, arg_count, v8_args);
 
 	return scope.Escape(result);
-}
-
-} // namespace detail
-
-/// Call a V8 function, converting C++ arguments to v8::Value arguments
-/// @param isolate V8 isolate instance
-/// @param func  V8 function to call
-/// @param recv V8 object used as `this` in the function
-/// @param args...  C++ arguments to convert to JS arguments using to_v8
-template<typename ...Args>
-v8::Handle<v8::Value> call_v8(v8::Isolate* isolate, v8::Handle<v8::Function> func,
-	v8::Handle<v8::Value> recv, Args... args)
-{
-	return detail::call_v8(isolate, func, recv, args...);
-}
-
-/// Call a V8 function using it as `this`, converting C++ arguments to v8::Value arguments
-/// @param isolate V8 isolate instance
-/// @param func  V8 function to call
-/// @param args...  C++ arguments to convert to JS arguments using to_v8
-template<typename ...Args>
-v8::Handle<v8::Value> call_v8(v8::Isolate* isolate, v8::Handle<v8::Function> func, Args... args)
-{
-	return detail::call_v8(isolate, func, func, args...);
 }
 
 } // namespace v8pp

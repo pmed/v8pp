@@ -92,17 +92,6 @@ using is_first_arg_isolate = std::integral_constant<bool,
 	std::is_same<typename call_from_v8_traits<F>::template arg_type<0>,
 		v8::Isolate*>::value>;
 
-/*
-template<typename F>
-using select_call_traits = typename std::conditional<is_direct_args<F>::value,
-	v8_args_call_traits<F>,
-	typename std::conditional<is_first_arg_isolate<F>::value,
-		isolate_arg_call_traits<F>,
-		call_from_v8_traits<F>
-	>::type
->::type;
-*/
-
 template<typename F>
 using select_call_traits = typename std::conditional<is_first_arg_isolate<F>::value,
 	typename std::conditional<is_direct_args<F, 1>::value,
