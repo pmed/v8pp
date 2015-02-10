@@ -8,6 +8,7 @@
 #include <vector>
 #include <map>
 #include <iterator>
+#include <stdexcept>
 #include <type_traits>
 #include <typeinfo>
 
