@@ -71,7 +71,7 @@ mylib.prop = x.prop +x.fun();
 
 ## Node.js and io.js addons
 
-The library is suitable to make [Node.js](http://nodejs.org/) and [io.js](https://iojs.org/) addons.
+The library is suitable to make [Node.js](http://nodejs.org/) and [io.js](https://iojs.org/) addons. See [addons](doc/addons.md) document.
 
 ```c++
 
