@@ -6,8 +6,6 @@
 #include <string>
 
 #include "v8.h"
-#include "libplatform/libplatform.h"
-
 #include "v8pp/context.hpp"
 
 void run_tests()
@@ -97,8 +95,6 @@ int main(int argc, char const * argv[])
 	}
 
 	v8::V8::InitializeICU();
-	v8::Platform* platform = v8::platform::CreateDefaultPlatform();
-	v8::V8::InitializePlatform(platform);
 	v8::V8::Initialize();
 
 	if (do_tests || scripts.empty())
@@ -128,8 +124,6 @@ int main(int argc, char const * argv[])
 	}
 
 	v8::V8::Dispose();
-	v8::V8::ShutdownPlatform();
-	delete platform;
 
 	return result;
 }

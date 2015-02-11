@@ -5,7 +5,7 @@ AR = ar
 ARFLAGS = rcs
 
 INCLUDES = -I. -I./v8pp
-LIBS = -lv8 -lv8_libplatform -licui18n  -licuuc -L. -lv8pp -ldl -lpthread
+LIBS = -lv8 -licui18n  -licuuc -L. -lv8pp -ldl -lpthread
 
 .cpp.o:
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
