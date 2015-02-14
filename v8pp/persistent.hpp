@@ -14,33 +14,33 @@ namespace v8pp {
 /// To resolve this issue add move support in dervied class.
 /// See https://groups.google.com/d/topic/v8-users/KV_LZqz41Ac/discussion
 template<typename T>
-struct moveable_persistent : public v8::UniquePersistent<T>
+struct persistent : public v8::UniquePersistent<T>
 {
 	using base_class = v8::UniquePersistent<T>;
 
-	moveable_persistent()
+	persistent()
 		: base_class()
 	{
 	}
 
 	template<typename S>
-	moveable_persistent(v8::Isolate* isolate, v8::Handle<S> const& handle)
+	persistent(v8::Isolate* isolate, v8::Handle<S> const& handle)
 		: base_class(isolate, handle)
 	{
 	}
 
 	template<typename S>
-	moveable_persistent(v8::Isolate* isolate, v8::PersistentBase<S> const& handle)
+	persistent(v8::Isolate* isolate, v8::PersistentBase<S> const& handle)
 		: base_class(isolate, handle)
 	{
 	}
 
-	moveable_persistent(moveable_persistent&& src)
+	persistent(persistent&& src)
 		: base_class(src.Pass())
 	{
 	}
 
-	moveable_persistent& operator=(moveable_persistent&& src)
+	persistent& operator=(persistent&& src)
 	{
 		if (&src != this)
 		{	
@@ -49,8 +49,8 @@ struct moveable_persistent : public v8::UniquePersistent<T>
 		return *this;
 	}
 
-	moveable_persistent(moveable_persistent const&) = delete;
-	moveable_persistent& operator=(moveable_persistent const&) = delete;
+	persistent(persistent const&) = delete;
+	persistent& operator=(persistent const&) = delete;
 };
 
 /// Pointer to C++ object wrapped in V8 with v8::UniquePersistent handle

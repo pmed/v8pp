@@ -82,7 +82,7 @@ public:
 	void add_object(v8::Isolate* isolate, T* object, v8::Local<v8::Object> handle)
 	{
 		assert(objects_.find(object) == objects_.end() && "duplicate object");
-		objects_.emplace(object, moveable_persistent<v8::Object>(isolate, handle));
+		objects_.emplace(object, persistent<v8::Object>(isolate, handle));
 	}
 
 	template<typename T>
@@ -156,7 +156,7 @@ private:
 	std::vector<base_class_info> bases_;
 	std::vector<class_info*> derivatives_;
 
-	std::unordered_map<void*, moveable_persistent<v8::Object>> objects_;
+	std::unordered_map<void*, persistent<v8::Object>> objects_;
 };
 
 template<typename T>
