@@ -375,10 +375,10 @@ public:
 	template<typename Method>
 	typename std::enable_if<
 		std::is_member_function_pointer<Method>::value, class_&>::type
-	set(char const *name, Method&& mem_func)
+	set(char const *name, Method mem_func)
 	{
 		class_singleton_.class_function_template()->PrototypeTemplate()->Set(
-			isolate(), name, wrap_function_template(isolate(), std::forward<Method>(mem_func)));
+			isolate(), name, wrap_function_template(isolate(), mem_func));
 		return *this;
 	}
 
@@ -386,10 +386,10 @@ public:
 	template<typename Function>
 	typename std::enable_if<
 		detail::is_function_pointer<Function>::value, class_&>::type
-	set(char const *name, Function&& func)
+	set(char const *name, Function func)
 	{
 		class_singleton_.js_function_template()->Set(isolate(), name,
-			wrap_function_template(isolate(), std::forward<Function>(func)));
+			wrap_function_template(isolate(), func));
 		return *this;
 	}
 

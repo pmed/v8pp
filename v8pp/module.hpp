@@ -53,16 +53,17 @@ public:
 	typename std::enable_if<
 		detail::is_function_pointer<Function>::value,
 		module&>::type
-	set(char const* name, Function&& func)
+	set(char const* name, Function func)
 	{
-		return set(name, wrap_function_template(isolate_, std::forward<Function>(func)));
+		return set(name, wrap_function_template(isolate_, func));
 	}
 
 	/// Set a C++ variable in the module with specified name
 	template<typename Variable>
 	typename std::enable_if<
 		!detail::is_function_pointer<Variable>::value &&
-		!std::is_pointer<Variable>::value, 
+		!std::is_pointer<Variable>::value &&
+		!std::is_convertible<Variable, v8::Handle<v8::Data>>::value,
 		module&>::type
 	set(char const *name, Variable& var, bool readonly = false)
 	{
