@@ -475,7 +475,7 @@ struct convert<T*, typename std::enable_if<is_wrapped_class<T>::value>::type>
 	{
 		if (!is_valid(isolate, value))
 		{
-			throw std::invalid_argument("expected Object");
+			return nullptr;
 		}
 		return class_<class_type>::unwrap_object(isolate, value);
 	}
