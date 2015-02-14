@@ -85,9 +85,6 @@ void test_apply_tuple()
 	check_eq("apply(f)", v8pp::detail::apply(f), 1);
 	check_eq("apply(g)", v8pp::detail::apply(g, 2), 2);
 	check_eq("apply(h)", v8pp::detail::apply(h, 3, true), 3);
-
-//	X x;
-//	v8pp::detail::apply(&X::f, x);
 }
 
 } // unnamed namespace
