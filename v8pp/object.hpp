@@ -1,5 +1,5 @@
-#ifndef V8PP_MODULE_HPP_INCLUDED
-#define V8PP_MODULE_HPP_INCLUDED
+#ifndef V8PP_OBJECT_HPP_INCLUDED
+#define V8PP_OBJECT_HPP_INCLUDED
 
 #include <cstring>
 #include <v8.h>
@@ -65,4 +65,4 @@ void set_const(v8::Isolate* isolate, v8::Handle<v8::Object> options,
 
 } // namespace v8pp
 
-#endif // V8PP_MODULE_HPP_INCLUDED
+#endif // V8PP_OBJECT_HPP_INCLUDED
