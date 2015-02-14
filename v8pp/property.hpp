@@ -313,9 +313,9 @@ struct property_ : detail::rw_property_impl<Get, Set, std::is_member_function_po
 	static_assert(detail::is_getter<Get>::value
 		|| detail::is_direct_getter<Get>::value
 		|| detail::is_isolate_getter<Get>::value,
-		"property get function must be either `T ()` or \
-		`void (v8::Local<v8::String> name, v8::PropertyCallbackInfo<v8::Value> const& info)` or \
-		`T (v8::Isolate*)`");
+		"property get function must be either `T ()` or "
+		"`void (v8::Local<v8::String> name, v8::PropertyCallbackInfo<v8::Value> const& info)` or "
+		"`T (v8::Isolate*)`");
 
 	static_assert(detail::is_setter<Set>::value
 		|| detail::is_direct_setter<Set>::value
@@ -337,9 +337,9 @@ struct property_<Get, Get> : detail::r_property_impl<Get, Get, std::is_member_fu
 	static_assert(detail::is_getter<Get>::value
 		|| detail::is_direct_getter<Get>::value
 		|| detail::is_isolate_getter<Get>::value,
-		"property get function must be either `T ()` or \
-		`void (v8::Local<v8::String> name, v8::PropertyCallbackInfo<v8::Value> const& info)` or \
-		`T (v8::Isolate*)`");
+		"property get function must be either `T ()` or "
+		"void (v8::Local<v8::String> name, v8::PropertyCallbackInfo<v8::Value> const& info)` or "
+		"`T (v8::Isolate*)`");
 
 	Get get_;
 
