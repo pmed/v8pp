@@ -210,16 +210,17 @@ struct convert<T, typename std::enable_if<std::is_integral<T>::value>::type>
 		{
 			if (is_signed)
 			{
-				return v8::Integer::New(isolate, value);
+				return v8::Integer::New(isolate, static_cast<int32_t>(value));
 			}
 			else
 			{
-				return v8::Integer::NewFromUnsigned(isolate, value);
+				return v8::Integer::NewFromUnsigned(isolate, static_cast<uint32_t>(value));
 			}
 		}
 		else
 		{
-			return v8::Number::New(isolate, value);
+			//TODO: check value < (1<<57) to fit in double?
+			return v8::Number::New(isolate, static_cast<double>(value));
 		}
 	}
 };
