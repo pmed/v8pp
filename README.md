@@ -42,7 +42,7 @@ mylib
 	// set function get_var as `fun`
 	.set("fun", &get_var)
 	// set property `prop` with getter get_var() and setter set_var()
-    .set("prop", property(get_var, set_var))
+    .set("prop", property(get_var, set_var));
 
 // bind class
 v8pp::class_<X> X_class(isolate);
@@ -54,7 +54,7 @@ X_class
 	// bind function
 	.set("fun", &X::set)
 	// bind read-only property
-    .set("prop", property(&X::get))
+	.set("prop", property(&X::get));
 
 // set class into the module template
 mylib.set("X", X_class);
@@ -68,7 +68,7 @@ After that bindings will be available in JavaScript:
 ```javascript
 mylib.var = mylib.PI + mylib.fun();
 var x = new mylib.X(1, true);
-mylib.prop = x.prop +x.fun();
+mylib.prop = x.prop + x.fun();
 ```
 
 ## Node.js and io.js addons
