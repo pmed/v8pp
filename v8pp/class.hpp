@@ -79,10 +79,10 @@ public:
 	}
 
 	template<typename T>
-	void add_object(v8::Isolate* isolate, T* object, v8::Local<v8::Object> handle)
+	void add_object(T* object, persistent<v8::Object>&& handle)
 	{
 		assert(objects_.find(object) == objects_.end() && "duplicate object");
-		objects_.emplace(object, persistent<v8::Object>(isolate, handle));
+		objects_.emplace(object, std::move(handle));
 	}
 
 	template<typename T>
@@ -197,6 +197,42 @@ private:
 		func->InstanceTemplate()->SetInternalFieldCount(2);
 	}
 
+	v8::Handle<v8::Object> wrap(T* object, bool destroy_after)
+	{
+		v8::EscapableHandleScope scope(isolate_);
+
+		v8::Local<v8::Object> obj = class_function_template()->GetFunction()->NewInstance();
+		obj->SetAlignedPointerInInternalField(0, object);
+		obj->SetAlignedPointerInInternalField(1, this);
+
+		persistent<v8::Object> pobj(isolate_, obj);
+		if (destroy_after)
+		{
+			pobj.SetWeak(object,
+				[](v8::WeakCallbackData<v8::Object, T> const& data)
+			{
+				v8::Isolate* isolate = data.GetIsolate();
+				T* object = data.GetParameter();
+				instance(isolate).destroy_object(object);
+			});
+		}
+		else
+		{
+			pobj.SetWeak(object,
+				[](v8::WeakCallbackData<v8::Object, T> const& data)
+			{
+				v8::Isolate* isolate = data.GetIsolate();
+				T* object = data.GetParameter();
+				instance(isolate).remove_object<T>(isolate, object, nullptr);
+			});
+
+		}
+
+		class_info::add_object(object, std::move(pobj));
+
+		return scope.Escape(obj);
+	}
+
 public:
 	static class_singleton& instance(v8::Isolate* isolate)
 	{
@@ -262,33 +298,14 @@ public:
 		js_function_template()->Inherit(base->class_function_template());
 	}
 
-	v8::Handle<v8::Object> wrap_external_object(T* wrap)
+	v8::Handle<v8::Object> wrap_external_object(T* object)
 	{
-		v8::EscapableHandleScope scope(isolate_);
-
-		v8::Local<v8::Object> obj = class_function_template()->GetFunction()->NewInstance();
-		obj->SetAlignedPointerInInternalField(0, wrap);
-		obj->SetAlignedPointerInInternalField(1, this);
-
-		class_info::add_object(isolate_, wrap, obj);
-
-		return scope.Escape(obj);
+		return wrap(object, false);
 	}
 
-	v8::Handle<v8::Object> wrap_object(T* wrap)
+	v8::Handle<v8::Object> wrap_object(T* object)
 	{
-		v8::EscapableHandleScope scope(isolate_);
-
-		v8::Local<v8::Object> obj = wrap_external_object(wrap);
-
-		v8::Persistent<v8::Object> pobj(isolate_, obj);
-		pobj.SetWeak(wrap,
-			[](v8::WeakCallbackData<v8::Object, T> const& data)
-			{
-				instance(data.GetIsolate()).destroy_object(data.GetParameter());
-			});
-
-		return scope.Escape(obj);
+		return wrap(object, true);
 	}
 
 	v8::Handle<v8::Object> wrap_object(v8::FunctionCallbackInfo<v8::Value> const& args)
