@@ -16,8 +16,22 @@ struct X
 
 struct Y : X
 {
-	explicit Y(int x) { var = x; }
+	static int instance_count;
+
+	explicit Y(int x) { var = x; ++instance_count; }
+	~Y() { --instance_count; }
 };
+
+int Y::instance_count = 0;
+
+static void run_GC(v8::Isolate* isolate, int count)
+{
+	// run loop several times
+	while (count-- > 0)
+	{
+		while (!isolate->IdleNotification(100));
+	}
+}
 
 namespace v8pp {
 template<>
@@ -53,7 +67,8 @@ void test_class()
 
 	context
 		.set("X", X_class)
-		.set("Y", Y_class);
+		.set("Y", Y_class)
+		.set("runGC", v8pp::wrap_function(isolate, "", &run_GC));
 
 	check_eq("X object", run_script<int>(context, "x = new X(); x.konst + x.var"), 100);
 	check_eq("X::rprop", run_script<int>(context, "x = new X(); x.rprop"), 1);
@@ -62,4 +77,9 @@ void test_class()
 	check_eq("X::static_fun(1)", run_script<int>(context, "X.static_fun(3)"), 3);
 
 	check_eq("Y object", run_script<int>(context, "y = new Y(-100); y.konst + y.var"), -1);
+	v8pp::class_<Y>::reference_external(context.isolate(), new Y(-1));
+	run_script<int>(context, "for (i = 0; i < 10; ++i) new Y(i); i");
+	check_eq("Y count", Y::instance_count, 10 + 2); // 10, y, and reference_external above
+	run_script<int>(context, "y = null; runGC(3); 0");
+	check_eq("Y count after GC", Y::instance_count, 1); // 1 reference_external
 }
