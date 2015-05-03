@@ -1,8 +1,8 @@
 [![Build Status](https://travis-ci.org/pmed/v8pp.svg)](https://travis-ci.org/pmed/v8pp)
 
-# v8pp
-
 [![Join the chat at https://gitter.im/pmed/v8pp](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pmed/v8pp?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
+# v8pp
 
 Header-only library to expose C++ classes and functions into [V8](https://code.google.com/p/v8/) to use them in JavaScript code. v8pp uses heavy template metaprogramming and variadic template parameters which requires modern compiler with C++11 support. The library has been tested on:
 
