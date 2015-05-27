@@ -351,3 +351,4 @@ The library uses several preprocessor macros, defined in `v8pp/config.hpp` file:
 
 * [vu8](https://github.com/tsa/vu8), abandoned
 * [v8-juice](http://code.google.com/p/v8-juice/), abandoned
+* Script bindng in [cpgf](https://github.com/cpgf/cpgf)
