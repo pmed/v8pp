@@ -223,7 +223,7 @@ private:
 			{
 				v8::Isolate* isolate = data.GetIsolate();
 				T* object = data.GetParameter();
-				instance(isolate).remove_object<T>(isolate, object, nullptr);
+				instance(isolate).template remove_object<T>(isolate, object, nullptr);
 			});
 
 		}
