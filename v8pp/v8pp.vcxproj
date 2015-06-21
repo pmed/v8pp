@@ -30,6 +30,7 @@
     <ClInclude Include="convert.hpp" />
     <ClInclude Include="factory.hpp" />
     <ClInclude Include="function.hpp" />
+    <ClInclude Include="json.hpp" />
     <ClInclude Include="module.hpp" />
     <ClInclude Include="object.hpp" />
     <ClInclude Include="property.hpp" />

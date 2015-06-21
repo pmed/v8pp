@@ -14,6 +14,7 @@
     <ClCompile Include="test_function.cpp" />
     <ClCompile Include="test_module.cpp" />
     <ClCompile Include="test_object.cpp" />
+    <ClCompile Include="test_json.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="test.hpp" />

@@ -22,6 +22,7 @@ void run_tests()
 	void test_class();
 	void test_property();
 	void test_object();
+	void test_json();
 
 	std::pair<char const*, void(*)()> tests[] =
 	{
@@ -37,6 +38,7 @@ void run_tests()
 		{ "test_class", test_class },
 		{ "test_property", test_property },
 		{ "test_object", test_object },
+		{ "test_json", test_json },
 	};
 
 	for (auto const& test : tests)

@@ -1,5 +1,5 @@
-#ifndef V8PP_FORWARD_HPP_INCLUDED
-#define V8PP_FORWARD_HPP_INCLUDED
+#ifndef V8PP_FUNCTION_HPP_INCLUDED
+#define V8PP_FUNCTION_HPP_INCLUDED
 
 #include <tuple>
 #include <type_traits>
@@ -163,4 +163,4 @@ v8::Handle<v8::Function> wrap_function(v8::Isolate* isolate, char const* name, F
 
 } // namespace v8pp
 
-#endif // V8PP_FORWARD_HPP_INCLUDED
+#endif // V8PP_FUNCTION_HPP_INCLUDED

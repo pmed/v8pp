@@ -17,5 +17,6 @@
     <ClInclude Include="property.hpp" />
     <ClInclude Include="function.hpp" />
     <ClInclude Include="object.hpp" />
+    <ClInclude Include="json.hpp" />
   </ItemGroup>
 </Project>
