@@ -24,15 +24,6 @@ struct Y : X
 
 int Y::instance_count = 0;
 
-static void run_GC(v8::Isolate* isolate, int count)
-{
-	// run loop several times
-	while (count-- > 0)
-	{
-		while (!isolate->IdleNotification(100));
-	}
-}
-
 namespace v8pp {
 template<>
 struct factory<Y>
@@ -68,7 +59,7 @@ void test_class()
 	context
 		.set("X", X_class)
 		.set("Y", Y_class)
-		.set("runGC", v8pp::wrap_function(isolate, "", &run_GC));
+		;
 
 	check_eq("X object", run_script<int>(context, "x = new X(); x.konst + x.var"), 100);
 	check_eq("X::rprop", run_script<int>(context, "x = new X(); x.rprop"), 1);
@@ -80,6 +71,11 @@ void test_class()
 	v8pp::class_<Y>::reference_external(context.isolate(), new Y(-1));
 	run_script<int>(context, "for (i = 0; i < 10; ++i) new Y(i); i");
 	check_eq("Y count", Y::instance_count, 10 + 2); // 10, y, and reference_external above
-	run_script<int>(context, "y = null; runGC(3); 0");
+	run_script<int>(context, "y = null; 0");
+
+	std::string const v8_flags = "--expose_gc";
+	v8::V8::SetFlagsFromString(v8_flags.data(), (int)v8_flags.length());
+	context.isolate()->RequestGarbageCollectionForTesting(v8::Isolate::GarbageCollectionType::kFullGarbageCollection);
+
 	check_eq("Y count after GC", Y::instance_count, 1); // 1 reference_external
 }

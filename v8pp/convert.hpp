@@ -373,7 +373,8 @@ struct convert<std::map<Key, Value, Less, Alloc>>
 
 // converter specializations for V8 Handles
 template<typename T>
-struct convert<v8::Handle<T>>
+struct convert<v8::Handle<T>, typename std::enable_if<
+	!std::is_same<v8::Handle<T>, v8::Local<T>>::value>::type>
 {
 	using from_type = v8::Handle<T>;
 	using to_type = v8::Handle<T>;
@@ -438,12 +439,16 @@ struct convert<v8::Persistent<T>>
 	}
 };
 
+template<typename T, typename Enable = void>
+struct is_wrapped_class;
+
 // convert specialization for wrapped user classes
 template<typename T>
-struct is_wrapped_class : std::is_class<T> {};
+struct is_wrapped_class<T> : std::is_class<T> {};
 
 template<typename T>
-struct is_wrapped_class<v8::Handle<T>> : std::false_type {};
+struct is_wrapped_class<v8::Handle<T>, typename std::enable_if<
+	!std::is_same<v8::Handle<T>, v8::Local<T>>::value, int>::type> : std::false_type{};
 
 template<typename T>
 struct is_wrapped_class<v8::Local<T>> : std::false_type {};

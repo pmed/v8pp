@@ -4,8 +4,8 @@ LDFLAGS += -shared
 AR = ar
 ARFLAGS = rcs
 
-INCLUDES = -I. -I./v8pp
-LIBS = -lv8 -licui18n  -licuuc -L. -lv8pp -ldl -lpthread
+INCLUDES = -I. -I./v8pp -isystem./v8/include -isystem./v8
+LIBS = -L./v8/lib -lv8 -lv8_libplatform -licui18n  -licuuc -L. -lv8pp -ldl -lpthread
 
 .cpp.o:
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@

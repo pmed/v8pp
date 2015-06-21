@@ -1,6 +1,6 @@
 cxx = c++
-cxxflags = -Wall -Wextra -Wno-return-type-c-linkage -std=c++11 -fPIC -I. -I./v8pp
-ldflags = -L. -lv8pp -lv8 -ldl
+cxxflags = -Wall -Wextra -Wno-return-type-c-linkage -std=c++11 -fPIC -I. -I./v8pp -isystem./v8/include -isystem./v8
+ldflags = -L./v8/lib -lv8 -lv8_libplatform -licui18n  -licuuc -L. -lv8pp -ldl -lpthread
 
 rule cxx
   command = $cxx $cxxflags -c $in -o $out
