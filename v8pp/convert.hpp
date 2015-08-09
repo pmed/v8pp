@@ -371,29 +371,6 @@ struct convert<std::map<Key, Value, Less, Alloc>>
 	}
 };
 
-// converter specializations for V8 Handles
-template<typename T>
-struct convert<v8::Handle<T>>
-{
-	using from_type = v8::Handle<T>;
-	using to_type = v8::Handle<T>;
-
-	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
-	{
-		return !value.As<T>().IsEmpty();
-	}
-
-	static v8::Handle<T> from_v8(v8::Isolate*, v8::Handle<v8::Value> value)
-	{
-		return value.As<T>();
-	}
-
-	static v8::Handle<T> to_v8(v8::Isolate*, v8::Handle<T> value)
-	{
-		return value;
-	}
-};
-
 template<typename T>
 struct convert<v8::Local<T>>
 {
@@ -441,9 +418,6 @@ struct convert<v8::Persistent<T>>
 // convert specialization for wrapped user classes
 template<typename T>
 struct is_wrapped_class : std::is_class<T> {};
-
-template<typename T>
-struct is_wrapped_class<v8::Handle<T>> : std::false_type {};
 
 template<typename T>
 struct is_wrapped_class<v8::Local<T>> : std::false_type {};
