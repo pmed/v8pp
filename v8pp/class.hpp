@@ -86,7 +86,7 @@ public:
 	}
 
 	template<typename T>
-	void remove_object(v8::Isolate* isolate, T* object, void (*destroy)(v8::Isolate* isolate, T* obj))
+	void remove_object(v8::Isolate* isolate, T* object, void (*destroy)(v8::Isolate* isolate, T* obj) = nullptr)
 	{
 		auto it = objects_.find(object);
 		assert(objects_.find(object) != objects_.end() && "no object");
@@ -223,7 +223,7 @@ private:
 			{
 				v8::Isolate* isolate = data.GetIsolate();
 				T* object = data.GetParameter();
-				instance(isolate).template remove_object<T>(isolate, object, nullptr);
+				instance(isolate).remove_object(isolate, object);
 			});
 
 		}
