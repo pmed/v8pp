@@ -87,8 +87,14 @@ void test_class()
 	check("y2", v8pp::from_v8<Y*>(isolate, y2_obj) == y2);
 	check("y2_obj", v8pp::to_v8(isolate, y2) == y2_obj);
 
+	v8::Handle<v8::Object> y3_obj = v8pp::class_<Y>::create_object(context.isolate(), -3);
+	Y* y3 = v8pp::class_<Y>::unwrap_object(isolate, y3_obj);
+	check("y3", v8pp::from_v8<Y*>(isolate, y3_obj) == y3);
+	check("y3_obj", v8pp::to_v8(isolate, y3) == y3_obj);
+	check_eq("y3.var", y3->var, -3);
+
 	run_script<int>(context, "for (i = 0; i < 10; ++i) new Y(i); i");
-	check_eq("Y count", Y::instance_count, 10 + 3); // 10 + y + y1 + y2
+	check_eq("Y count", Y::instance_count, 10 + 4); // 10 + y + y1 + y2 + y3
 	run_script<int>(context, "y = null; 0");
 
 	v8pp::class_<Y>::unreference_external(isolate, &y1);
@@ -100,6 +106,11 @@ void test_class()
 	check("unref y2", v8pp::from_v8<Y*>(isolate, y2_obj) == nullptr);
 	check("unref y2_obj", v8pp::to_v8(isolate, y2).IsEmpty());
 	y2_obj.Clear();
+
+	v8pp::class_<Y>::destroy_object(isolate, y3);
+	check("unref y3", v8pp::from_v8<Y*>(isolate, y3_obj) == nullptr);
+	check("unref y3_obj", v8pp::to_v8(isolate, y3).IsEmpty());
+	y3_obj.Clear();
 
 	std::string const v8_flags = "--expose_gc";
 	v8::V8::SetFlagsFromString(v8_flags.data(), (int)v8_flags.length());

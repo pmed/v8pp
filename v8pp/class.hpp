@@ -519,6 +519,14 @@ public:
 		return class_singleton::instance(isolate).unwrap_object(value);
 	}
 
+	/// Create a wrapped C++ object and import it into JavaScript
+	template<typename ...Args>
+	static v8::Handle<v8::Object> create_object(v8::Isolate* isolate, Args... args)
+	{
+		T* obj = v8pp::factory<T>::create(isolate, std::forward<Args>(args)...);
+		return import_external(isolate, obj);
+	}
+
 	/// Find V8 object handle for a wrapped C++ object, may return empty handle on fail.
 	static v8::Handle<v8::Object> find_object(v8::Isolate* isolate, T const* obj)
 	{
