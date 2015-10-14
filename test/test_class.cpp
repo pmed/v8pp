@@ -76,14 +76,34 @@ void test_class()
 	check_eq("X::static_fun(1)", run_script<int>(context, "X.static_fun(3)"), 3);
 
 	check_eq("Y object", run_script<int>(context, "y = new Y(-100); y.konst + y.var"), -1);
-	v8pp::class_<Y>::reference_external(context.isolate(), new Y(-1));
+
+	Y y1(-1);
+	v8::Handle<v8::Object> y1_obj = v8pp::class_<Y>::reference_external(context.isolate(), &y1);
+	check("y1", v8pp::from_v8<Y*>(isolate, y1_obj) == &y1);
+	check("y1_obj", v8pp::to_v8(isolate, y1) == y1_obj);
+
+	Y* y2 = new Y(-2);
+	v8::Handle<v8::Object> y2_obj = v8pp::class_<Y>::import_external(context.isolate(), y2);
+	check("y2", v8pp::from_v8<Y*>(isolate, y2_obj) == y2);
+	check("y2_obj", v8pp::to_v8(isolate, y2) == y2_obj);
+
 	run_script<int>(context, "for (i = 0; i < 10; ++i) new Y(i); i");
-	check_eq("Y count", Y::instance_count, 10 + 2); // 10, y, and reference_external above
+	check_eq("Y count", Y::instance_count, 10 + 3); // 10 + y + y1 + y2
 	run_script<int>(context, "y = null; 0");
+
+	v8pp::class_<Y>::unreference_external(isolate, &y1);
+	check("unref y1", v8pp::from_v8<Y*>(isolate, y1_obj) == nullptr);
+	check("unref y1_obj", v8pp::to_v8(isolate, y1).IsEmpty());
+	y1_obj.Clear();
+
+	v8pp::class_<Y>::destroy_object(isolate, y2);
+	check("unref y2", v8pp::from_v8<Y*>(isolate, y2_obj) == nullptr);
+	check("unref y2_obj", v8pp::to_v8(isolate, y2).IsEmpty());
+	y2_obj.Clear();
 
 	std::string const v8_flags = "--expose_gc";
 	v8::V8::SetFlagsFromString(v8_flags.data(), (int)v8_flags.length());
 	context.isolate()->RequestGarbageCollectionForTesting(v8::Isolate::GarbageCollectionType::kFullGarbageCollection);
 
-	check_eq("Y count after GC", Y::instance_count, 1); // 1 reference_external
+	check_eq("Y count after GC", Y::instance_count, 1); // y1
 }

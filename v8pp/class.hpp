@@ -57,7 +57,7 @@ public:
 
 	bool cast(void*& ptr, type_index type) const
 	{
-		if (type == type_)
+		if (type == type_ || !ptr)
 		{
 			return true;
 		}
@@ -100,6 +100,11 @@ public:
 		assert(objects_.find(object) != objects_.end() && "no object");
 		if (it != objects_.end())
 		{
+			// remove pointer to wrapped  C++ object from V8 Object internal field
+			// to disable unwrapping for this V8 Object
+			assert(to_local(isolate, it->second)->GetAlignedPointerFromInternalField(0) == object);
+			to_local(isolate, it->second)->SetAlignedPointerInInternalField(0, nullptr);
+
 			it->second.Reset();
 			if (destroy)
 			{
@@ -493,6 +498,12 @@ public:
 	static v8::Handle<v8::Object> reference_external(v8::Isolate* isolate, T* ext)
 	{
 		return class_singleton::instance(isolate).wrap_external_object(ext);
+	}
+
+	/// Remove external reference from JavaScript
+	static void unreference_external(v8::Isolate* isolate, T* ext)
+	{
+		return class_singleton::instance(isolate).remove_object(isolate, ext);
 	}
 
 	/// As reference_external but delete memory for C++ object
