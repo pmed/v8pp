@@ -6,11 +6,12 @@ set PATH=%PATH%;%CD%\depot_tools
 fetch --no-history v8
 cd v8
 gclient sync
-python build\gyp_v8 -Dtarget_arch=x64 -Dcomponent=shared_library -Dv8_use_external_startup_data=0
-msbuild /p:Configuration=Release /p:Platform=x64 tools\gyp\v8.sln
+python build\gyp_v8 -Dtarget_arch=x64 --depth=. -I../v8_options.gypi tools/gyp/v8.gyp
+msbuild /m /p:Configuration=Release /p:Platform=x64 tools\gyp\v8.sln
 mkdir lib\x64\Release
 copy build\Release\lib\*.lib lib\x64\Release
 copy build\Release\lib\*.exp lib\x64\Release
+copy build\Release\v8_lib*.lib lib\x64\Release
 copy build\Release\*.dll lib\x64\Release
 copy build\Release\*.pdb lib\x64\Release
 
