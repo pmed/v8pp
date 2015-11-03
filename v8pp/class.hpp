@@ -152,6 +152,8 @@ protected:
 		return next_index++;
 	}
 
+	type_index type() const { return type_; }
+
 private:
 	struct base_class_info
 	{
@@ -181,7 +183,7 @@ class class_singleton : public class_info
 		return my_type;
 	}
 private:
-	explicit class_singleton(v8::Isolate* isolate, type_index type)
+	class_singleton(v8::Isolate* isolate, type_index type)
 		: class_info(type)
 		, isolate_(isolate)
 		, ctor_(nullptr)
@@ -209,6 +211,8 @@ private:
 		//  1 - pointer to the class_singleton
 		func->InstanceTemplate()->SetInternalFieldCount(2);
 	}
+
+	~class_singleton() {}
 
 	v8::Handle<v8::Object> wrap(T* object, bool destroy_after)
 	{
@@ -246,35 +250,78 @@ private:
 		return scope.Escape(obj);
 	}
 
+	using class_instances = std::vector<void*>;
 public:
-	static class_singleton& instance(v8::Isolate* isolate)
+	static class_singleton& create(v8::Isolate* isolate)
 	{
 		// Get pointer to singleton instances from v8::Isolate
-		using singleton_instances = std::vector<void*>;
-
-		singleton_instances* singletons =
-			static_cast<singleton_instances*>(isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
+		class_instances* singletons =
+			static_cast<class_instances*>(isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
 		if (!singletons)
 		{
 			// No singletons map yet, create and store it
-			singletons = new singleton_instances;
+			singletons = new class_instances;
 			isolate->SetData(V8PP_ISOLATE_DATA_SLOT, singletons);
 		}
 
 		// Get singleton instance from the the list by class_type
 		type_index const my_type = class_type();
-		class_singleton* result;
 		if (my_type < singletons->size())
 		{
-			result = static_cast<class_singleton*>((*singletons)[my_type]);
+			throw std::runtime_error("v8pp::class_ already created");
 		}
-		else
-		{
-			// No singleton instance, create and add it
-			result = new class_singleton(isolate, my_type);
-			singletons->emplace_back(result);
-		}
+
+		class_singleton* result = new class_singleton(isolate, my_type);
+		singletons->emplace_back(result);
+
 		return *result;
+	}
+
+	static void destroy(v8::Isolate* isolate)
+	{
+		class_instances* singletons =
+			static_cast<class_instances*>(isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
+		if (singletons)
+		{
+			type_index const my_type = class_type();
+			if (my_type < singletons->size())
+			{
+				class_singleton* instance = static_cast<class_singleton*>((*singletons)[my_type]);
+				if (instance->type() == my_type)
+				{
+					instance->destroy_objects();
+					delete instance;
+					(*singletons)[my_type] = nullptr;
+					size_t const null_count = std::count(singletons->begin(), singletons->end(), nullptr);
+					if (null_count == singletons->size())
+					{
+						delete singletons;
+						isolate->SetData(V8PP_ISOLATE_DATA_SLOT, nullptr);
+					}
+				}
+			}
+		}
+	}
+
+	static class_singleton& instance(v8::Isolate* isolate)
+	{
+		// Get pointer to singleton instances from v8::Isolate
+		class_instances* singletons =
+			static_cast<class_instances*>(isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
+		if (singletons)
+		{
+			type_index const my_type = class_type();
+			class_singleton* result;
+			if (my_type < singletons->size())
+			{
+				result = static_cast<class_singleton*>((*singletons)[my_type]);
+				if (result && result->type() == my_type)
+				{
+					return *result;
+				}
+			}
+		}
+		throw std::runtime_error("v8pp::class_ not created");
 	}
 
 	v8::Isolate* isolate() { return isolate_; }
@@ -377,9 +424,10 @@ template<typename T>
 class class_
 {
 	using class_singleton = detail::class_singleton<T>;
+	detail::class_singleton<T>& class_singleton_;
 public:
 	explicit class_(v8::Isolate* isolate)
-		: class_singleton_(class_singleton::instance(isolate))
+		: class_singleton_(class_singleton::create(isolate))
 	{
 	}
 
@@ -545,6 +593,12 @@ public:
 		class_singleton::instance(isolate).destroy_objects();
 	}
 
+	/// Destroy all wrapped C++ objects and this binding class_
+	static void destroy(v8::Isolate* isolate)
+	{
+		class_singleton::destroy(isolate);
+	}
+
 private:
 	template<typename Attribute>
 	static void member_get(v8::Local<v8::String>, v8::PropertyCallbackInfo<v8::Value> const& info)
@@ -566,8 +620,6 @@ private:
 		using attr_type = typename detail::function_traits<Attribute>::return_type;
 		self.*ptr = v8pp::from_v8<attr_type>(isolate, value);
 	}
-
-	detail::class_singleton<T>& class_singleton_;
 };
 
 } // namespace v8pp

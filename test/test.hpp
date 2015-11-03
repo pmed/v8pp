@@ -71,6 +71,19 @@ void check_eq(std::string msg, T actual, U expected)
 	}
 }
 
+template<typename Ex, typename F>
+void check_ex(std::string msg, F&& f)
+{
+	try
+	{
+		f();
+		check(msg + " expected " + typeid(Ex).name() + " exception", false);
+	}
+	catch (Ex const&)
+	{
+	}
+}
+
 template<typename T>
 T run_script(v8pp::context& context, std::string const& source)
 {

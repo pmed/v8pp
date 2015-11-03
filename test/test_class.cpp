@@ -47,6 +47,11 @@ void test_class()
 	v8::Isolate* isolate = context.isolate();
 	v8::HandleScope scope(isolate);
 
+	check_ex<std::runtime_error>("find unwrapped", [isolate]()
+	{
+		v8pp::class_<struct Z>::find_object(isolate, nullptr);
+	});
+
 	v8pp::class_<X> X_class(isolate);
 	X_class
 		.ctor()
@@ -117,4 +122,6 @@ void test_class()
 	context.isolate()->RequestGarbageCollectionForTesting(v8::Isolate::GarbageCollectionType::kFullGarbageCollection);
 
 	check_eq("Y count after GC", Y::instance_count, 1); // y1
+
+	v8pp::class_<Y>::destroy(isolate);
 }

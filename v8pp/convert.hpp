@@ -506,9 +506,9 @@ struct convert<T, typename std::enable_if<is_wrapped_class<T>::value>::type>
 	using from_type = T&;
 	using to_type = v8::Handle<v8::Object>;
 
-	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
+	static bool is_valid(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
-		return !value.IsEmpty() && value->IsObject();
+		return convert<T*>::is_valid(isolate, value);
 	}
 
 	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
@@ -521,7 +521,7 @@ struct convert<T, typename std::enable_if<is_wrapped_class<T>::value>::type>
 		{
 			return *object;
 		}
-		throw std::runtime_error(std::string("expected C++ wrapped object"));
+		throw std::runtime_error("expected C++ wrapped object");
 	}
 
 	static to_type to_v8(v8::Isolate* isolate, T const& value)
