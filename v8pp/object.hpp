@@ -16,7 +16,7 @@
 
 namespace v8pp {
 
-/// Get optional value form V8 object by name.
+/// Get optional value from V8 object by name.
 /// Dot symbols in option name delimits subobjects name.
 /// return false if the value doesn't exist in the options object
 template<typename T>
