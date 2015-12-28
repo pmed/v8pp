@@ -1,94 +1,20 @@
 language: c++
 
-matrix:
-  include:
-    - os: linux
-      compiler: gcc
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: ['g++-4.8']
-      env:
-        - CC_=gcc-4.8
-        - CXX_=g++-4.8
-        
-    - os: linux
-      compiler: gcc
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: ['g++-4.9']
-      env:
-        - CC_=gcc-4.9
-        - CXX_=g++-4.9
+sudo: required
+dist: trusty
 
+compiler:
+  - gcc
+  - clang
 
-    - os: linux
-      compiler: gcc
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: ['g++-5']
-      env:
-        - CC_=gcc-5
-        - CXX_=g++-5
+before_install:
+  - sudo add-apt-repository ppa:pinepain/v8 -y
+  - sudo apt-get update -q
+  - sudo apt-get install libv8-dev -y
 
-    - os: linux
-      compiler: clang
-      env:
-        - CC_=clang
-        - CXX_=clang++
-        - CXXFLAGS="-stdlib=libc++"
+install:
+  - if [ "$CXX" == "clang++" ]; then export CXXFLAGS="-stdlib=libstdc++"; fi
+  
+script: make
 
-    - os: linux
-      compiler: clang
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5']
-          packages: ['clang-3.5']
-      env:
-        - CC_=clang-3.5
-        - CXX_=clang++-3.5
-        - CXXFLAGS="-stdlib=libc++"
-
-    - os: linux
-      compiler: clang
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5']
-          packages: ['clang-3.5']
-      env:
-        - CC_=clang-3.5
-        - CXX_=clang++-3.5
-
-    - os: linux
-      compiler: clang
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.6']
-          packages: ['clang-3.6']
-      env:
-        - CC_=clang-3.6
-        - CXX_=clang++-3.6
-        - CXXFLAGS="-stdlib=libc++"
-
-# Activate when 3.7 is released and the repository is available
-#    - os: linux
-#      compiler: clang
-#      addons:
-#        apt:
-#          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.7']
-#          packages: ['clang-3.7']
-#      env:
-#        - CC_=clang-37
-#        - CXX_=clang++-3.7
-#        - CXXFLAGS="-stdlib=libc++"
-
-# Activate when we are allowed to use MacOS X
-#    - os: osx
-#      compiler: clang
-#      env: COMPILER=clang++
-
-before_script: CC=$CC_ CXX=$CXX_ LINK=$CXX_ ./build-v8.sh
-script: CC=$CC_ CXX=$CXX_ CXXFLAGS="-isystem./v8/include -isystem./v8 "$CXXFLAGS LIBRARY_PATH="./v8/lib" LINK=$CXX_ make
-after_success: LD_LIBRARY_PATH=.:./v8/lib ./v8pp_test -v --run-tests test/console.js test/file.js
+after_success: LD_LIBRARY_PATH=. ./v8pp_test -v --run-tests test/console.js test/file.js
