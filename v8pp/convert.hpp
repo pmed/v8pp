@@ -13,6 +13,7 @@
 
 #include <climits>
 #include <string>
+#include <array>
 #include <vector>
 #include <map>
 #include <iterator>
@@ -290,6 +291,55 @@ struct convert<T, typename std::enable_if<std::is_floating_point<T>::value>::typ
 	}
 };
 
+// convert Array <-> std::array
+template<typename T, size_t N>
+struct convert<std::array<T, N>>
+{
+	using from_type = std::array<T, N>;
+	using to_type = v8::Handle<v8::Array>;
+
+	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
+	{
+		return !value.IsEmpty() && value->IsArray();
+	}
+
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	{
+		if (!is_valid(isolate, value))
+		{
+			throw std::invalid_argument("expected Array");
+		}
+
+		v8::HandleScope scope(isolate);
+		v8::Local<v8::Array> array = value.As<v8::Array>();
+
+		if (array->Length() != N)
+		{
+			throw std::runtime_error("Invalid array length: expected " + std::to_string(N)
+				+ " actual " + std::to_string(array->Length()));
+		}
+
+		from_type result;
+		for (uint32_t i = 0; i < N; ++i)
+		{
+			result[i] = convert<T>::from_v8(isolate, array->Get(i));
+		}
+		return result;
+	}
+
+	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
+	{
+		v8::EscapableHandleScope scope(isolate);
+
+		v8::Local<v8::Array> result = v8::Array::New(isolate, N);
+		for (uint32_t i = 0; i < N; ++i)
+		{
+			result->Set(i, convert<T>::to_v8(isolate, value[i]));
+		}
+		return scope.Escape(result);
+	}
+};
+
 // convert Array <-> std::vector
 template<typename T, typename Alloc>
 struct convert<std::vector<T, Alloc>>
@@ -468,6 +518,9 @@ struct is_wrapped_class<v8::Persistent<T>> : std::false_type {};
 
 template<typename Char, typename Traits, typename Alloc>
 struct is_wrapped_class<std::basic_string<Char, Traits, Alloc>> : std::false_type {};
+
+template<typename T, size_t N>
+struct is_wrapped_class<std::array<T, N>> : std::false_type{};
 
 template<typename T, typename Alloc>
 struct is_wrapped_class<std::vector<T, Alloc>> : std::false_type {};

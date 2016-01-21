@@ -7,6 +7,7 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 #include <iosfwd>
+#include <array>
 #include <string>
 #include <sstream>
 #include <stdexcept>
@@ -23,6 +24,21 @@ std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& o
 	os << '[';
 	bool first = true;
 	for (auto const& item : sequence)
+	{
+		if (!first) os << ", ";
+		os << item;
+		first = false;
+	}
+	os << ']';
+	return os;
+}
+
+template<typename Char, typename Traits, typename T, size_t N>
+std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& os, std::array<T, N> const& array)
+{
+	os << '[';
+	bool first = true;
+	for (auto const& item : array)
 	{
 		if (!first) os << ", ";
 		os << item;

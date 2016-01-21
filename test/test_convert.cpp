@@ -67,16 +67,27 @@ void test_convert()
 	test_string_conv(isolate, L"qaz");
 #endif
 
-	std::initializer_list<int> const items = { 1, 2, 3 };
-	check("initilaizer list to array", v8pp::to_v8(isolate, items)->IsArray());
+	using int_vector = std::vector<int>;
 
-	std::vector<int> vector = items;
+	int_vector vector = { 1, 2, 3 };
 	test_conv(isolate, vector);
-	check("vector to array", v8pp::to_v8(isolate, vector.begin(), vector.end())->IsArray());
-
-	std::list<int> list = items;
-	check("list to array", v8pp::to_v8(isolate, list.begin(), list.end())->IsArray());
 
 	std::map<char, int> map = { { 'a', 1 }, { 'b', 2 }, { 'c', 3 } };
 	test_conv(isolate, map);
+
+	std::array<int, 3> array = { 1, 2, 3 };
+	test_conv(isolate, array);
+
+	check_ex<std::runtime_error>("wrong array length", [isolate, array]()
+	{
+		v8::Local<v8::Array> arr = v8pp::to_v8(isolate, std::array<int, 3>{ 1, 2, 3 });
+		v8pp::from_v8<std::array<int, 2>>(isolate, arr);
+	});
+
+	check_eq("initializer list to array",
+		v8pp::from_v8<int_vector>(isolate, v8pp::to_v8(isolate, { 1, 2, 3 })), vector);
+
+	std::list<int> list = { 1, 2, 3 };
+	check_eq("pair of iterators to array",
+		v8pp::from_v8<int_vector>(isolate, v8pp::to_v8(isolate, list.begin(), list.end())), vector);
 }
