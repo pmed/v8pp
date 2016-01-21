@@ -21,6 +21,37 @@ void test_conv(v8::Isolate* isolate, T value)
 	check_eq(typeid(T).name(), value2, value);
 }
 
+template<typename Char, size_t N>
+void test_string_conv(v8::Isolate* isolate, Char const (&str)[N])
+{
+	std::basic_string<Char> const str2(str, 2);
+
+	test_conv(isolate, str[0]);
+	test_conv(isolate, str);
+
+	check_eq("string literal",
+		v8pp::from_v8<Char const*>(isolate, v8pp::to_v8(isolate, str)), str);
+	check_eq("string literal2",
+		v8pp::from_v8<Char const*>(isolate, v8pp::to_v8(isolate, str, 2)), str2);
+
+	Char const* ptr = str;
+	check_eq("string pointer",
+		v8pp::from_v8<Char const*>(isolate, v8pp::to_v8(isolate, ptr)), str);
+	check_eq("string pointer2",
+		v8pp::from_v8<Char const*>(isolate, v8pp::to_v8(isolate, ptr, 2)), str2);
+
+	Char const* empty = str + N - 1; // use last \0 in source string
+	check_eq("empty string literal",
+		v8pp::from_v8<Char const*>(isolate, v8pp::to_v8(isolate, "")), empty);
+	check_eq("empty string literal0",
+		v8pp::from_v8<Char const*>(isolate, v8pp::to_v8(isolate, "", 0)), empty);
+
+	check_eq("empty string pointer",
+		v8pp::from_v8<Char const*>(isolate, v8pp::to_v8(isolate, empty)), empty);
+	check_eq("empty string pointer0",
+		v8pp::from_v8<Char const*>(isolate, v8pp::to_v8(isolate, empty, 0)), empty);
+}
+
 void test_convert()
 {
 	v8pp::context context;
@@ -30,8 +61,11 @@ void test_convert()
 	test_conv(isolate, 1);
 	test_conv(isolate, 2.2);
 	test_conv(isolate, true);
-	test_conv(isolate, 'a');
-	test_conv(isolate, "qaz");
+
+	test_string_conv(isolate, "qaz");
+#ifdef WIN32
+	test_string_conv(isolate, L"qaz");
+#endif
 
 	std::initializer_list<int> const items = { 1, 2, 3 };
 	check("initilaizer list to array", v8pp::to_v8(isolate, items)->IsArray());

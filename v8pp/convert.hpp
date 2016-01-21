@@ -135,15 +135,17 @@ struct convert<Char const*>
 		}
 	}
 
-	static to_type to_v8(v8::Isolate* isolate, Char const* value)
+	static to_type to_v8(v8::Isolate* isolate, Char const* value, size_t len = ~0)
 	{
 		if (sizeof(Char) == 1)
 		{
-			return v8::String::NewFromUtf8(isolate, reinterpret_cast<char const*>(value));
+			return v8::String::NewFromUtf8(isolate, reinterpret_cast<char const*>(value),
+				v8::String::kNormalString, static_cast<int>(len));
 		}
 		else
 		{
-			return v8::String::NewFromTwoByte(isolate, reinterpret_cast<uint16_t const*>(value));
+			return v8::String::NewFromTwoByte(isolate, reinterpret_cast<uint16_t const*>(value),
+				v8::String::kNormalString, static_cast<int>(len));
 		}
 	}
 };
@@ -548,15 +550,27 @@ typename convert<T>::from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Valu
 	return convert<T>::is_valid(isolate, value)? convert<T>::from_v8(isolate, value) : default_value;
 }
 
-inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char const* str, int len = -1)
+inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char const* str, size_t len)
 {
-	return v8::String::NewFromUtf8(isolate, str, v8::String::kNormalString, len);
+	return convert<char const*>::to_v8(isolate, str, len);
+}
+
+template<size_t N>
+v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char const (&str)[N], size_t len = N - 1)
+{
+	return convert<char const*>::to_v8(isolate, str, len);
 }
 
 #ifdef WIN32
-inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, wchar_t const* str, int len = -1)
+inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, wchar_t const* str, size_t len)
 {
-	return v8::String::NewFromTwoByte(isolate, reinterpret_cast<uint16_t const*>(str), v8::String::kNormalString, len);
+	return convert<wchar_t const*>::to_v8(isolate, str, len);
+}
+
+template<size_t N>
+v8::Handle<v8::String> to_v8(v8::Isolate* isolate, wchar_t const (&str)[N], size_t len = N - 1)
+{
+	return convert<wchar_t const*>::to_v8(isolate, str, len);
 }
 #endif
 
