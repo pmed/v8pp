@@ -33,11 +33,14 @@ void test_convert()
 	test_conv(isolate, 'a');
 	test_conv(isolate, "qaz");
 
-	std::vector<int> vector = { 1, 2, 3 };
+	std::initializer_list<int> const items = { 1, 2, 3 };
+	check("initilaizer list to array", v8pp::to_v8(isolate, items)->IsArray());
+
+	std::vector<int> vector = items;
 	test_conv(isolate, vector);
 	check("vector to array", v8pp::to_v8(isolate, vector.begin(), vector.end())->IsArray());
 
-	std::list<int> list = { 1, 2, 3 };
+	std::list<int> list = items;
 	check("list to array", v8pp::to_v8(isolate, list.begin(), list.end())->IsArray());
 
 	std::map<char, int> map = { { 'a', 1 }, { 'b', 2 }, { 'c', 3 } };

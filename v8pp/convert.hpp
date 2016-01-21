@@ -580,6 +580,12 @@ v8::Handle<v8::Array> to_v8(v8::Isolate* isolate, Iterator begin, Iterator end)
 }
 
 template<typename T>
+v8::Handle<v8::Array> to_v8(v8::Isolate* isolate, std::initializer_list<T> const& init)
+{
+	return to_v8(isolate, init.begin(), init.end());
+}
+
+template<typename T>
 v8::Local<T> to_local(v8::Isolate* isolate, v8::PersistentBase<T> const& handle)
 {
 	if (handle.IsWeak())
