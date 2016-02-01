@@ -88,6 +88,35 @@ struct function_traits<F&> : function_traits<F> {};
 template<typename F>
 struct function_traits<F&&> : function_traits<F> {};
 
+template<typename F, bool is_class>
+struct is_callable_impl : std::is_function<typename std::remove_pointer<F>::type>
+{
+};
+
+template<typename F>
+struct is_callable_impl<F, true>
+{
+private:
+	struct fallback { void operator()(); };
+	struct derived : F, fallback {};
+
+	template<typename U, U> struct check;
+
+	template<typename>
+	static std::true_type test(...);
+
+	template<typename C>
+	static std::false_type test(check<void(fallback::*)(), &C::operator()>*);
+
+	using type = decltype(test<derived>(0));
+public:
+	static const bool value = type::value;
+};
+
+template<typename F>
+using is_callable = std::integral_constant<bool,
+	is_callable_impl<F, std::is_class<F>::value>::value>;
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // integer_sequence

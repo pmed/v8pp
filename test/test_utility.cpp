@@ -79,9 +79,14 @@ int f() { return 1; }
 int g(int x) { return x; }
 int h(int x, bool) { return x; }
 
-struct X
+struct Y
 {
 	int f() const { return 1; }
+};
+
+struct Z
+{
+	void operator()();
 };
 
 void test_apply_tuple()
@@ -95,9 +100,26 @@ void test_apply_tuple()
 	check_eq("apply(h)", v8pp::detail::apply(h, 3, true), 3);
 }
 
+void test_is_callable()
+{
+	static_assert(v8pp::detail::is_callable<decltype(f)>::value, "f is callable");
+	static_assert(v8pp::detail::is_callable<decltype(g)>::value, "g is callable");
+	static_assert(v8pp::detail::is_callable<decltype(h)>::value, "h is callable");
+
+	auto lambda = [](){};
+	static_assert(v8pp::detail::is_callable<decltype(lambda)>::value, "lambda is callable");
+
+	static_assert(v8pp::detail::is_callable<Z>::value, "Z is callable");
+	static_assert(!v8pp::detail::is_callable<decltype(&Y::f)>::value, "Y::f is not callable");
+
+	static_assert(!v8pp::detail::is_callable<int>::value, "int is not callable");
+	static_assert(!v8pp::detail::is_callable<Y>::value, "Y is not callable");
+}
+
 } // unnamed namespace
 
 void test_utility()
 {
 	test_apply_tuple();
+	test_is_callable();
 }
