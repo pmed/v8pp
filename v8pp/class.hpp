@@ -463,7 +463,7 @@ public:
 	/// Set static class function
 	template<typename Function>
 	typename std::enable_if<
-		detail::is_function_pointer<Function>::value, class_&>::type
+		detail::is_callable<Function>::value, class_&>::type
 	set(char const *name, Function func)
 	{
 		class_singleton_.js_function_template()->Set(isolate(), name,

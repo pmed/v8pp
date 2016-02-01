@@ -21,13 +21,8 @@ namespace v8pp {
 namespace detail {
 
 template<typename T>
-using is_function_pointer = std::is_function<typename std::remove_pointer<T>::type>;
-
-template<typename F>
-using is_void_return = std::is_same<void, typename function_traits<F>::return_type>;
-
-template<typename T>
-using is_pointer_cast_allowed = std::integral_constant<bool, sizeof(T) <=sizeof(void*)>;
+using is_pointer_cast_allowed = std::integral_constant<bool,
+	sizeof(T) <= sizeof(void*) && std::is_trivial<T>::value>;
 
 template<typename T>
 union pointer_cast
@@ -37,8 +32,7 @@ private:
 	T value;
 
 public:
-	static_assert(is_pointer_cast_allowed<T>::value,
-		"data size should be not greater than pointer size");
+	static_assert(is_pointer_cast_allowed<T>::value, "pointer_cast is not allowed");
 
 	explicit pointer_cast(void* ptr) : ptr(ptr) {}
 	explicit pointer_cast(T value) : value(value) {}
@@ -87,7 +81,7 @@ get_external_data(v8::Handle<v8::Value> value)
 }
 
 template<typename F>
-typename std::enable_if<is_function_pointer<F>::value,
+typename std::enable_if<is_callable<F>::value,
 	typename function_traits<F>::return_type>::type
 invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
@@ -127,9 +121,8 @@ forward_ret(v8::FunctionCallbackInfo<v8::Value> const& args)
 template<typename F>
 void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	static_assert(detail::is_function_pointer<F>::value
-		|| std::is_member_function_pointer<F>::value,
-		"required pointer to a free or member function");
+	static_assert(is_callable<F>::value || std::is_member_function_pointer<F>::value,
+		"required callable F");
 
 	v8::Isolate* isolate = args.GetIsolate();
 	v8::HandleScope scope(isolate);

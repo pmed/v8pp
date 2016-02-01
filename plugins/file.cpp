@@ -14,11 +14,6 @@
 
 namespace file {
 
-bool rename(char const* src, char const* dest)
-{
-	return std::rename(src, dest) == 0;
-}
-
 class file_base
 {
 public:
@@ -134,10 +129,12 @@ v8::Handle<v8::Value> init(v8::Isolate* isolate)
 	// Create a module to add classes and functions to and return a
 	// new instance of the module to be embedded into the v8 context
 	v8pp::module m(isolate);
-	m.set("rename", &rename)
-	 .set("writer", file_writer_class)
-	 .set("reader", file_reader_class)
-		;
+	m.set("rename", [](char const* src, char const* dest) -> bool
+	{
+		return std::rename(src, dest) == 0;
+	});
+	m.set("writer", file_writer_class);
+	m.set("reader", file_reader_class);
 
 	return scope.Escape(m.new_instance());
 }

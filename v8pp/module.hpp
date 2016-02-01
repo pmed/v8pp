@@ -40,10 +40,17 @@ public:
 	v8::Isolate* isolate() { return isolate_; }
 
 	/// Set a V8 value in the module with specified name
-	module& set(char const* name, v8::Handle<v8::Data> value)
+	template<typename Data>
+	module& set(char const* name, v8::Handle<Data> value)
 	{
 		obj_->Set(v8pp::to_v8(isolate_, name), value);
 		return *this;
+	}
+
+	/// Set another module in the module with specified name
+	module& set(char const* name, module& m)
+	{
+		return set(name, m.new_instance());
 	}
 
 	/// Set wrapped C++ class in the module with specified name
@@ -58,9 +65,7 @@ public:
 
 	/// Set a C++ function in the module with specified name
 	template<typename Function>
-	typename std::enable_if<
-		detail::is_function_pointer<Function>::value,
-		module&>::type
+	typename std::enable_if<detail::is_callable<Function>::value, module&>::type
 	set(char const* name, Function func)
 	{
 		return set(name, wrap_function_template(isolate_, func));
@@ -68,11 +73,7 @@ public:
 
 	/// Set a C++ variable in the module with specified name
 	template<typename Variable>
-	typename std::enable_if<
-		!detail::is_function_pointer<Variable>::value &&
-		!std::is_pointer<Variable>::value &&
-		!std::is_convertible<Variable, v8::Handle<v8::Data>>::value,
-		module&>::type
+	typename std::enable_if<!detail::is_callable<Variable>::value, module&>::type
 	set(char const *name, Variable& var, bool readonly = false)
 	{
 		v8::HandleScope scope(isolate_);
@@ -93,11 +94,7 @@ public:
 
 	/// Set v8pp::property in the module with specified name
 	template<typename GetFunction, typename SetFunction>
-	typename std::enable_if<
-		detail::is_function_pointer<GetFunction>::value &&
-		detail::is_function_pointer<SetFunction>::value,
-		module&>::type
-	set(char const *name, property_<GetFunction, SetFunction> prop)
+	module& set(char const *name, property_<GetFunction, SetFunction> prop)
 	{
 		v8::HandleScope scope(isolate_);
 
@@ -124,12 +121,6 @@ public:
 		obj_->Set(v8pp::to_v8(isolate_, name), to_v8(isolate_, value),
 			v8::PropertyAttribute(v8::ReadOnly | v8::DontDelete));
 		return *this;
-	}
-
-	/// Set another module in the module with specified name
-	module& set(char const* name, module& m)
-	{
-		return set(name, m.new_instance());
 	}
 
 	/// Create a new module instance in V8
