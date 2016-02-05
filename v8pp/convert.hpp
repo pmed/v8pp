@@ -244,23 +244,19 @@ struct convert<T, typename std::enable_if<std::is_enum<T>::value>::type>
 	using from_type = T;
 	using to_type = typename convert<underlying_type>::to_type;
 
-	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
+	static bool is_valid(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
-		return !value.IsEmpty() && value->IsNumber();
+		return convert<underlying_type>::is_valid(isolate, value);
 	}
 
 	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
-		if (!is_valid(isolate, value))
-		{
-			throw std::invalid_argument("expected Number");
-		}
 		return static_cast<T>(convert<underlying_type>::from_v8(isolate, value));
 	}
 
 	static to_type to_v8(v8::Isolate* isolate, T value)
 	{
-		return convert<underlying_type>::to_v8(isolate, value);
+		return convert<underlying_type>::to_v8(isolate, static_cast<underlying_type>(value));
 	}
 };
 

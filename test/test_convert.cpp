@@ -62,6 +62,12 @@ void test_convert()
 	test_conv(isolate, 2.2);
 	test_conv(isolate, true);
 
+	enum old_enum { A = 1, B = 5, C = - 1 };
+	test_conv(isolate, B);
+
+	enum class new_enum { X = 'a', Y = 'b', Z = 'c' };
+	test_conv(isolate, new_enum::Z);
+
 	test_string_conv(isolate, "qaz");
 #ifdef WIN32
 	test_string_conv(isolate, L"qaz");

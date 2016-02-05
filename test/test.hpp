@@ -66,6 +66,13 @@ std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& o
 	return os;
 }
 
+template<typename Char, typename Traits,
+	typename Enum, typename = typename std::enable_if<std::is_enum<Enum>::value>::type>
+std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& os, Enum value)
+{
+	return os << static_cast<typename std::underlying_type<Enum>::type>(value);
+}
+
 inline void check(std::string msg, bool condition)
 {
 	if (!condition)
