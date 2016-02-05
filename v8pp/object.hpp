@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2013-2015 Pavel Medvedev. All rights reserved.
+// Copyright (c) 2013-2016 Pavel Medvedev. All rights reserved.
 //
 // This file is part of v8pp (https://github.com/pmed/v8pp) project.
 //
