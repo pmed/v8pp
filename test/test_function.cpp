@@ -47,4 +47,8 @@ void test_function()
 	X xfun;
 	context.set("xfun", v8pp::wrap_function(isolate, "xfun", xfun));
 	check_eq("xfun", run_script<int>(context, "xfun(5)"), -5);
+
+	std::function<int(int)> fun = f;
+	context.set("fun", v8pp::wrap_function(isolate, "fun", fun));
+	check_eq("fun", run_script<int>(context, "fun(42)"), 42);
 }
