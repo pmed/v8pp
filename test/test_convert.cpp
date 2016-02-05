@@ -52,6 +52,73 @@ void test_string_conv(v8::Isolate* isolate, Char const (&str)[N])
 		v8pp::from_v8<Char const*>(isolate, v8pp::to_v8(isolate, empty, 0)), empty);
 }
 
+struct person
+{
+	std::string name;
+	int age;
+
+//for test framework
+	bool operator!=(person const& other) const
+	{
+		return name != other.name || age != other.age;
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, person const& p)
+	{
+		return os << "person: " << p.name << " age: " << p.age;
+	}
+};
+
+namespace v8pp {
+
+template<>
+struct convert<person>
+{
+	using from_type = person;
+	using to_type = v8::Handle<v8::Object>;
+
+	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
+	{
+		return !value.IsEmpty() && value->IsObject();
+	}
+
+	static to_type to_v8(v8::Isolate* isolate, person const& p)
+	{
+		v8::EscapableHandleScope scope(isolate);
+		v8::Local<v8::Object> obj = v8::Object::New(isolate);
+		obj->Set(v8pp::to_v8(isolate, "name"), v8pp::to_v8(isolate, p.name));
+		obj->Set(v8pp::to_v8(isolate, "age"), v8pp::to_v8(isolate, p.age));
+		/* Simpler after #include <v8pp/object.hpp>
+		set_option(isolate, obj, "name", p.name);
+		set_option(isolate, obj, "age", p.age);
+		*/
+		return scope.Escape(obj);
+	}
+
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	{
+		if (!is_valid(isolate, value))
+		{
+			throw std::runtime_error("excpected object");
+		}
+
+		v8::HandleScope scope(isolate);
+		v8::Local<v8::Object> obj = value.As<v8::Object>();
+
+		person result;
+		result.name = v8pp::from_v8<std::string>(isolate, obj->Get(v8pp::to_v8(isolate, "name")));
+		result.age = v8pp::from_v8<int>(isolate, obj->Get(v8pp::to_v8(isolate, "age")));
+		
+		/* Simpler after #include <v8pp/object.hpp>
+		get_option(isolate, obj, "name", result.name);
+		get_option(isolate, obj, "age", result.age);
+		*/
+		return result;
+	}
+};
+
+} // v8pp
+
 void test_convert()
 {
 	v8pp::context context;
@@ -96,4 +163,8 @@ void test_convert()
 	std::list<int> list = { 1, 2, 3 };
 	check_eq("pair of iterators to array",
 		v8pp::from_v8<int_vector>(isolate, v8pp::to_v8(isolate, list.begin(), list.end())), vector);
+
+	person p;
+	p.name = "Al"; p.age = 33;
+	test_conv(isolate, p);
 }
