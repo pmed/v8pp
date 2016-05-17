@@ -7,8 +7,14 @@ compiler:
   - gcc
   - clang
 
+matrix:
+  include:
+    - env: V8_VERSION=4.10
+      env: V8_VERSION=5.1
+      env: V8_VERSION=5.2
+
 before_install:
-  - sudo add-apt-repository ppa:pinepain/v8 -y
+  - sudo add-apt-repository ppa:pinepain/libv8-"$V8_VERSION" -y
   - sudo apt-get update -q
   - sudo apt-get install libv8-dev -y
 
