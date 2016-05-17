@@ -50,7 +50,7 @@ public:
 	/// Set another module in the module with specified name
 	module& set(char const* name, module& m)
 	{
-		return set(name, m.new_instance());
+		return set(name, m.obj_);
 	}
 
 	/// Set wrapped C++ class in the module with specified name
@@ -60,7 +60,7 @@ public:
 		v8::HandleScope scope(isolate_);
 
 		cl.class_function_template()->SetClassName(v8pp::to_v8(isolate_, name));
-		return set(name, cl.js_function_template()->GetFunction());
+		return set(name, cl.js_function_template());
 	}
 
 	/// Set a C++ function in the module with specified name
