@@ -100,11 +100,13 @@ public:
 		assert(objects_.find(object) != objects_.end() && "no object");
 		if (it != objects_.end())
 		{
-			// remove pointer to wrapped  C++ object from V8 Object internal field
-			// to disable unwrapping for this V8 Object
-			assert(to_local(isolate, it->second)->GetAlignedPointerFromInternalField(0) == object);
-			to_local(isolate, it->second)->SetAlignedPointerInInternalField(0, nullptr);
-
+			if (!it->second.IsNearDeath())
+			{
+				// remove pointer to wrapped  C++ object from V8 Object internal field
+				// to disable unwrapping for this V8 Object
+				assert(to_local(isolate, it->second)->GetAlignedPointerFromInternalField(0) == object);
+				to_local(isolate, it->second)->SetAlignedPointerInInternalField(0, nullptr);
+			}
 			it->second.Reset();
 			if (destroy)
 			{
