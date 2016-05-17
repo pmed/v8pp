@@ -57,10 +57,10 @@ set_external_data(v8::Isolate* isolate, T const& value)
 	v8::Local<v8::External> ext = v8::External::New(isolate, data);
 
 	v8::Persistent<v8::External> pext(isolate, ext);
-	pext.SetWeak(data, [](v8::WeakCallbackData<v8::External, T> const& data)
+	pext.SetWeak(data, [](v8::WeakCallbackInfo<T> const& data)
 		{
 			delete data.GetParameter();
-		});
+		}, v8::WeakCallbackType::kParameter);
 
 	return ext;
 }
