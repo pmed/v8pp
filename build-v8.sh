@@ -5,7 +5,13 @@ export PATH=`pwd`/depot_tools:"$PATH"
 fetch --no-history v8
 cd v8
 gclient sync
-GYP_GENERATORS=make build/gyp_v8 --generator-output=out --depth=. -Ibuild/standalone.gypi -I../v8_options.gypi build/all.gyp
+
+GYP_DIR=build
+if [ ! -f "$GYP_DIR"/gyp_v8 ] ; then
+  GYP_DIR=gypfiles
+fi
+
+GYP_GENERATORS=make "$GYP_DIR"/gyp_v8 --generator-output=out --depth=. -I"$GYP_DIR"/standalone.gypi -I../v8_options.gypi "$GYP_DIR"/all.gyp
 make v8 v8_libplatform -C out BUILDTYPE=Release -j8 builddir=$(pwd)/out/Release
 mkdir -p lib
 cp out/Release/lib.target/*.so lib
