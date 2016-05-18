@@ -16,6 +16,13 @@
 #include "v8pp/throw_ex.hpp"
 #include "v8pp/utility.hpp"
 
+#if defined(V8_MAJOR_VERSION) && defined(V8_MINOR_VERSION) && defined(V8_BUILD_NUMBER) \
+      && (V8_MAJOR_VERSION > 4 || (V8_MAJOR_VERSION == 4 \
+      && (V8_MINOR_VERSION > 3 || (V8_MINOR_VERSION == 3 && V8_BUILD_NUMBER > 28))))
+#define V8_USE_WEAK_CB_INFO
+#endif
+
+
 namespace v8pp {
 
 namespace detail {
@@ -57,10 +64,19 @@ set_external_data(v8::Isolate* isolate, T const& value)
 	v8::Local<v8::External> ext = v8::External::New(isolate, data);
 
 	v8::Persistent<v8::External> pext(isolate, ext);
-	pext.SetWeak(data, [](v8::WeakCallbackInfo<T> const& data)
+	pext.SetWeak(data,
+#ifdef V8_USE_CB_INFO
+		[](v8::WeakCallbackInfo<T> const& data)
+#else
+		[](v8::WeakCallbackData<v8::External, T> const& data)
+#endif
 		{
 			delete data.GetParameter();
-		}, v8::WeakCallbackType::kParameter);
+		}
+#ifdef V8_USE_CB_INFO
+		,v8::WeakCallbackType::kParameter
+#endif
+		);
 
 	return ext;
 }

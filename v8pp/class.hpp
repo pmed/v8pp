@@ -228,22 +228,38 @@ private:
 		if (destroy_after)
 		{
 			pobj.SetWeak(object,
+#ifdef V8_USE_CB_INFO
 				[](v8::WeakCallbackInfo<T> const& data)
+#else
+				[](v8::WeakCallbackData<v8::Object, T> const& data)
+#endif
 			{
 				v8::Isolate* isolate = data.GetIsolate();
 				T* object = data.GetParameter();
 				instance(isolate).destroy_object(object);
-			}, v8::WeakCallbackType::kParameter);
+			}
+#ifdef V8_USE_CB_INFO
+			,v8::WeakCallbackType::kParameter
+#endif
+			);
 		}
 		else
 		{
 			pobj.SetWeak(object,
+#ifdef V8_USE_CB_INFO
 				[](v8::WeakCallbackInfo<T> const& data)
+#else
+				[](v8::WeakCallbackData<v8::Object, T> const& data)
+#endif
 			{
 				v8::Isolate* isolate = data.GetIsolate();
 				T* object = data.GetParameter();
 				instance(isolate).remove_object(isolate, object);
-			}, v8::WeakCallbackType::kParameter);
+			}
+#ifdef V8_USE_CB_INFO
+			,v8::WeakCallbackType::kParameter
+#endif
+			);
 
 		}
 
