@@ -504,7 +504,7 @@ struct is_wrapped_class<T> : std::is_class<T> {};
 
 template<typename T>
 struct is_wrapped_class<v8::Handle<T>, typename std::enable_if<
-	!std::is_same<v8::Handle<T>, v8::Local<T>>::value, int>::type> : std::false_type{};
+	!std::is_same<v8::Handle<T>, v8::Local<T>>::value>::type> : std::false_type{};
 
 template<typename T>
 struct is_wrapped_class<v8::Local<T>> : std::false_type {};
