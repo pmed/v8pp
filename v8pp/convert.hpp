@@ -21,20 +21,7 @@
 #include <type_traits>
 #include <typeinfo>
 
-namespace v8pp  {
-
-namespace detail {
-
-// A string that converts to Char const * (useful for fusion::invoke)
-template<typename Char>
-struct convertible_string : std::basic_string<Char>
-{
-	convertible_string(Char const *str, size_t len) : std::basic_string<Char>(str, len) {}
-
-	operator Char const*() const { return this->c_str(); }
-};
-
-} // namespace detail
+namespace v8pp {
 
 template<typename T>
 class class_;
@@ -109,7 +96,15 @@ struct convert<Char const*>
 	static_assert(sizeof(Char) <= sizeof(uint16_t),
 		"only UTF-8 and UTF-16 strings are supported");
 
-	using from_type = detail::convertible_string<Char>;
+
+	// A string that converts to Char const *
+	struct convertible_string : std::basic_string<Char>
+	{
+		convertible_string(Char const* str, size_t len) : std::basic_string<Char>(str, len) {}
+		operator Char const*() const { return this->c_str(); }
+	};
+
+	using from_type = convertible_string;
 	using to_type = v8::Handle<v8::String>;
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
