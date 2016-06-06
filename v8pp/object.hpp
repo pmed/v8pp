@@ -33,7 +33,7 @@ bool get_option(v8::Isolate* isolate, v8::Handle<v8::Object> options,
 			&& get_option(isolate, suboptions, dot + 1, value);
 	}
 	v8::Local<v8::Value> val = options->Get(v8pp::to_v8(isolate, name));
-	if (val.IsEmpty() || val == v8::Undefined(isolate))
+	if (val.IsEmpty() || val->IsUndefined())
 	{
 		return false;
 	}
