@@ -65,7 +65,7 @@ set_external_data(v8::Isolate* isolate, T const& value)
 
 	v8::Persistent<v8::External> pext(isolate, ext);
 	pext.SetWeak(data,
-#ifdef V8_USE_CB_INFO
+#ifdef V8_USE_WEAK_CB_INFO
 		[](v8::WeakCallbackInfo<T> const& data)
 #else
 		[](v8::WeakCallbackData<v8::External, T> const& data)
@@ -73,7 +73,7 @@ set_external_data(v8::Isolate* isolate, T const& value)
 		{
 			delete data.GetParameter();
 		}
-#ifdef V8_USE_CB_INFO
+#ifdef V8_USE_WEAK_CB_INFO
 		,v8::WeakCallbackType::kParameter
 #endif
 		);

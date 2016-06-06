@@ -228,7 +228,7 @@ private:
 		if (destroy_after)
 		{
 			pobj.SetWeak(object,
-#ifdef V8_USE_CB_INFO
+#ifdef V8_USE_WEAK_CB_INFO
 				[](v8::WeakCallbackInfo<T> const& data)
 #else
 				[](v8::WeakCallbackData<v8::Object, T> const& data)
@@ -238,7 +238,7 @@ private:
 				T* object = data.GetParameter();
 				instance(isolate).destroy_object(object);
 			}
-#ifdef V8_USE_CB_INFO
+#ifdef V8_USE_WEAK_CB_INFO
 			,v8::WeakCallbackType::kParameter
 #endif
 			);
@@ -246,7 +246,7 @@ private:
 		else
 		{
 			pobj.SetWeak(object,
-#ifdef V8_USE_CB_INFO
+#ifdef V8_USE_WEAK_CB_INFO
 				[](v8::WeakCallbackInfo<T> const& data)
 #else
 				[](v8::WeakCallbackData<v8::Object, T> const& data)
@@ -256,7 +256,7 @@ private:
 				T* object = data.GetParameter();
 				instance(isolate).remove_object(isolate, object);
 			}
-#ifdef V8_USE_CB_INFO
+#ifdef V8_USE_WEAK_CB_INFO
 			,v8::WeakCallbackType::kParameter
 #endif
 			);
