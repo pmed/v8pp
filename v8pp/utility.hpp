@@ -10,6 +10,7 @@
 #define V8PP_UTILITY_HPP_INCLUDED
 
 #include <tuple>
+#include <type_traits>
 
 namespace v8pp { namespace detail {
 
@@ -19,7 +20,7 @@ struct tuple_tail;
 template<typename Head, typename... Tail>
 struct tuple_tail<std::tuple<Head, Tail...>>
 {
-	using type = std::tuple<Tail... >;
+	using type = std::tuple<Tail...>;
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -120,6 +121,10 @@ template<typename F>
 using is_callable = std::integral_constant<bool,
 	is_callable_impl<F, std::is_class<F>::value>::value>;
 
+#if (__cplusplus > 201402L) || (defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 190023918)
+using std::index_sequence;
+using std::make_index_sequence;
+#else
 /////////////////////////////////////////////////////////////////////////////
 //
 // integer_sequence
@@ -156,6 +161,7 @@ using make_integer_sequence = typename sequence_generator<T, N, N>::type;
 
 template<size_t N>
 using make_index_sequence = make_integer_sequence<size_t, N>;
+#endif
 
 /////////////////////////////////////////////////////////////////////////////
 //
