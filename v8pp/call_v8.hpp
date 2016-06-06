@@ -22,13 +22,13 @@ namespace v8pp {
 /// @param args...  C++ arguments to convert to JS arguments using to_v8
 template<typename ...Args>
 v8::Handle<v8::Value> call_v8(v8::Isolate* isolate, v8::Handle<v8::Function> func,
-	v8::Handle<v8::Value> recv, Args... args)
+	v8::Handle<v8::Value> recv, Args&&... args)
 {
 	v8::EscapableHandleScope scope(isolate);
 
 	int const arg_count = sizeof...(Args);
 	// +1 to allocate array for arg_count == 0
-	v8::Handle<v8::Value> v8_args[arg_count + 1] = { to_v8(isolate, args)... };
+	v8::Handle<v8::Value> v8_args[arg_count + 1] = { to_v8(isolate, std::forward<Args>(args))... };
 
 	v8::Local<v8::Value> result = func->Call(recv, arg_count, v8_args);
 
