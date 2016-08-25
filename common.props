@@ -19,7 +19,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(V8_LIB)\$(PlatformTarget)\$(Configuration)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>v8.lib;v8_libplatform.lib;v8_libbase.lib;ws2_32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>v8.lib;v8_libplatform.lib;v8_libbase.lib;ws2_32.lib;winmm.lib;dbghelp.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Lib>
       <AdditionalLibraryDirectories>$(BOOST_LIB)\$(PlatformTarget)\;$(V8_LIB)\$(Configuration)\$(PlatformTarget)</AdditionalLibraryDirectories>
