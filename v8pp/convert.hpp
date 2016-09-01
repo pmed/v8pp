@@ -43,7 +43,7 @@ struct convert;
 
 // converter specializations for string types
 template<typename Char, typename Traits, typename Alloc>
-struct convert< std::basic_string<Char, Traits, Alloc>>
+struct convert<std::basic_string<Char, Traits, Alloc>>
 {
 	static_assert(sizeof(Char) <= sizeof(uint16_t),
 		"only UTF-8 and UTF-16 strings are supported");
@@ -583,13 +583,15 @@ template<typename T>
 struct convert<T const&> : convert<T> {};
 
 template<typename T>
-typename convert<T>::from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+auto from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	-> decltype(convert<T>::from_v8(isolate, value))
 {
 	return convert<T>::from_v8(isolate, value);
 }
 
 template<typename T, typename U>
-typename convert<T>::from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value, U const& default_value)
+auto from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value, U const& default_value)
+	-> decltype(convert<T>::from_v8(isolate, value))
 {
 	return convert<T>::is_valid(isolate, value)? convert<T>::from_v8(isolate, value) : default_value;
 }
@@ -619,7 +621,8 @@ v8::Handle<v8::String> to_v8(v8::Isolate* isolate, wchar_t const (&str)[N], size
 #endif
 
 template<typename T>
-typename convert<T>::to_type to_v8(v8::Isolate* isolate, T const& value)
+auto to_v8(v8::Isolate* isolate, T const& value)
+	-> decltype(convert<T>::to_v8(isolate, value))
 {
 	return convert<T>::to_v8(isolate, value);
 }
