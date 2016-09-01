@@ -38,6 +38,7 @@
     <ClCompile Include="test_object.cpp" />
     <ClCompile Include="test_property.cpp" />
     <ClCompile Include="test_throw_ex.cpp" />
+    <ClCompile Include="test_utility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\v8pp\v8pp.vcxproj">

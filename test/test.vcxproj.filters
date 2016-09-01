@@ -2,7 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="test_utility.cpp" />
     <ClCompile Include="test_call_v8.cpp" />
     <ClCompile Include="test_throw_ex.cpp" />
     <ClCompile Include="test_factory.cpp" />
@@ -15,6 +14,7 @@
     <ClCompile Include="test_module.cpp" />
     <ClCompile Include="test_object.cpp" />
     <ClCompile Include="test_json.cpp" />
+    <ClCompile Include="test_utility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="test.hpp" />

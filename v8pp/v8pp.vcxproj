@@ -25,7 +25,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\test\test_utility.cpp" />
     <ClCompile Include="context.cpp" />
   </ItemGroup>
   <ItemGroup>
