@@ -1,10 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
-  <PropertyGroup Label="UserMacros">
-    <V8_INCLUDE>$(SolutionDir)\v8;$(SolutionDir)\v8\include</V8_INCLUDE>
-    <V8_LIB>$(SolutionDir)\v8\lib</V8_LIB>
-  </PropertyGroup>
   <PropertyGroup>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)bin\$(Configuration)\$(ProjectName)\</IntDir>
@@ -12,25 +8,10 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(V8_INCLUDE);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4190</DisableSpecificWarnings>
       <PreprocessorDefinitions>V8_USE_UNSAFE_HANDLES;V8_DISABLE_DEPRECATIONS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
-    <Link>
-      <AdditionalLibraryDirectories>$(V8_LIB)\$(PlatformTarget)\$(Configuration)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>v8.lib;v8_libplatform.lib;v8_libbase.lib;ws2_32.lib;winmm.lib;dbghelp.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
-    <Lib>
-      <AdditionalLibraryDirectories>$(BOOST_LIB)\$(PlatformTarget)\;$(V8_LIB)\$(Configuration)\$(PlatformTarget)</AdditionalLibraryDirectories>
-    </Lib>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <BuildMacro Include="V8_INCLUDE">
-      <Value>$(V8_INCLUDE)</Value>
-    </BuildMacro>
-    <BuildMacro Include="V8_LIB">
-      <Value>$(V8_LIB)</Value>
-    </BuildMacro>
-  </ItemGroup>
 </Project>

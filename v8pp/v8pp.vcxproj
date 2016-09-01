@@ -1,5 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\v8-v120-x64.5.4.500.8\build\native\v8-v120-x64.props" Condition="Exists('..\packages\v8-v120-x64.5.4.500.8\build\native\v8-v120-x64.props')" />
+  <Import Project="..\packages\v8.symbols-v120-x64.5.4.500.8\build\native\v8.symbols-v120-x64.props" Condition="Exists('..\packages\v8.symbols-v120-x64.5.4.500.8\build\native\v8.symbols-v120-x64.props')" />
+  <Import Project="..\packages\v8.redist-v120-x64.5.4.500.8\build\native\v8.redist-v120-x64.props" Condition="Exists('..\packages\v8.redist-v120-x64.5.4.500.8\build\native\v8.redist-v120-x64.props')" />
+  <Import Project="..\packages\v8-v120-x86.5.4.500.8\build\native\v8-v120-x86.props" Condition="Exists('..\packages\v8-v120-x86.5.4.500.8\build\native\v8-v120-x86.props')" />
+  <Import Project="..\packages\v8.symbols-v120-x86.5.4.500.8\build\native\v8.symbols-v120-x86.props" Condition="Exists('..\packages\v8.symbols-v120-x86.5.4.500.8\build\native\v8.symbols-v120-x86.props')" />
+  <Import Project="..\packages\v8.redist-v120-x86.5.4.500.8\build\native\v8.redist-v120-x86.props" Condition="Exists('..\packages\v8.redist-v120-x86.5.4.500.8\build\native\v8.redist-v120-x86.props')" />
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -19,6 +25,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\test\test_utility.cpp" />
     <ClCompile Include="context.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -36,6 +43,9 @@
     <ClInclude Include="property.hpp" />
     <ClInclude Include="throw_ex.hpp" />
     <ClInclude Include="utility.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{2E6CFC3D-5A08-4909-8D1A-3469063D169B}</ProjectGuid>
@@ -147,6 +157,16 @@
     <Lib />
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\v8.redist-v120-x86.5.4.500.8\build\native\v8.redist-v120-x86.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.redist-v120-x86.5.4.500.8\build\native\v8.redist-v120-x86.props'))" />
+    <Error Condition="!Exists('..\packages\v8.symbols-v120-x86.5.4.500.8\build\native\v8.symbols-v120-x86.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.symbols-v120-x86.5.4.500.8\build\native\v8.symbols-v120-x86.props'))" />
+    <Error Condition="!Exists('..\packages\v8-v120-x86.5.4.500.8\build\native\v8-v120-x86.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8-v120-x86.5.4.500.8\build\native\v8-v120-x86.props'))" />
+    <Error Condition="!Exists('..\packages\v8.redist-v120-x64.5.4.500.8\build\native\v8.redist-v120-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.redist-v120-x64.5.4.500.8\build\native\v8.redist-v120-x64.props'))" />
+    <Error Condition="!Exists('..\packages\v8.symbols-v120-x64.5.4.500.8\build\native\v8.symbols-v120-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.symbols-v120-x64.5.4.500.8\build\native\v8.symbols-v120-x64.props'))" />
+    <Error Condition="!Exists('..\packages\v8-v120-x64.5.4.500.8\build\native\v8-v120-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8-v120-x64.5.4.500.8\build\native\v8-v120-x64.props'))" />
+  </Target>
 </Project>
