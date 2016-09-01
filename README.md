@@ -1,4 +1,4 @@
-[![Travis Build status](https://travis-ci.org/pmed/v8pp.svg)](https://travis-ci.org/pmed/v8pp) [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/99kp0ud268j21mdw?svg=true)](https://ci.appveyor.com/project/pmed/v8pp) [![Join the chat at https://gitter.im/pmed/v8pp](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pmed/v8pp?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Travis Build status](https://travis-ci.org/pmed/v8pp.svg)](https://travis-ci.org/pmed/v8pp) [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/github/pmed/v8pp?svg=true)](https://ci.appveyor.com/project/pmed/v8pp) [![Join the chat at https://gitter.im/pmed/v8pp](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pmed/v8pp?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 # v8pp
 
