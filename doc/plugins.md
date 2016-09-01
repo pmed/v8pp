@@ -1,21 +1,24 @@
 # Plugins
 
-The library allows to use a simple loadable plugins. A target platform should support dynamically loadable modules
-(i.e. .so or .dll libraries). The target application should contain [`v8pp::context`](./context.md) implementation.
+The library allows to use a simple loadable C++ plugins for V8 engine embedded
+in a program. A target platform should support dynamically loadable modules
+(i.e. `.so` or `.dll` libraries). The target application should contain
+[`v8pp::context`](./context.md) implementation from a
+[`v8pp/context.cpp`](../v8pp/context.cpp) file.
 
-Each plugin exports an initialization procedure `V8PP_PLUGIN_INIT(v8::Isolate* isolate)` which adds
-bindings to the V8 `isolate` instance and should return an exported object:
+Each plugin should export an initialization procedure declared as
+`V8PP_PLUGIN_INIT(v8::Isolate* isolate)`. This init procedure adds bindings to
+the V8 `isolate` instance and should return an exported object:
 
 ```c++
-// in plugin project
-
+// in a plugin shared library
 V8PP_PLUGIN_INIT(v8::Isolate* isolate)
 {
 	return v8pp::to_v8(isolate, 42);
 }
 ```
 
-The returned value is a `require()` result in JavaScript:
+The exported value retuned is availbale as a `require()` result in JavaScript:
 
 ```js
 var plugin_exports = require('plugin');
