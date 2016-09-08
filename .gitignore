@@ -1,8 +1,14 @@
 /bin
+/docs/html
+/docs/xml
+/node_modules
+/packages
+/.vs
 /*.*sdf
 /*.suo
+/*.VC.db
 *.user
-
+*.exe
 *.so
 *.o
 *.a
