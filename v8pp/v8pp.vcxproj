@@ -39,6 +39,7 @@
     <ClInclude Include="json.hpp" />
     <ClInclude Include="module.hpp" />
     <ClInclude Include="object.hpp" />
+    <ClInclude Include="persistent.hpp" />
     <ClInclude Include="property.hpp" />
     <ClInclude Include="throw_ex.hpp" />
     <ClInclude Include="utility.hpp" />
