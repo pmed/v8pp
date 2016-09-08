@@ -32,7 +32,7 @@ class class_info
 public:
 	using type_index = unsigned;
 
-	class_info(type_index type)
+	explicit class_info(type_index type)
 		: type_(type)
 	{
 	}
@@ -147,15 +147,6 @@ public:
 		return result;
 	}
 
-protected:
-	static type_index register_class()
-	{
-		static type_index next_index = 0;
-		return next_index++;
-	}
-
-	type_index type() const { return type_; }
-
 private:
 	struct base_class_info
 	{
@@ -179,14 +170,11 @@ private:
 template<typename T>
 class class_singleton : public class_info
 {
-	static type_index class_type()
-	{
-		static type_index const my_type = class_info::register_class();
-		return my_type;
-	}
 private:
-	class_singleton(v8::Isolate* isolate, type_index type)
-		: class_info(type)
+	static type_index class_type;
+
+	explicit class_singleton(v8::Isolate* isolate)
+		: class_info(class_type)
 		, isolate_(isolate)
 		, ctor_(nullptr)
 	{
@@ -213,8 +201,6 @@ private:
 		//  1 - pointer to the class_singleton
 		func->InstanceTemplate()->SetInternalFieldCount(2);
 	}
-
-	~class_singleton() {}
 
 	v8::Handle<v8::Object> wrap(T* object, bool destroy_after)
 	{
@@ -282,14 +268,8 @@ public:
 			isolate->SetData(V8PP_ISOLATE_DATA_SLOT, singletons);
 		}
 
-		// Get singleton instance from the the list by class_type
-		type_index const my_type = class_type();
-		if (my_type < singletons->size())
-		{
-			throw std::runtime_error("v8pp::class_ already created");
-		}
-
-		class_singleton* result = new class_singleton(isolate, my_type);
+		class_type = static_cast<type_index>(singletons->size());
+		class_singleton* result = new class_singleton(isolate);
 		singletons->emplace_back(result);
 
 		return *result;
@@ -301,21 +281,17 @@ public:
 			static_cast<class_instances*>(isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
 		if (singletons)
 		{
-			type_index const my_type = class_type();
-			if (my_type < singletons->size())
+			if (class_type < singletons->size())
 			{
-				class_singleton* instance = static_cast<class_singleton*>((*singletons)[my_type]);
-				if (instance->type() == my_type)
+				class_singleton* instance = static_cast<class_singleton*>((*singletons)[class_type]);
+				instance->destroy_objects();
+				delete instance;
+				(*singletons)[class_type] = nullptr;
+				size_t const null_count = std::count(singletons->begin(), singletons->end(), nullptr);
+				if (null_count == singletons->size())
 				{
-					instance->destroy_objects();
-					delete instance;
-					(*singletons)[my_type] = nullptr;
-					size_t const null_count = std::count(singletons->begin(), singletons->end(), nullptr);
-					if (null_count == singletons->size())
-					{
-						delete singletons;
-						isolate->SetData(V8PP_ISOLATE_DATA_SLOT, nullptr);
-					}
+					delete singletons;
+					isolate->SetData(V8PP_ISOLATE_DATA_SLOT, nullptr);
 				}
 			}
 		}
@@ -326,17 +302,12 @@ public:
 		// Get pointer to singleton instances from v8::Isolate
 		class_instances* singletons =
 			static_cast<class_instances*>(isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
-		if (singletons)
+		if (singletons && class_type < singletons->size())
 		{
-			type_index const my_type = class_type();
-			class_singleton* result;
-			if (my_type < singletons->size())
+			class_singleton* result = static_cast<class_singleton*>((*singletons)[class_type]);
+			if (result)
 			{
-				result = static_cast<class_singleton*>((*singletons)[my_type]);
-				if (result && result->type() == my_type)
-				{
-					return *result;
-				}
+				return *result;
 			}
 		}
 		throw std::runtime_error("v8pp::class_ not created");
@@ -402,7 +373,7 @@ public:
 			{
 				void* ptr = obj->GetAlignedPointerFromInternalField(0);
 				class_info* info = static_cast<class_info*>(obj->GetAlignedPointerFromInternalField(1));
-				if (info && info->cast(ptr, class_type()))
+				if (info && info->cast(ptr, class_type))
 				{
 					return static_cast<T*>(ptr);
 				}
@@ -434,6 +405,9 @@ private:
 	v8::UniquePersistent<v8::FunctionTemplate> func_;
 	v8::UniquePersistent<v8::FunctionTemplate> js_func_;
 };
+
+template<typename T>
+class_info::type_index class_singleton<T>::class_type;
 
 } // namespace detail
 
