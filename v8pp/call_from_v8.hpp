@@ -43,7 +43,8 @@ struct call_from_v8_traits
 		Index < (arg_count + Offset)>::type;
 
 	template<size_t Index>
-	using convert_type = typename convert<arg_type<Index>>::from_type;
+	using convert_type = decltype(convert<arg_type<Index>>::from_v8(
+		std::declval<v8::Isolate*>(), std::declval<v8::Handle<v8::Value>>()));
 
 	template<size_t Index>
 	static convert_type<Index>
