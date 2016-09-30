@@ -9,8 +9,8 @@ compiler:
 
 env: 
   - V8_VERSION=4.10
-  - V8_VERSION=5.1
   - V8_VERSION=5.2
+  - V8_VERSION=5.4
 
 before_install:
   - sudo add-apt-repository ppa:pinepain/libv8-"$V8_VERSION" -y
