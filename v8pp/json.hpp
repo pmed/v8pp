@@ -16,7 +16,7 @@ namespace v8pp {
 
 /// Stringify V8 value to JSON
 /// return empty string for empty value
-std::string json_str(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+inline std::string json_str(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 {
 	if (value.IsEmpty())
 	{
@@ -38,7 +38,7 @@ std::string json_str(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 /// Parse JSON string into V8 value
 /// return empty value for empty string
 /// return Error value on parse error
-v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const& str)
+inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const& str)
 {
 	if (str.empty())
 	{
