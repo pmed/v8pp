@@ -9,10 +9,10 @@
 #ifndef V8PP_CONFIG_HPP_INCLUDED
 #define V8PP_CONFIG_HPP_INCLUDED
 
-/// v8::Isolate data slot number, used in v8pp
-#if !defined(V8PP_ISOLATE_DATA_SLOT)
-#define V8PP_ISOLATE_DATA_SLOT 0
-#endif
+/// v8::Isolate data slot number, used in v8pp for shared data
+//#if !defined(V8PP_ISOLATE_DATA_SLOT)
+//#define V8PP_ISOLATE_DATA_SLOT 0
+//#endif
 
 /// v8pp plugin initialization procedure name
 #if !defined(V8PP_PLUGIN_INIT_PROC_NAME)

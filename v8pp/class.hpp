@@ -254,57 +254,55 @@ private:
 		return scope.Escape(obj);
 	}
 
-	using class_instances = std::vector<void*>;
+	using class_singletons = std::vector<void*>;
+	static class_singletons& class_instances(v8::Isolate* isolate)
+	{
+#if defined(V8PP_ISOLATE_DATA_SLOT)
+		class_singletons* instances =
+			static_cast<class_singletons*>(isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
+		if (!instances)
+		{
+			instances = new class_singletons;
+			isolate->SetData(V8PP_ISOLATE_DATA_SLOT, instances);
+		}
+		return *instances;
+#else
+		static std::unordered_map<v8::Isolate*, class_singletons> instances;
+		return instances[isolate];
+#endif
+	}
+
 public:
 	static class_singleton& create(v8::Isolate* isolate)
 	{
-		// Get pointer to singleton instances from v8::Isolate
-		class_instances* singletons =
-			static_cast<class_instances*>(isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
-		if (!singletons)
-		{
-			// No singletons map yet, create and store it
-			singletons = new class_instances;
-			isolate->SetData(V8PP_ISOLATE_DATA_SLOT, singletons);
-		}
-
-		class_type = static_cast<type_index>(singletons->size());
+		class_singletons& singletons = class_instances(isolate);
+		class_type = static_cast<type_index>(singletons.size());
 		class_singleton* result = new class_singleton(isolate);
-		singletons->emplace_back(result);
-
+		singletons.emplace_back(result);
 		return *result;
 	}
 
 	static void destroy(v8::Isolate* isolate)
 	{
-		class_instances* singletons =
-			static_cast<class_instances*>(isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
-		if (singletons)
+		class_singletons& singletons = class_instances(isolate);
+		if (class_type < singletons.size())
 		{
-			if (class_type < singletons->size())
+			class_singleton* instance = static_cast<class_singleton*>(singletons[class_type]);
+			if (instance)
 			{
-				class_singleton* instance = static_cast<class_singleton*>((*singletons)[class_type]);
 				instance->destroy_objects();
 				delete instance;
-				(*singletons)[class_type] = nullptr;
-				size_t const null_count = std::count(singletons->begin(), singletons->end(), nullptr);
-				if (null_count == singletons->size())
-				{
-					delete singletons;
-					isolate->SetData(V8PP_ISOLATE_DATA_SLOT, nullptr);
-				}
+				singletons[class_type] = nullptr;
 			}
 		}
 	}
 
 	static class_singleton& instance(v8::Isolate* isolate)
 	{
-		// Get pointer to singleton instances from v8::Isolate
-		class_instances* singletons =
-			static_cast<class_instances*>(isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
-		if (singletons && class_type < singletons->size())
+		class_singletons& singletons = class_instances(isolate);
+		if (class_type < singletons.size())
 		{
-			class_singleton* result = static_cast<class_singleton*>((*singletons)[class_type]);
+			class_singleton* result = static_cast<class_singleton*>(singletons[class_type]);
 			if (result)
 			{
 				return *result;
