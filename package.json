@@ -1,6 +1,6 @@
 {
   "name": "v8pp",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "C++ bindings for V8",
   "keywords": [ "V8", "native", "addon", "module", "bindings" ],
   "main": "include_dirs.js",
