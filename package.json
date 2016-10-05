@@ -8,5 +8,8 @@
   "author": "Pavel Medvedev <pmedvedev@gmail.com>",
   "license": "BSL-1.0",
   "bugs": { "url": "https://github.com/pmed/v8pp/issues"  },
-  "homepage": "https://github.com/pmed/v8pp#readme"
+  "homepage": "https://github.com/pmed/v8pp#readme",
+  "files": ["docs", "examples", "v8pp/*.hpp", "include_dirs.js",
+    "COPYING", "LICENSE_1_0.txt", "README.md"
+  ]
 }
