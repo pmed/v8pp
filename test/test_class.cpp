@@ -49,7 +49,8 @@ void test_class()
 
 	check_ex<std::runtime_error>("find unwrapped", [isolate]()
 	{
-		v8pp::class_<struct Z>::find_object(isolate, nullptr);
+		struct Z {};
+		v8pp::class_<Z>::find_object(isolate, nullptr);
 	});
 
 	v8pp::class_<X> X_class(isolate);
