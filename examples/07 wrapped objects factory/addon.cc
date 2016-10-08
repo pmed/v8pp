@@ -25,6 +25,10 @@ void InitAll(Handle<Object> exports, Handle<Object> module) {
 
   Isolate* isolate = Isolate::GetCurrent();
   v8pp::set_option(isolate, module, "exports", v8pp::wrap_function(isolate, "exports", &CreateObject));
+  node::AtExit([](void* param)
+  {
+      v8pp::cleanup(static_cast<Isolate*>(param));
+  }, isolate);
 }
 
 NODE_MODULE(addon, InitAll)

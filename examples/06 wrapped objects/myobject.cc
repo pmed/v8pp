@@ -7,6 +7,7 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 #include "myobject.h"
+#include <node.h>
 #include <v8pp/class.hpp>
 #include <v8pp/module.hpp>
 
@@ -28,6 +29,10 @@ void MyObject::Init(Handle<Object> exports) {
   addon.set("MyObject", MyObject_class);
 
   exports->SetPrototype(addon.new_instance());
+  node::AtExit([](void* param)
+  {
+      v8pp::cleanup(static_cast<Isolate*>(param));
+  }, isolate);
 }
 
 MyObject::MyObject(const FunctionCallbackInfo<Value>& args) {

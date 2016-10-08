@@ -35,6 +35,10 @@ void InitAll(Handle<Object> exports) {
   addon.set("createObject", &CreateObject);
   addon.set("add", &Add);
   exports->SetPrototype(addon.new_instance());
+  node::AtExit([](void* param)
+  {
+      v8pp::cleanup(static_cast<Isolate*>(param));
+  }, isolate);
 }
 
 NODE_MODULE(addon, InitAll)
