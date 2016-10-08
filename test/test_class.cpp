@@ -32,6 +32,8 @@ struct Y : X
 
 int Y::instance_count = 0;
 
+struct Z {};
+
 namespace v8pp {
 template<>
 struct factory<Y>
@@ -46,12 +48,6 @@ void test_class()
 	v8pp::context context;
 	v8::Isolate* isolate = context.isolate();
 	v8::HandleScope scope(isolate);
-
-	check_ex<std::runtime_error>("find unwrapped", [isolate]()
-	{
-		struct Z {};
-		v8pp::class_<Z>::find_object(isolate, nullptr);
-	});
 
 	v8pp::class_<X> X_class(isolate);
 	X_class
@@ -70,6 +66,19 @@ void test_class()
 		.inherit<X>()
 		.ctor<int>()
 		;
+
+	check_ex<std::runtime_error>("already wrapped class X", [isolate]()
+	{
+		v8pp::class_<X> X_class(isolate);
+	});
+	check_ex<std::runtime_error>("already inherited class X", [isolate, &Y_class]()
+	{
+		Y_class.inherit<X>();
+	});
+	check_ex<std::runtime_error>("unwrapped class Z", [isolate]()
+	{
+		v8pp::class_<Z>::find_object(isolate, nullptr);
+	});
 
 	context
 		.set("X", X_class)

@@ -9,6 +9,8 @@
 #ifndef V8PP_CLASS_HPP_INCLUDED
 #define V8PP_CLASS_HPP_INCLUDED
 
+#include <cstdio>
+
 #include <algorithm>
 #include <memory>
 #include <typeindex>
@@ -29,6 +31,24 @@ class class_;
 
 namespace detail {
 
+inline std::string class_name(std::type_index const& type)
+{
+	return std::string("v8pp::class_<") + type.name() + '>';
+}
+
+inline std::string pointer_str(void const* ptr)
+{
+	std::string buf(sizeof(void*) * 2 + 3, 0); // +3 for 0x and \0 terminator
+	int const len = 
+#if defined(_MSC_VER) && (_MSC_VER < 1900)
+		sprintf_s(&buf[0], buf.size(), "%p", ptr);
+#else
+		snprintf(&buf[0], buf.size(), "%p", ptr);
+#endif
+	buf.resize(len < 0? 0 : len);
+	return buf;
+}
+
 class class_info
 {
 public:
@@ -47,8 +67,9 @@ public:
 			[info](base_class_info const& base) { return base.info == info; });
 		if (it != bases_.end())
 		{
-			assert(false && "duplicated inheritance");
-			throw std::runtime_error(std::string("duplicated base class ") + info->type().name());
+			//assert(false && "duplicated inheritance");
+			throw std::runtime_error(class_name(type_)
+				+ " is already inherited from " + class_name(info->type_));
 		}
 		bases_.emplace_back(info, cast);
 		info->derivatives_.emplace_back(this);
@@ -88,7 +109,13 @@ public:
 	template<typename T>
 	void add_object(T* object, persistent<v8::Object>&& handle)
 	{
-		assert(objects_.find(object) == objects_.end() && "duplicate object");
+		auto it = objects_.find(object);
+		if (it != objects_.end())
+		{
+			//assert(false && "duplicate object");
+			throw std::runtime_error(class_name(type())
+				+ " duplicate object " + pointer_str(object));
+		}
 		objects_.emplace(object, std::move(handle));
 	}
 
@@ -180,8 +207,9 @@ public:
 		auto it = singletons->find(type);
 		if (it != singletons->classes_.end())
 		{
-			assert(false && "class already registred");
-			throw std::runtime_error("class already registred");
+			//assert(false && "class already registred");
+			throw std::runtime_error(class_name(type)
+				+ " is already exist in isolate " + pointer_str(isolate));
 		}
 		singletons->classes_.emplace_back(new class_singleton<T>(isolate, type));
 		return *static_cast<class_singleton<T>*>(singletons->classes_.back().get());
@@ -219,8 +247,9 @@ public:
 				return *static_cast<class_singleton<T>*>(it->get());
 			}
 		}
-		assert(false && "class not registered");
-		throw std::runtime_error("class not registered");
+		//assert(false && "class not registered");
+		throw std::runtime_error(class_name(type)
+			+ " not found in isolate " + pointer_str(isolate));
 	}
 
 	static void remove_all(v8::Isolate* isolate)
@@ -425,8 +454,8 @@ public:
 	{
 		if (!ctor_)
 		{
-			assert(false && "create not allowed");
-			throw std::runtime_error("create not allowed");
+			//assert(false && "create not allowed");
+			throw std::runtime_error(class_name(type()) + " has no constructor");
 		}
 		return wrap_object(ctor_(args));
 	}
