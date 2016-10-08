@@ -14,6 +14,9 @@
 //#define V8PP_ISOLATE_DATA_SLOT 0
 //#endif
 
+/// Make v8pp thread safe with multiple v8::Isolate instances
+//#define V8PP_THREAD_SAFE
+
 /// v8pp plugin initialization procedure name
 #if !defined(V8PP_PLUGIN_INIT_PROC_NAME)
 #define V8PP_PLUGIN_INIT_PROC_NAME v8pp_module_init

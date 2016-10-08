@@ -24,6 +24,10 @@
 #include "v8pp/persistent.hpp"
 #include "v8pp/property.hpp"
 
+#ifdef V8PP_THREAD_SAFE
+#include <mutex>
+#endif
+
 namespace v8pp {
 
 template<typename T>
@@ -202,6 +206,9 @@ public:
 	template<typename T>
 	static class_singleton<T>& add_class(v8::Isolate* isolate)
 	{
+#ifdef V8PP_THREAD_SAFE
+		std::unique_lock<std::mutex> lock(mutex());
+#endif
 		class_singletons* singletons = instance(add, isolate);
 		std::type_index const type = typeid(T);
 		auto it = singletons->find(type);
@@ -218,6 +225,9 @@ public:
 	template<typename T>
 	static void remove_class(v8::Isolate* isolate)
 	{
+#ifdef V8PP_THREAD_SAFE
+		std::unique_lock<std::mutex> lock(mutex());
+#endif
 		class_singletons* singletons = instance(get, isolate);
 		if (singletons)
 		{
@@ -237,6 +247,9 @@ public:
 	template<typename T>
 	static class_singleton<T>& find_class(v8::Isolate* isolate)
 	{
+#ifdef V8PP_THREAD_SAFE
+		std::unique_lock<std::mutex> lock(mutex());
+#endif
 		class_singletons* singletons = instance(get, isolate);
 		std::type_index const type = typeid(T);
 		if (singletons)
@@ -254,10 +267,21 @@ public:
 
 	static void remove_all(v8::Isolate* isolate)
 	{
+#ifdef V8PP_THREAD_SAFE
+		std::unique_lock<std::mutex> lock(mutex());
+#endif
 		instance(remove, isolate);
 	}
 
 private:
+#ifdef V8PP_THREAD_SAFE
+	static std::mutex& mutex()
+	{
+		static std::mutex mtx_;
+		return mtx_;
+	}
+#endif
+
 	using classes = std::vector<std::unique_ptr<class_info>>;
 	classes classes_;
 
