@@ -6,7 +6,10 @@
         'v8_use_external_startup_data': 0,
     },
     'target_defaults': {
-        'msvs_disabled_warnings': [ 4251],  # class 'std::xx' needs to have dll-interface.
+        'configurations': {
+            'Debug': { 'msvs_settings':   { 'VCCLCompilerTool': { 'WarningLevel': '0', 'WarnAsError': 'false' } } },
+            'Release': { 'msvs_settings': { 'VCCLCompilerTool': { 'WarningLevel': '0', 'WarnAsError': 'false' } } },
+        },
         'msvs_cygwin_shell': 0,
         'target_conditions': [
             ['_type=="static_library"', {
