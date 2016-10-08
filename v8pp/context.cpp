@@ -11,6 +11,7 @@
 #include "v8pp/convert.hpp"
 #include "v8pp/function.hpp"
 #include "v8pp/module.hpp"
+#include "v8pp/class.hpp"
 #include "v8pp/throw_ex.hpp"
 
 #include <fstream>
@@ -187,6 +188,9 @@ context::context(v8::Isolate* isolate)
 
 context::~context()
 {
+	// remove all class singletons before modules unload
+	cleanup(isolate_);
+
 	for (auto& kv : modules_)
 	{
 		dynamic_module& module = kv.second;

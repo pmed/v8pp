@@ -167,9 +167,127 @@ private:
 };
 
 template<typename T>
+class class_singleton;
+
+class class_singletons
+{
+public:
+	template<typename T>
+	static class_singleton<T>& add_class(v8::Isolate* isolate)
+	{
+		class_singletons* singletons = instance(add, isolate);
+		std::type_index const type = typeid(T);
+		auto it = singletons->find(type);
+		if (it != singletons->classes_.end())
+		{
+			assert(false && "class already registred");
+			throw std::runtime_error("class already registred");
+		}
+		singletons->classes_.emplace_back(new class_singleton<T>(isolate, type));
+		return *static_cast<class_singleton<T>*>(singletons->classes_.back().get());
+	}
+
+	template<typename T>
+	static void remove_class(v8::Isolate* isolate)
+	{
+		class_singletons* singletons = instance(get, isolate);
+		if (singletons)
+		{
+			std::type_index const type = typeid(T);
+			auto it = singletons->find(type);
+			if (it != singletons->classes_.end())
+			{
+				singletons->classes_.erase(it);
+				if (singletons->classes_.empty())
+				{
+					instance(remove, isolate);
+				}
+			}
+		}
+	}
+
+	template<typename T>
+	static class_singleton<T>& find_class(v8::Isolate* isolate)
+	{
+		class_singletons* singletons = instance(get, isolate);
+		std::type_index const type = typeid(T);
+		if (singletons)
+		{
+			auto it = singletons->find(type);
+			if (it != singletons->classes_.end())
+			{
+				return *static_cast<class_singleton<T>*>(it->get());
+			}
+		}
+		assert(false && "class not registered");
+		throw std::runtime_error("class not registered");
+	}
+
+	static void remove_all(v8::Isolate* isolate)
+	{
+		instance(remove, isolate);
+	}
+
+private:
+	using classes = std::vector<std::unique_ptr<class_info>>;
+	classes classes_;
+
+	classes::iterator find(std::type_index const& type)
+	{
+		return std::find_if(classes_.begin(), classes_.end(),
+			[&type](std::unique_ptr<class_info> const& info) { return info->type() == type; });
+	}
+
+	enum operation { get, add, remove };
+	static class_singletons* instance(operation op, v8::Isolate* isolate)
+	{
+#if defined(V8PP_ISOLATE_DATA_SLOT)
+		class_singletons* instances =
+			static_cast<class_singletons*>(isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
+		switch (op)
+		{
+		case get:
+			return instances;
+		case add:
+			if (!instances)
+			{
+				instances = new class_singletons;
+				isolate->SetData(V8PP_ISOLATE_DATA_SLOT, instances);
+			}
+			return instances;
+		case remove:
+			if (instances)
+			{
+				delete instances;
+				isolate->SetData(V8PP_ISOLATE_DATA_SLOT, nullptr);
+			}
+		default:
+			return nullptr;
+		}
+#else
+		static std::unordered_map<v8::Isolate*, class_singletons> instances;
+		switch (op)
+		{
+		case get:
+			{
+				auto it = instances.find(isolate);
+				return it != instances.end()? &it->second : nullptr;
+			}
+		case add:
+			return &instances[isolate];
+		case remove:
+			instances.erase(isolate);
+		default:
+			return nullptr;
+		}
+#endif
+	}
+};
+
+template<typename T>
 class class_singleton : public class_info
 {
-private:
+public:
 	class_singleton(v8::Isolate* isolate, std::type_index const& type)
 		: class_info(type)
 		, isolate_(isolate)
@@ -182,7 +300,7 @@ private:
 			v8::Isolate* isolate = args.GetIsolate();
 			try
 			{
-				return args.GetReturnValue().Set(instance(isolate).wrap_object(args));
+				return args.GetReturnValue().Set(class_singletons::find_class<T>(isolate).wrap_object(args));
 			}
 			catch (std::exception const& ex)
 			{
@@ -197,6 +315,14 @@ private:
 		//  0 - pointer to a wrapped C++ object
 		//  1 - pointer to the class_singleton
 		func->InstanceTemplate()->SetInternalFieldCount(2);
+	}
+
+	class_singleton(class_singleton const&) = delete;
+	class_singleton& operator=(class_singleton const&) = delete;
+
+	~class_singleton()
+	{
+		destroy_objects();
 	}
 
 	v8::Handle<v8::Object> wrap(T* object, bool destroy_after)
@@ -219,7 +345,7 @@ private:
 			{
 				v8::Isolate* isolate = data.GetIsolate();
 				T* object = data.GetParameter();
-				instance(isolate).destroy_object(object);
+				class_singletons::find_class<T>(isolate).destroy_object(object);
 			}
 #ifdef V8_USE_WEAK_CB_INFO
 				, v8::WeakCallbackType::kParameter
@@ -237,7 +363,7 @@ private:
 			{
 				v8::Isolate* isolate = data.GetIsolate();
 				T* object = data.GetParameter();
-				instance(isolate).remove_object(isolate, object);
+				class_singletons::find_class<T>(isolate).remove_object(isolate, object);
 			}
 #ifdef V8_USE_WEAK_CB_INFO
 				, v8::WeakCallbackType::kParameter
@@ -249,69 +375,6 @@ private:
 		class_info::add_object(object, std::move(pobj));
 
 		return scope.Escape(obj);
-	}
-
-	using class_info_ptr = std::unique_ptr<class_info>;
-	using class_singletons = std::vector<class_info_ptr>;
-
-	static class_singletons& class_instances(v8::Isolate* isolate)
-	{
-#if defined(V8PP_ISOLATE_DATA_SLOT)
-		class_singletons* instances =
-			static_cast<class_singletons*>(isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
-		if (!instances)
-		{
-			instances = new class_singletons;
-			isolate->SetData(V8PP_ISOLATE_DATA_SLOT, instances);
-		}
-		return *instances;
-#else
-		static std::unordered_map<v8::Isolate*, class_singletons> instances;
-		return instances[isolate];
-#endif
-	}
-
-	static class_singletons::iterator find_instance(class_singletons& singletons, std::type_index const& type)
-	{
-		return std::find_if(singletons.begin(), singletons.end(),
-			[&type](class_info_ptr const& info) { return info->type() == type; });
-	}
-public:
-	static class_singleton& create(v8::Isolate* isolate)
-	{
-		class_singletons& singletons = class_instances(isolate);
-		std::type_index const type = typeid(T);
-		auto it = find_instance(singletons, type);
-		if (it != singletons.end())
-		{
-			throw std::runtime_error(std::string("duplicate class_ instance for ") + type.name());
-		}
-		singletons.emplace_back(new class_singleton(isolate, type));
-		return *static_cast<class_singleton*>(singletons.back().get());
-	}
-
-	static void destroy(v8::Isolate* isolate)
-	{
-		class_singletons& singletons = class_instances(isolate);
-		std::type_index const type = typeid(T);
-		auto it = find_instance(singletons, type);
-		if (it != singletons.end())
-		{
-			static_cast<class_singleton*>(it->get())->destroy_objects();
-			singletons.erase(it);
-		}
-	}
-
-	static class_singleton& instance(v8::Isolate* isolate)
-	{
-		class_singletons& singletons = class_instances(isolate);
-		std::type_index const type = typeid(T);
-		auto it = find_instance(singletons, type);
-		if (it == singletons.end())
-		{
-			throw std::runtime_error(std::string("no v8pp::class_ instance for ") + type.name());
-		}
-		return *static_cast<class_singleton*>(it->get());
 	}
 
 	v8::Isolate* isolate() { return isolate_; }
@@ -340,7 +403,7 @@ public:
 	template<typename U>
 	void inherit()
 	{
-		class_singleton<U>* base = &class_singleton<U>::instance(isolate_);
+		class_singleton<U>* base = &class_singletons::find_class<U>(isolate_);
 		add_base(base, [](void* ptr) -> void*
 			{
 				return static_cast<U*>(static_cast<T*>(ptr));
@@ -360,7 +423,12 @@ public:
 
 	v8::Handle<v8::Object> wrap_object(v8::FunctionCallbackInfo<v8::Value> const& args)
 	{
-		return ctor_? wrap_object(ctor_(args)) : throw std::runtime_error("create is not allowed");
+		if (!ctor_)
+		{
+			assert(false && "create not allowed");
+			throw std::runtime_error("create not allowed");
+		}
+		return wrap_object(ctor_(args));
 	}
 
 	T* unwrap_object(v8::Local<v8::Value> value)
@@ -417,7 +485,7 @@ class class_
 	detail::class_singleton<T>& class_singleton_;
 public:
 	explicit class_(v8::Isolate* isolate)
-		: class_singleton_(class_singleton::create(isolate))
+		: class_singleton_(detail::class_singletons::add_class<T>(isolate))
 	{
 	}
 
@@ -535,26 +603,26 @@ public:
 	/// It will not take ownership of the C++ pointer.
 	static v8::Handle<v8::Object> reference_external(v8::Isolate* isolate, T* ext)
 	{
-		return class_singleton::instance(isolate).wrap_external_object(ext);
+		return detail::class_singletons::find_class<T>(isolate).wrap_external_object(ext);
 	}
 
 	/// Remove external reference from JavaScript
 	static void unreference_external(v8::Isolate* isolate, T* ext)
 	{
-		return class_singleton::instance(isolate).remove_object(isolate, ext);
+		return detail::class_singletons::find_class<T>(isolate).remove_object(isolate, ext);
 	}
 
 	/// As reference_external but delete memory for C++ object
 	/// when JavaScript object is deleted. You must use "new" to allocate ext.
 	static v8::Handle<v8::Object> import_external(v8::Isolate* isolate, T* ext)
 	{
-		return class_singleton::instance(isolate).wrap_object(ext);
+		return detail::class_singletons::find_class<T>(isolate).wrap_object(ext);
 	}
 
 	/// Get wrapped object from V8 value, may return nullptr on fail.
 	static T* unwrap_object(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
-		return class_singleton::instance(isolate).unwrap_object(value);
+		return detail::class_singletons::find_class<T>(isolate).unwrap_object(value);
 	}
 
 	/// Create a wrapped C++ object and import it into JavaScript
@@ -568,25 +636,25 @@ public:
 	/// Find V8 object handle for a wrapped C++ object, may return empty handle on fail.
 	static v8::Handle<v8::Object> find_object(v8::Isolate* isolate, T const* obj)
 	{
-		return class_singleton::instance(isolate).find_object(obj);
+		return detail::class_singletons::find_class<T>(isolate).find_object(obj);
 	}
 
 	/// Destroy wrapped C++ object
 	static void destroy_object(v8::Isolate* isolate, T* obj)
 	{
-		class_singleton::instance(isolate).destroy_object(obj);
+		detail::class_singletons::find_class<T>(isolate).destroy_object(obj);
 	}
 
 	/// Destroy all wrapped C++ objects of this class
 	static void destroy_objects(v8::Isolate* isolate)
 	{
-		class_singleton::instance(isolate).destroy_objects();
+		detail::class_singletons::find_class<T>(isolate).destroy_objects();
 	}
 
 	/// Destroy all wrapped C++ objects and this binding class_
 	static void destroy(v8::Isolate* isolate)
 	{
-		class_singleton::destroy(isolate);
+		detail::class_singletons::remove_class<T>(isolate);
 	}
 
 private:
@@ -611,6 +679,11 @@ private:
 		self.*ptr = v8pp::from_v8<attr_type>(isolate, value);
 	}
 };
+
+inline void cleanup(v8::Isolate* isolate)
+{
+	detail::class_singletons::remove_all(isolate);
+}
 
 } // namespace v8pp
 
