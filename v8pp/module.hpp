@@ -64,11 +64,11 @@ public:
 	}
 
 	/// Set a C++ function in the module with specified name
-	template<typename Function>
-	typename std::enable_if<detail::is_callable<Function>::value, module&>::type
-	set(char const* name, Function func)
+	template<typename Function, typename Fun = typename std::decay<Function>::type>
+	typename std::enable_if<detail::is_callable<Fun>::value, module&>::type
+	set(char const* name, Function&& func)
 	{
-		return set(name, wrap_function_template(isolate_, func));
+		return set(name, wrap_function_template(isolate_, std::forward<Fun>(func)));
 	}
 
 	/// Set a C++ variable in the module with specified name
@@ -94,18 +94,20 @@ public:
 
 	/// Set v8pp::property in the module with specified name
 	template<typename GetFunction, typename SetFunction>
-	module& set(char const *name, property_<GetFunction, SetFunction> prop)
+	module& set(char const *name, property_<GetFunction, SetFunction>&& prop)
 	{
+		using prop_type = property_<GetFunction, SetFunction>;
+
 		v8::HandleScope scope(isolate_);
 
-		v8::AccessorGetterCallback getter = property_<GetFunction, SetFunction>::get;
-		v8::AccessorSetterCallback setter = property_<GetFunction, SetFunction>::set;
-		if (property_<GetFunction, SetFunction>::is_readonly)
+		v8::AccessorGetterCallback getter = prop_type::get;
+		v8::AccessorSetterCallback setter = prop_type::set;
+		if (prop_type::is_readonly)
 		{
 			setter = nullptr;
 		}
 
-		v8::Handle<v8::Value> data = detail::set_external_data(isolate_, prop);
+		v8::Handle<v8::Value> data = detail::set_external_data(isolate_, std::forward<prop_type>(prop));
 		v8::PropertyAttribute const prop_attrs = v8::PropertyAttribute(v8::DontDelete | (setter? 0 : v8::ReadOnly));
 
 		obj_->SetAccessor(v8pp::to_v8(isolate_, name), getter, setter, data, v8::DEFAULT, prop_attrs);
@@ -124,7 +126,7 @@ public:
 
 	/// Set a value convertible to JavaScript as a read-only property
 	template<typename Value>
-	module& set_const(char const* name, Value value)
+	module& set_const(char const* name, Value const& value)
 	{
 		v8::HandleScope scope(isolate_);
 

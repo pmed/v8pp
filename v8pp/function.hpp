@@ -49,6 +49,62 @@ public:
 };
 
 template<typename T>
+class external_data
+{
+public:
+	static v8::Local<v8::External> set(v8::Isolate* isolate, T&& data)
+	{
+		external_data* value = new external_data;
+		try
+		{
+			new (value->storage()) T(std::forward<T>(data));
+		}
+		catch (...)
+		{
+			delete value;
+			throw;
+		}
+
+		v8::Local<v8::External> ext = v8::External::New(isolate, value);
+		value->pext_.Reset(isolate, ext);
+		value->pext_.SetWeak(value,
+#ifdef V8_USE_WEAK_CB_INFO
+			[](v8::WeakCallbackInfo<external_data> const& data)
+#else
+			[](v8::WeakCallbackData<v8::External, external_data> const& data)
+#endif
+		{
+			delete data.GetParameter();
+		}
+#ifdef V8_USE_WEAK_CB_INFO
+			, v8::WeakCallbackType::kParameter
+#endif
+			);
+		return ext;
+	}
+
+	static T& get(v8::Local<v8::External> ext)
+	{
+		external_data* value = static_cast<external_data*>(ext->Value());
+		return *static_cast<T*>(value->storage());
+	}
+
+private:
+	void* storage() { return &storage_; }
+	~external_data()
+	{
+		if (!pext_.IsEmpty())
+		{
+			static_cast<T*>(storage())->~T();
+			pext_.Reset();
+		}
+	}
+	using data_storage = typename std::aligned_storage<sizeof(T)>::type;
+	data_storage storage_;
+	v8::UniquePersistent<v8::External> pext_;
+};
+
+template<typename T>
 typename std::enable_if<is_pointer_cast_allowed<T>::value, v8::Local<v8::Value>>::type
 set_external_data(v8::Isolate* isolate, T value)
 {
@@ -57,28 +113,9 @@ set_external_data(v8::Isolate* isolate, T value)
 
 template<typename T>
 typename std::enable_if<!is_pointer_cast_allowed<T>::value, v8::Local<v8::Value>>::type
-set_external_data(v8::Isolate* isolate, T const& value)
+set_external_data(v8::Isolate* isolate, T&& value)
 {
-	T* data = new T(value);
-
-	v8::Local<v8::External> ext = v8::External::New(isolate, data);
-
-	v8::Persistent<v8::External> pext(isolate, ext);
-	pext.SetWeak(data,
-#ifdef V8_USE_WEAK_CB_INFO
-		[](v8::WeakCallbackInfo<T> const& data)
-#else
-		[](v8::WeakCallbackData<v8::External, T> const& data)
-#endif
-		{
-			delete data.GetParameter();
-		}
-#ifdef V8_USE_WEAK_CB_INFO
-		,v8::WeakCallbackType::kParameter
-#endif
-		);
-
-	return ext;
+	return external_data<T>::set(isolate, std::forward<T>(value));
 }
 
 template<typename T>
@@ -92,8 +129,7 @@ template<typename T>
 typename std::enable_if<!is_pointer_cast_allowed<T>::value, T&>::type
 get_external_data(v8::Handle<v8::Value> value)
 {
-	T* data = static_cast<T*>(value.As<v8::External>()->Value());
-	return *data;
+	return external_data<T>::get(value.As<v8::External>());
 }
 
 template<typename F>
@@ -101,8 +137,7 @@ typename std::enable_if<is_callable<F>::value,
 	typename function_traits<F>::return_type>::type
 invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	F f = get_external_data<F>(args.Data());
-	return call_from_v8(std::forward<F>(f), args);
+	return call_from_v8(std::forward<F>(get_external_data<F>(args.Data())), args);
 }
 
 template<typename F>
@@ -114,10 +149,8 @@ invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
 	static_assert(std::tuple_size<arguments>::value > 0, "");
 	using class_type = typename std::tuple_element<0, arguments>::type;
 
-	F f = get_external_data<F>(args.Data());
-	class_type& obj = from_v8<class_type&>(args.GetIsolate(), args.This());
-
-	return call_from_v8(obj, std::forward<F>(f), args);
+	return call_from_v8(from_v8<class_type&>(args.GetIsolate(), args.This()),
+		std::forward<F>(get_external_data<F>(args.Data())), args);
 }
 
 template<typename F>
@@ -157,20 +190,22 @@ void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 
 /// Wrap C++ function into new V8 function template
 template<typename F>
-v8::Handle<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F func)
+v8::Handle<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&& func)
 {
-	return v8::FunctionTemplate::New(isolate, &detail::forward_function<F>,
-		detail::set_external_data(isolate, func));
+	using F_type = typename std::decay<F>::type;
+	return v8::FunctionTemplate::New(isolate, &detail::forward_function<F_type>,
+		detail::set_external_data(isolate, std::forward<F_type>(func)));
 }
 
 /// Wrap C++ function into new V8 function
 /// Set nullptr or empty string for name
 /// to make the function anonymous
 template<typename F>
-v8::Handle<v8::Function> wrap_function(v8::Isolate* isolate, char const* name, F func)
+v8::Handle<v8::Function> wrap_function(v8::Isolate* isolate, char const* name, F&& func)
 {
-	v8::Handle<v8::Function> fn = v8::Function::New(isolate, &detail::forward_function<F>,
-		detail::set_external_data(isolate, func));
+	using F_type = typename std::decay<F>::type;
+	v8::Handle<v8::Function> fn = v8::Function::New(isolate, &detail::forward_function<F_type>,
+		detail::set_external_data(isolate, std::forward<F_type>(func)));
 	if (name && *name)
 	{
 		fn->SetName(to_v8(isolate, name));

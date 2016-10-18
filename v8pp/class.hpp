@@ -548,13 +548,12 @@ public:
 	}
 
 	/// Set static class function
-	template<typename Function>
-	typename std::enable_if<
-		detail::is_callable<Function>::value, class_&>::type
-	set(char const *name, Function func)
+	template<typename Function, typename Fun = typename std::decay<Function>::type>
+	typename std::enable_if<detail::is_callable<Fun>::value, class_&>::type
+	set(char const *name, Function&& func)
 	{
 		class_singleton_.js_function_template()->Set(isolate(), name,
-			wrap_function_template(isolate(), func));
+			wrap_function_template(isolate(), std::forward<Fun>(func)));
 		return *this;
 	}
 
@@ -573,7 +572,7 @@ public:
 			setter = nullptr;
 		}
 
-		v8::Handle<v8::Value> data = detail::set_external_data(isolate(), attribute);
+		v8::Handle<v8::Value> data = detail::set_external_data(isolate(), std::forward<Attribute>(attribute));
 		v8::PropertyAttribute const prop_attrs = v8::PropertyAttribute(v8::DontDelete | (setter? 0 : v8::ReadOnly));
 
 		class_singleton_.class_function_template()->PrototypeTemplate()->SetAccessor(
@@ -585,18 +584,19 @@ public:
 	template<typename GetMethod, typename SetMethod>
 	typename std::enable_if<std::is_member_function_pointer<GetMethod>::value
 		&& std::is_member_function_pointer<SetMethod>::value, class_&>::type
-	set(char const *name, property_<GetMethod, SetMethod> prop)
+	set(char const *name, property_<GetMethod, SetMethod>&& prop)
 	{
+		using prop_type = property_<GetMethod, SetMethod>;
 		v8::HandleScope scope(isolate());
 
-		v8::AccessorGetterCallback getter = property_<GetMethod, SetMethod>::get;
-		v8::AccessorSetterCallback setter = property_<GetMethod, SetMethod>::set;
-		if (property_<GetMethod, SetMethod>::is_readonly)
+		v8::AccessorGetterCallback getter = prop_type::get;
+		v8::AccessorSetterCallback setter = prop_type::set;
+		if (prop_type::is_readonly)
 		{
 			setter = nullptr;
 		}
 
-		v8::Handle<v8::Value> data = detail::set_external_data(isolate(), prop);
+		v8::Handle<v8::Value> data = detail::set_external_data(isolate(), std::forward<prop_type>(prop));
 		v8::PropertyAttribute const prop_attrs = v8::PropertyAttribute(v8::DontDelete | (setter? 0 : v8::ReadOnly));
 
 		class_singleton_.class_function_template()->PrototypeTemplate()->SetAccessor(v8pp::to_v8(isolate(), name),
@@ -606,7 +606,7 @@ public:
 
 	/// Set value as a read-only property
 	template<typename Value>
-	class_& set_const(char const* name, Value value)
+	class_& set_const(char const* name, Value const& value)
 	{
 		v8::HandleScope scope(isolate());
 

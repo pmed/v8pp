@@ -135,7 +135,7 @@ struct r_property_impl<Get, Set, true>
 
 		class_type& obj = v8pp::from_v8<class_type&>(isolate, info.This());
 
-		Property prop = detail::get_external_data<Property>(info.Data());
+		Property const& prop = detail::get_external_data<Property>(info.Data());
 		assert(prop.get_);
 
 		if (prop.get_)
@@ -186,7 +186,7 @@ struct r_property_impl<Get, Set, false>
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
-		Property prop = detail::get_external_data<Property>(info.Data());
+		Property const& prop = detail::get_external_data<Property>(info.Data());
 		assert(prop.get_);
 
 		if (prop.get_)
@@ -246,7 +246,7 @@ struct rw_property_impl<Get, Set, true>
 
 		class_type& obj = v8pp::from_v8<class_type&>(isolate, info.This());
 
-		Property prop = detail::get_external_data<Property>(info.Data());
+		Property const& prop = detail::get_external_data<Property>(info.Data());
 		assert(prop.set_);
 
 		if (prop.set_)
@@ -297,7 +297,7 @@ struct rw_property_impl<Get, Set, false>
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
-		Property prop = detail::get_external_data<Property>(info.Data());
+		Property const& prop = detail::get_external_data<Property>(info.Data());
 		assert(prop.set_);
 
 		if (prop.set_)
