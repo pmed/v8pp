@@ -62,6 +62,7 @@ void run_tests()
 		catch (std::exception const& ex)
 		{
 			std::cerr << " error: " << ex.what();
+			exit(EXIT_FAILURE);
 		}
 		std::cout << std::endl;
 	}
