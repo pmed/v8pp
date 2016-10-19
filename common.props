@@ -10,7 +10,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4190</DisableSpecificWarnings>
-      <PreprocessorDefinitions>V8_USE_UNSAFE_HANDLES;V8_DISABLE_DEPRECATIONS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>V8_USE_UNSAFE_HANDLES;V8_DISABLE_DEPRECATIONS;V8PP_ISOLATE_DATA_SLOT=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
   </ItemDefinitionGroup>
