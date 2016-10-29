@@ -118,8 +118,21 @@ void test_is_callable()
 
 } // unnamed namespace
 
+struct some_struct {};
+namespace test { class some_class {}; }
+
 void test_utility()
 {
 	test_apply_tuple();
 	test_is_callable();
+
+	check_eq("type_id", v8pp::detail::type_id<int>().name(), "int");
+	check_eq("type_id", v8pp::detail::type_id<bool>().name(), "bool");
+#ifdef _MSC_VER
+	check_eq("type_id", v8pp::detail::type_id<some_struct>().name(), "struct some_struct");
+	check_eq("type_id", v8pp::detail::type_id<test::some_class>().name(), "class test::some_class");
+#else
+	check_eq("type_id", v8pp::detail::type_id<some_struct>().name(), "some_struct");
+	check_eq("type_id", v8pp::detail::type_id<test::some_class>().name(), "test::some_class");
+#endif
 }

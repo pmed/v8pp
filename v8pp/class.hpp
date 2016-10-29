@@ -13,7 +13,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <typeindex>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
@@ -31,9 +30,9 @@ class class_;
 
 namespace detail {
 
-inline std::string class_name(std::type_index const& type)
+inline std::string class_name(type_info const& info)
 {
-	return std::string("v8pp::class_<") + type.name() + '>';
+	return "v8pp::class_<" + info.name() + '>';
 }
 
 inline std::string pointer_str(void const* ptr)
@@ -52,12 +51,12 @@ inline std::string pointer_str(void const* ptr)
 class class_info
 {
 public:
-	explicit class_info(std::type_index const& type) : type_(type) {}
+	explicit class_info(type_info const& type) : type_(type) {}
 	class_info(class_info const&) = delete;
 	class_info& operator=(class_info const&) = delete;
 	virtual ~class_info() = default;
 
-	std::type_index const& type() const { return type_; }
+	type_info const& type() const { return type_; }
 
 	using cast_function = void* (*)(void* ptr);
 
@@ -75,7 +74,7 @@ public:
 		info->derivatives_.emplace_back(this);
 	}
 
-	bool cast(void*& ptr, std::type_index const& type) const
+	bool cast(void*& ptr, type_info const& type) const
 	{
 		if (type == type_ || !ptr)
 		{
@@ -186,7 +185,7 @@ private:
 		}
 	};
 
-	std::type_index const type_;
+	type_info const type_;
 	std::vector<base_class_info> bases_;
 	std::vector<class_info*> derivatives_;
 
@@ -203,7 +202,7 @@ public:
 	static class_singleton<T>& add_class(v8::Isolate* isolate)
 	{
 		class_singletons* singletons = instance(add, isolate);
-		std::type_index const type = typeid(T);
+		type_info const type = type_id<T>();
 		auto it = singletons->find(type);
 		if (it != singletons->classes_.end())
 		{
@@ -221,7 +220,7 @@ public:
 		class_singletons* singletons = instance(get, isolate);
 		if (singletons)
 		{
-			std::type_index const type = typeid(T);
+			type_info const type = type_id<T>();
 			auto it = singletons->find(type);
 			if (it != singletons->classes_.end())
 			{
@@ -238,7 +237,7 @@ public:
 	static class_singleton<T>& find_class(v8::Isolate* isolate)
 	{
 		class_singletons* singletons = instance(get, isolate);
-		std::type_index const type = typeid(T);
+		type_info const type = type_id<T>();
 		if (singletons)
 		{
 			auto it = singletons->find(type);
@@ -261,7 +260,7 @@ private:
 	using classes = std::vector<std::unique_ptr<class_info>>;
 	classes classes_;
 
-	classes::iterator find(std::type_index const& type)
+	classes::iterator find(type_info const& type)
 	{
 		return std::find_if(classes_.begin(), classes_.end(),
 			[&type](std::unique_ptr<class_info> const& info) { return info->type() == type; });
@@ -317,7 +316,7 @@ template<typename T>
 class class_singleton : public class_info
 {
 public:
-	class_singleton(v8::Isolate* isolate, std::type_index const& type)
+	class_singleton(v8::Isolate* isolate, type_info const& type)
 		: class_info(type)
 		, isolate_(isolate)
 		, ctor_(nullptr)

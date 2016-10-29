@@ -186,6 +186,58 @@ typename function_traits<F>::return_type apply(F&& f, Args&&... args)
 	return std::forward<F>(f)(std::forward<Args>(args)...);
 }
 
+/// Type information for custom RTTI
+class type_info
+{
+public:
+	std::string const& name() const { return name_; }
+	bool operator==(type_info const& other) const { return name_ == other.name_; }
+	bool operator!=(type_info const& other) const { return name_ != other.name_; }
+private:
+	template<typename T> friend type_info type_id();
+	type_info(char const* name, size_t size)
+		: name_(name, size)
+	{
+	}
+	std::string name_;
+};
+
+/// Get type information for type T
+/// Idea  borrowed from https://github.com/Manu343726/ctti
+template<typename T>
+type_info type_id()
+{
+#if defined(_MSC_VER)
+	#define V8PP_PRETTY_FUNCTION __FUNCSIG__
+	#define V8PP_PRETTY_FUNCTION_PREFIX "class v8pp::detail::type_info __cdecl v8pp::detail::type_id<"
+	#define V8PP_PRETTY_FUNCTION_SUFFIX ">(void)"
+#elif defined(__clang__) || defined(__GNUC__)
+	#define V8PP_PRETTY_FUNCTION __PRETTY_FUNCTION__
+	#if !defined(__clang__)
+		#define V8PP_PRETTY_FUNCTION_PREFIX "v8pp::detail::type_info v8pp::detail::type_id() [with T = "
+	#else
+		#define V8PP_PRETTY_FUNCTION_PREFIX "v8pp::detail::type_info v8pp::detail::type_id() [T = "
+	#endif
+	#define V8PP_PRETTY_FUNCTION_SUFFIX "]"
+#else
+	#error "Unknown compiler"
+#endif
+
+#define V8PP_PRETTY_FUNCTION_LEN (sizeof(V8PP_PRETTY_FUNCTION) - 1)
+#define V8PP_PRETTY_FUNCTION_PREFIX_LEN (sizeof(V8PP_PRETTY_FUNCTION_PREFIX) - 1)
+#define V8PP_PRETTY_FUNCTION_SUFFIX_LEN (sizeof(V8PP_PRETTY_FUNCTION_SUFFIX) - 1)
+
+	return type_info(V8PP_PRETTY_FUNCTION + V8PP_PRETTY_FUNCTION_PREFIX_LEN,
+		V8PP_PRETTY_FUNCTION_LEN - V8PP_PRETTY_FUNCTION_PREFIX_LEN - V8PP_PRETTY_FUNCTION_SUFFIX_LEN);
+
+#undef V8PP_PRETTY_FUNCTION
+#undef V8PP_PRETTY_FUNCTION_PREFIX
+#undef V8PP_PRETTY_FUNCTION_SUFFFIX
+#undef V8PP_PRETTY_FUNCTION_LEN
+#undef V8PP_PRETTY_FUNCTION_PREFIX_LEN
+#undef V8PP_PRETTY_FUNCTION_SUFFFIX_LEN
+}
+
 }} // namespace v8pp::detail
 
 #endif // V8PP_UTILITY_HPP_INCLUDED
