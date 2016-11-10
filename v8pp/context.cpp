@@ -160,13 +160,13 @@ struct array_buffer_allocator : v8::ArrayBuffer::Allocator
 };
 static array_buffer_allocator array_buffer_allocator_;
 
-context::context(v8::Isolate* isolate)
+context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator)
 {
 	own_isolate_ = (isolate == nullptr);
 	if (own_isolate_)
 	{
 		v8::Isolate::CreateParams create_params;
-		create_params.array_buffer_allocator = &array_buffer_allocator_;
+		create_params.array_buffer_allocator = allocator ? allocator : &array_buffer_allocator_;
 
 		isolate = v8::Isolate::New(create_params);
 		isolate->Enter();
