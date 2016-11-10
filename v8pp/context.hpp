@@ -28,7 +28,7 @@ class context
 {
 public:
 	/// Create context with optional existing v8::Isolate
-	explicit context(v8::Isolate* isolate = nullptr);
+	explicit context(v8::Isolate* isolate = nullptr, v8::ArrayBuffer::Allocator* allocator = nullptr);
 	~context();
 
 	/// V8 isolate associated with this context
