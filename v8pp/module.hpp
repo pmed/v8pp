@@ -85,10 +85,9 @@ public:
 			setter = nullptr;
 		}
 
-		v8::Handle<v8::Value> data = detail::set_external_data(isolate_, &var);
-		v8::PropertyAttribute const prop_attrs = v8::PropertyAttribute(v8::DontDelete | (setter ? 0 : v8::ReadOnly));
-
-		obj_->SetAccessor(v8pp::to_v8(isolate_, name), getter, setter, data, v8::DEFAULT, prop_attrs);
+		obj_->SetAccessor(v8pp::to_v8(isolate_, name), getter, setter,
+			detail::set_external_data(isolate_, &var), v8::DEFAULT,
+			v8::PropertyAttribute(v8::DontDelete | (setter ? 0 : v8::ReadOnly)));
 		return *this;
 	}
 
@@ -107,10 +106,10 @@ public:
 			setter = nullptr;
 		}
 
-		v8::Handle<v8::Value> data = detail::set_external_data(isolate_, std::forward<prop_type>(prop));
-		v8::PropertyAttribute const prop_attrs = v8::PropertyAttribute(v8::DontDelete | (setter? 0 : v8::ReadOnly));
-
-		obj_->SetAccessor(v8pp::to_v8(isolate_, name), getter, setter, data, v8::DEFAULT, prop_attrs);
+		obj_->SetAccessor(v8pp::to_v8(isolate_, name), getter, setter,
+			detail::set_external_data(isolate_, std::forward<prop_type>(prop)),
+			v8::DEFAULT,
+			v8::PropertyAttribute(v8::DontDelete | (setter ? 0 : v8::ReadOnly)));
 		return *this;
 	}
 
@@ -140,7 +139,8 @@ public:
 
 private:
 	template<typename Variable>
-	static void var_get(v8::Local<v8::String>, v8::PropertyCallbackInfo<v8::Value> const& info)
+	static void var_get(v8::Local<v8::String>,
+		v8::PropertyCallbackInfo<v8::Value> const& info)
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
@@ -149,7 +149,8 @@ private:
 	}
 
 	template<typename Variable>
-	static void var_set(v8::Local<v8::String>, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info)
+	static void var_set(v8::Local<v8::String>, v8::Local<v8::Value> value,
+		v8::PropertyCallbackInfo<void> const& info)
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 

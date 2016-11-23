@@ -24,7 +24,8 @@ struct call_from_v8_traits
 	static bool const is_mem_fun = std::is_member_function_pointer<F>::value;
 	using arguments = typename function_traits<F>::arguments;
 
-	static size_t const arg_count = std::tuple_size<arguments>::value - is_mem_fun - Offset;
+	static size_t const arg_count =
+		std::tuple_size<arguments>::value - is_mem_fun - Offset;
 
 	template<size_t Index, bool>
 	struct tuple_element
@@ -130,7 +131,8 @@ typename function_traits<F>::return_type
 call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
 	isolate_arg_call_traits<F>, index_sequence<Indices...>)
 {
-	return func(args.GetIsolate(), isolate_arg_call_traits<F>::template arg_from_v8<Indices + 1>(args)...);
+	return func(args.GetIsolate(),
+		isolate_arg_call_traits<F>::template arg_from_v8<Indices + 1>(args)...);
 }
 
 template<typename T, typename F, size_t ...Indices>
@@ -138,7 +140,8 @@ typename function_traits<F>::return_type
 call_from_v8_impl(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
 	isolate_arg_call_traits<F>, index_sequence<Indices...>)
 {
-	return (obj.*func)(args.GetIsolate(), isolate_arg_call_traits<F>::template arg_from_v8<Indices + 1>(args)...);
+	return (obj.*func)(args.GetIsolate(),
+		isolate_arg_call_traits<F>::template arg_from_v8<Indices + 1>(args)...);
 }
 
 template<typename F, size_t ...Indices>

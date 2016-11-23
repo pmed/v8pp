@@ -25,14 +25,16 @@ struct factory
 	static T* create(v8::Isolate* isolate, Args... args)
 	{
 		T* object = new T(std::forward<Args>(args)...);
-		isolate->AdjustAmountOfExternalAllocatedMemory(static_cast<int64_t>(object_size));
+		isolate->AdjustAmountOfExternalAllocatedMemory(
+			static_cast<int64_t>(object_size));
 		return object;
 	}
 
 	static void destroy(v8::Isolate* isolate, T* object)
 	{
 		delete object;
-		isolate->AdjustAmountOfExternalAllocatedMemory(-static_cast<int64_t>(object_size));
+		isolate->AdjustAmountOfExternalAllocatedMemory(
+			-static_cast<int64_t>(object_size));
 	}
 };
 

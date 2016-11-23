@@ -20,12 +20,33 @@ int dtor_count = 0;
 
 struct X
 {
-	X() { ++ctor_count; ctor_types |= 0x01; }
-	X(int) { ++ctor_count; ctor_types |= 0x02; }
-	X(bool, float) { ++ctor_count; ctor_types |= 0x04; }
-	X(v8::FunctionCallbackInfo<v8::Value> const&) { ++ctor_count; ctor_types |= 0x08; }
+	X()
+	{
+		++ctor_count;
+		ctor_types |= 0x01;
+	}
 
-	~X() { ++dtor_count; }
+	X(int) {
+		++ctor_count;
+		ctor_types |= 0x02;
+	}
+
+	X(bool, float)
+	{
+		++ctor_count;
+		ctor_types |= 0x04;
+	}
+
+	X(v8::FunctionCallbackInfo<v8::Value> const&)
+	{
+		++ctor_count;
+		ctor_types |= 0x08;
+	}
+
+	~X()
+	{
+		++dtor_count;
+	}
 };
 
 class Y

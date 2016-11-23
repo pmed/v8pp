@@ -264,15 +264,18 @@ private:
 	classes::iterator find(type_info const& type)
 	{
 		return std::find_if(classes_.begin(), classes_.end(),
-			[&type](std::unique_ptr<class_info> const& info) { return info->type() == type; });
+			[&type](std::unique_ptr<class_info> const& info)
+			{
+				return info->type() == type;
+			});
 	}
 
 	enum operation { get, add, remove };
 	static class_singletons* instance(operation op, v8::Isolate* isolate)
 	{
 #if defined(V8PP_ISOLATE_DATA_SLOT)
-		class_singletons* instances =
-			static_cast<class_singletons*>(isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
+		class_singletons* instances = static_cast<class_singletons*>(
+			isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
 		switch (op)
 		{
 		case get:
@@ -328,7 +331,8 @@ public:
 			v8::Isolate* isolate = args.GetIsolate();
 			try
 			{
-				return args.GetReturnValue().Set(class_singletons::find_class<T>(isolate).wrap_object(args));
+				return args.GetReturnValue().Set(
+					class_singletons::find_class<T>(isolate).wrap_object(args));
 			}
 			catch (std::exception const& ex)
 			{
@@ -365,7 +369,8 @@ public:
 	{
 		v8::EscapableHandleScope scope(isolate_);
 
-		v8::Local<v8::Object> obj = class_function_template()->GetFunction()->NewInstance();
+		v8::Local<v8::Object> obj = class_function_template()
+			->GetFunction()->NewInstance();
 		obj->SetAlignedPointerInInternalField(0, object);
 		obj->SetAlignedPointerInInternalField(1, this);
 
@@ -399,7 +404,8 @@ public:
 			{
 				v8::Isolate* isolate = data.GetIsolate();
 				T* object = data.GetParameter();
-				class_singletons::find_class<T>(isolate).remove_object(isolate, object);
+				class_singletons::find_class<T>(isolate)
+					.remove_object(isolate, object);
 			}
 #ifdef V8_USE_WEAK_CB_INFO
 				, v8::WeakCallbackType::kParameter
@@ -581,11 +587,11 @@ public:
 			setter = nullptr;
 		}
 
-		v8::Handle<v8::Value> data = detail::set_external_data(isolate(), std::forward<Attribute>(attribute));
-		v8::PropertyAttribute const prop_attrs = v8::PropertyAttribute(v8::DontDelete | (setter? 0 : v8::ReadOnly));
-
-		class_singleton_.class_function_template()->PrototypeTemplate()->SetAccessor(
-			v8pp::to_v8(isolate(), name), getter, setter, data, v8::DEFAULT, prop_attrs);
+		class_singleton_.class_function_template()->PrototypeTemplate()
+			->SetAccessor(v8pp::to_v8(isolate(), name), getter, setter,
+				detail::set_external_data(isolate(),
+					std::forward<Attribute>(attribute)), v8::DEFAULT,
+				v8::PropertyAttribute(v8::DontDelete | (setter? 0 : v8::ReadOnly)));
 		return *this;
 	}
 
@@ -605,11 +611,11 @@ public:
 			setter = nullptr;
 		}
 
-		v8::Handle<v8::Value> data = detail::set_external_data(isolate(), std::forward<prop_type>(prop));
-		v8::PropertyAttribute const prop_attrs = v8::PropertyAttribute(v8::DontDelete | (setter? 0 : v8::ReadOnly));
-
-		class_singleton_.class_function_template()->PrototypeTemplate()->SetAccessor(v8pp::to_v8(isolate(), name),
-			getter, setter, data, v8::DEFAULT, prop_attrs);
+		class_singleton_.class_function_template()->PrototypeTemplate()
+			->SetAccessor(v8pp::to_v8(isolate(), name),getter, setter,
+				detail::set_external_data(isolate(),
+					std::forward<prop_type>(prop)), v8::DEFAULT,
+				v8::PropertyAttribute(v8::DontDelete | (setter ? 0 : v8::ReadOnly)));
 		return *this;
 	}
 
@@ -619,8 +625,9 @@ public:
 	{
 		v8::HandleScope scope(isolate());
 
-		class_singleton_.class_function_template()->PrototypeTemplate()->Set(v8pp::to_v8(isolate(), name),
-			to_v8(isolate(), value), v8::PropertyAttribute(v8::ReadOnly | v8::DontDelete));
+		class_singleton_.class_function_template()->PrototypeTemplate()
+			->Set(v8pp::to_v8(isolate(), name), to_v8(isolate(), value),
+				v8::PropertyAttribute(v8::ReadOnly | v8::DontDelete));
 		return *this;
 	}
 
@@ -641,26 +648,30 @@ public:
 	/// It will not take ownership of the C++ pointer.
 	static v8::Handle<v8::Object> reference_external(v8::Isolate* isolate, T* ext)
 	{
-		return detail::class_singletons::find_class<T>(isolate).wrap_external_object(ext);
+		return detail::class_singletons::find_class<T>(isolate)
+			.wrap_external_object(ext);
 	}
 
 	/// Remove external reference from JavaScript
 	static void unreference_external(v8::Isolate* isolate, T* ext)
 	{
-		return detail::class_singletons::find_class<T>(isolate).remove_object(isolate, ext);
+		return detail::class_singletons::find_class<T>(isolate)
+			.remove_object(isolate, ext);
 	}
 
 	/// As reference_external but delete memory for C++ object
 	/// when JavaScript object is deleted. You must use "new" to allocate ext.
 	static v8::Handle<v8::Object> import_external(v8::Isolate* isolate, T* ext)
 	{
-		return detail::class_singletons::find_class<T>(isolate).wrap_object(ext);
+		return detail::class_singletons::find_class<T>(isolate)
+			.wrap_object(ext);
 	}
 
 	/// Get wrapped object from V8 value, may return nullptr on fail.
 	static T* unwrap_object(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
-		return detail::class_singletons::find_class<T>(isolate).unwrap_object(value);
+		return detail::class_singletons::find_class<T>(isolate)
+			.unwrap_object(value);
 	}
 
 	/// Create a wrapped C++ object and import it into JavaScript
@@ -674,7 +685,8 @@ public:
 	/// Find V8 object handle for a wrapped C++ object, may return empty handle on fail.
 	static v8::Handle<v8::Object> find_object(v8::Isolate* isolate, T const* obj)
 	{
-		return detail::class_singletons::find_class<T>(isolate).find_object(obj);
+		return detail::class_singletons::find_class<T>(isolate)
+			.find_object(obj);
 	}
 
 	/// Destroy wrapped C++ object
@@ -697,7 +709,8 @@ public:
 
 private:
 	template<typename Attribute>
-	static void member_get(v8::Local<v8::String>, v8::PropertyCallbackInfo<v8::Value> const& info)
+	static void member_get(v8::Local<v8::String>,
+		v8::PropertyCallbackInfo<v8::Value> const& info)
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
@@ -707,7 +720,8 @@ private:
 	}
 
 	template<typename Attribute>
-	static void member_set(v8::Local<v8::String>, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info)
+	static void member_set(v8::Local<v8::String>, v8::Local<v8::Value> value,
+		v8::PropertyCallbackInfo<void> const& info)
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 

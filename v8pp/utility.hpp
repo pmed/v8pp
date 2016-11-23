@@ -39,35 +39,43 @@ struct function_traits<R (Args...)>
 
 // function pointer
 template<typename R, typename ...Args>
-struct function_traits<R (*)(Args...)> : function_traits<R (Args...)> {};
+struct function_traits<R (*)(Args...)>
+	: function_traits<R (Args...)>
+{
+};
 
 // member function pointer
 template<typename C, typename R, typename ...Args>
-struct function_traits<R (C::*)(Args...)> : function_traits<R (C&, Args...)>
+struct function_traits<R (C::*)(Args...)>
+	: function_traits<R (C&, Args...)>
 {
 };
 
 // const member function pointer
 template<typename C, typename R, typename ...Args>
-struct function_traits<R (C::*)(Args...) const> : function_traits<R (C const&, Args...)>
+struct function_traits<R (C::*)(Args...) const>
+	: function_traits<R (C const&, Args...)>
 {
 };
 
 // volatile member function pointer
 template<typename C, typename R, typename ...Args>
-struct function_traits<R(C::*)(Args...) volatile> : function_traits<R(C volatile&, Args...)>
+struct function_traits<R(C::*)(Args...) volatile>
+	: function_traits<R(C volatile&, Args...)>
 {
 };
 
 // const volatile member function pointer
 template<typename C, typename R, typename ...Args>
-struct function_traits<R(C::*)(Args...) const volatile> : function_traits<R(C const volatile&, Args...)>
+struct function_traits<R(C::*)(Args...) const volatile>
+	: function_traits<R(C const volatile&, Args...)>
 {
 };
 
 // member object pointer
 template<typename C, typename R>
-struct function_traits<R (C::*)> : function_traits<R (C&)>
+struct function_traits<R (C::*)>
+	: function_traits<R (C&)>
 {
 };
 
@@ -75,7 +83,8 @@ struct function_traits<R (C::*)> : function_traits<R (C&)>
 template<typename F>
 struct function_traits
 {
-	static_assert(!std::is_bind_expression<F>::value, "std::bind result is not supported yet");
+	static_assert(!std::is_bind_expression<F>::value,
+		"std::bind result is not supported yet");
 private:
 	using callable_traits = function_traits<decltype(&F::operator())>;
 public:
@@ -90,10 +99,12 @@ template<typename F>
 struct function_traits<F&&> : function_traits<F> {};
 
 template<typename F>
-using is_void_return = std::is_same<void, typename function_traits<F>::return_type>;
+using is_void_return = std::is_same<void,
+	typename function_traits<F>::return_type>;
 
 template<typename F, bool is_class>
-struct is_callable_impl : std::is_function<typename std::remove_pointer<F>::type>
+struct is_callable_impl
+	: std::is_function<typename std::remove_pointer<F>::type>
 {
 };
 
@@ -168,7 +179,8 @@ using make_index_sequence = make_integer_sequence<size_t, N>;
 // apply_tuple
 //
 template<typename F, typename Tuple, size_t... Indices>
-typename function_traits<F>::return_type apply_impl(F&& f, Tuple&& t, index_sequence<Indices...>)
+typename function_traits<F>::return_type apply_impl(
+	F&& f, Tuple&& t, index_sequence<Indices...>)
 {
 	return std::forward<F>(f)(std::get<Indices>(std::forward<Tuple>(t))...);
 }
@@ -176,7 +188,8 @@ typename function_traits<F>::return_type apply_impl(F&& f, Tuple&& t, index_sequ
 template<typename F, typename Tuple>
 typename function_traits<F>::return_type apply_tuple(F&& f, Tuple&& t)
 {
-	using Indices = make_index_sequence<std::tuple_size<typename std::decay<Tuple>::type>::value>;
+	using Indices = make_index_sequence<
+		std::tuple_size<typename std::decay<Tuple>::type>::value>;
 	return apply_impl(std::forward<F>(f), std::forward<Tuple>(t), Indices{});
 }
 

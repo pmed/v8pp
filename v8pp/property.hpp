@@ -103,8 +103,8 @@ struct r_property_impl<Get, Set, true>
 		|| is_direct_getter<Get>::value
 		|| is_isolate_getter<Get>::value,
 		"property get function must be either `T ()` or \
-					`void (v8::Local<v8::String> name, v8::PropertyCallbackInfo<v8::Value> const& info)` or \
-					`T (v8::Isolate*)`");
+		`void (v8::Local<v8::String> name, v8::PropertyCallbackInfo<v8::Value> const& info)` or \
+		`T (v8::Isolate*)`");
 
 	static void get_impl(class_type& obj, Get get, v8::Local<v8::String>,
 		v8::PropertyCallbackInfo<v8::Value> const& info, getter_tag)
@@ -129,7 +129,8 @@ struct r_property_impl<Get, Set, true>
 		info.GetReturnValue().Set(to_v8(isolate, (obj.*get)(isolate)));
 	}
 
-	static void get(v8::Local<v8::String> name, v8::PropertyCallbackInfo<v8::Value> const& info)
+	static void get(v8::Local<v8::String> name,
+		v8::PropertyCallbackInfo<v8::Value> const& info)
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
@@ -149,7 +150,8 @@ struct r_property_impl<Get, Set, true>
 		}
 	}
 
-	static void set(v8::Local<v8::String>, v8::Local<v8::Value>, v8::PropertyCallbackInfo<void> const&)
+	static void set(v8::Local<v8::String>, v8::Local<v8::Value>,
+		v8::PropertyCallbackInfo<void> const&)
 	{
 		assert(false && "never should be called");
 	}
@@ -182,7 +184,8 @@ struct r_property_impl<Get, Set, false>
 		info.GetReturnValue().Set(to_v8(isolate, (get)(isolate)));
 	}
 
-	static void get(v8::Local<v8::String> name, v8::PropertyCallbackInfo<v8::Value> const& info)
+	static void get(v8::Local<v8::String> name,
+		v8::PropertyCallbackInfo<v8::Value> const& info)
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
@@ -200,7 +203,8 @@ struct r_property_impl<Get, Set, false>
 		}
 	}
 
-	static void set(v8::Local<v8::String>, v8::Local<v8::Value>, v8::PropertyCallbackInfo<void> const&)
+	static void set(v8::Local<v8::String>, v8::Local<v8::Value>,
+		v8::PropertyCallbackInfo<void> const&)
 	{
 		assert(false && "never should be called");
 	}
@@ -216,7 +220,8 @@ struct rw_property_impl<Get, Set, true>
 		typename function_traits<Set>::arguments>::type;
 
 	static void set_impl(class_type& obj, Set set, v8::Local<v8::String>,
-		v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info, setter_tag)
+		v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
+		setter_tag)
 	{
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<0>;
 
@@ -226,13 +231,15 @@ struct rw_property_impl<Get, Set, true>
 	}
 
 	static void set_impl(class_type& obj, Set set, v8::Local<v8::String> name,
-		v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info, direct_setter_tag)
+		v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
+		direct_setter_tag)
 	{
 		(obj.*set)(name, value, info);
 	}
 
 	static void set_impl(class_type& obj, Set set, v8::Local<v8::String>, 
-		v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info, isolate_setter_tag)
+		v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
+		isolate_setter_tag)
 	{
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<1>;
 
@@ -240,7 +247,8 @@ struct rw_property_impl<Get, Set, true>
 		(obj.*set)(isolate, v8pp::from_v8<value_type>(isolate, value));
 	}
 
-	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info)
+	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value,
+		v8::PropertyCallbackInfo<void> const& info)
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
@@ -267,8 +275,9 @@ struct rw_property_impl<Get, Set, false>
 {
 	using Property = property_<Get, Set>;
 
-	static void set_impl(Set set, v8::Local<v8::String>, v8::Local<v8::Value> value,
-		v8::PropertyCallbackInfo<void> const& info, setter_tag)
+	static void set_impl(Set set, v8::Local<v8::String>,
+		v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
+		setter_tag)
 	{
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<0>;
 
@@ -277,14 +286,16 @@ struct rw_property_impl<Get, Set, false>
 		set(v8pp::from_v8<value_type>(isolate, value));
 	}
 
-	static void set_impl(Set set, v8::Local<v8::String> name, v8::Local<v8::Value> value, 
-		v8::PropertyCallbackInfo<void> const& info, direct_setter_tag)
+	static void set_impl(Set set, v8::Local<v8::String> name,
+		v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
+		direct_setter_tag)
 	{
 		set(name, value, info);
 	}
 
-	static void set_impl(Set set, v8::Local<v8::String>, v8::Local<v8::Value> value,
-		v8::PropertyCallbackInfo<void> const& info, isolate_setter_tag)
+	static void set_impl(Set set, v8::Local<v8::String>,
+		v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
+		isolate_setter_tag)
 	{
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<1>;
 
@@ -293,7 +304,8 @@ struct rw_property_impl<Get, Set, false>
 		set(isolate, v8pp::from_v8<value_type>(isolate, value));
 	}
 
-	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info)
+	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value,
+		v8::PropertyCallbackInfo<void> const& info)
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
@@ -316,7 +328,8 @@ struct rw_property_impl<Get, Set, false>
 
 /// Property with get and set functions
 template<typename Get, typename Set>
-struct property_ : detail::rw_property_impl<Get, Set, std::is_member_function_pointer<Set>::value>
+struct property_
+	: detail::rw_property_impl<Get, Set, std::is_member_function_pointer<Set>::value>
 {
 	static_assert(detail::is_getter<Get>::value
 		|| detail::is_direct_getter<Get>::value
@@ -340,7 +353,8 @@ struct property_ : detail::rw_property_impl<Get, Set, std::is_member_function_po
 
 /// Read-only property class specialization for get only method
 template<typename Get>
-struct property_<Get, Get> : detail::r_property_impl<Get, Get, std::is_member_function_pointer<Get>::value>
+struct property_<Get, Get>
+	: detail::r_property_impl<Get, Get, std::is_member_function_pointer<Get>::value>
 {
 	static_assert(detail::is_getter<Get>::value
 		|| detail::is_direct_getter<Get>::value

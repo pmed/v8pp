@@ -34,7 +34,8 @@ std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& o
 }
 
 template<typename Char, typename Traits, typename T, size_t N>
-std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& os, std::array<T, N> const& array)
+std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& os,
+	std::array<T, N> const& array)
 {
 	os << '[';
 	bool first = true;
@@ -117,7 +118,8 @@ T run_script(v8pp::context& context, std::string const& source)
 	v8::Handle<v8::Value> result = context.run_script(source);
 	if (try_catch.HasCaught())
 	{
-		std::string const msg = v8pp::from_v8<std::string>(isolate, try_catch.Exception()->ToString());
+		std::string const msg = v8pp::from_v8<std::string>(isolate,
+			try_catch.Exception()->ToString());
 		throw std::runtime_error(msg);
 	}
 	return v8pp::from_v8<T>(isolate, result);

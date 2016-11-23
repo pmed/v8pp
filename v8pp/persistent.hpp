@@ -73,14 +73,15 @@ public:
 	{
 	}
 
-	/// Create a persistent pointer from a  pointer to a wrapped object, store persistent handle to it
+	/// Create a persistent pointer from a  pointer to a wrapped object,
+	/// store persistent handle to it
 	explicit persistent_ptr(v8::Isolate* isolate,  T* value)
 		: value_()
 	{
 		reset(isolate, value);
 	}
 
-	/// Create a persistent pointer from V8 Value, store persistent handle to it
+	/// Create a persistent pointer from V8 Value, store persistent handle
 	explicit persistent_ptr(v8::Isolate* isolate, v8::Handle<v8::Value> handle)
 		: value_()
 	{
@@ -109,7 +110,7 @@ public:
 	/// On destroy dispose persistent handle only
 	~persistent_ptr() { reset(); }
 
-	/// Reset with a new pointer to wrapped C++ object, replace persistent handle for it
+	/// Reset with a new pointer to wrapped C++ object, replace persistent handle
 	void reset(v8::Isolate* isolate, T* value)
 	{
 		if (value != value_)
@@ -167,5 +168,3 @@ private:
 } // namespace v8pp
 
 #endif // V8PP_PERSISTENT_HPP_INCLUDED
-
-

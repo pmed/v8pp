@@ -28,7 +28,9 @@ class context
 {
 public:
 	/// Create context with optional existing v8::Isolate
-	explicit context(v8::Isolate* isolate = nullptr, v8::ArrayBuffer::Allocator* allocator = nullptr);
+	/// and v8::ArrayBuffer::Allocator
+	explicit context(v8::Isolate* isolate = nullptr,
+		v8::ArrayBuffer::Allocator* allocator = nullptr);
 	~context();
 
 	/// V8 isolate associated with this context
@@ -46,7 +48,8 @@ public:
 	v8::Handle<v8::Value> run_file(std::string const& filename);
 
 	/// The same as run_file but uses string as the script source
-	v8::Handle<v8::Value> run_script(std::string const& source, std::string const& filename = "");
+	v8::Handle<v8::Value> run_script(std::string const& source,
+		std::string const& filename = "");
 
 	/// Set a V8 value in the context global object with specified name
 	context& set(char const* name, v8::Handle<v8::Value> value);

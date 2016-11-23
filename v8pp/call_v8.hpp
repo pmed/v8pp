@@ -28,7 +28,10 @@ v8::Handle<v8::Value> call_v8(v8::Isolate* isolate, v8::Handle<v8::Function> fun
 
 	int const arg_count = sizeof...(Args);
 	// +1 to allocate array for arg_count == 0
-	v8::Handle<v8::Value> v8_args[arg_count + 1] = { to_v8(isolate, std::forward<Args>(args))... };
+	v8::Handle<v8::Value> v8_args[arg_count + 1] =
+	{
+		to_v8(isolate, std::forward<Args>(args))...
+	};
 
 	v8::Local<v8::Value> result = func->Call(recv, arg_count, v8_args);
 

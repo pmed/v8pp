@@ -79,12 +79,14 @@ struct convert<std::basic_string<Char, Traits, Alloc>>
 	{
 		if (sizeof(Char) == 1)
 		{
-			return v8::String::NewFromUtf8(isolate, reinterpret_cast<char const*>(value.data()),
+			return v8::String::NewFromUtf8(isolate,
+				reinterpret_cast<char const*>(value.data()),
 				v8::String::kNormalString, static_cast<int>(value.length()));
 		}
 		else
 		{
-			return v8::String::NewFromTwoByte(isolate, reinterpret_cast<uint16_t const*>(value.data()),
+			return v8::String::NewFromTwoByte(isolate,
+				reinterpret_cast<uint16_t const*>(value.data()),
 				v8::String::kNormalString, static_cast<int>(value.length()));
 		}
 	}
@@ -100,7 +102,8 @@ struct convert<Char const*>
 	// A string that converts to Char const *
 	struct convertible_string : std::basic_string<Char>
 	{
-		convertible_string(Char const* str, size_t len) : std::basic_string<Char>(str, len) {}
+		convertible_string(Char const* str, size_t len)
+			: std::basic_string<Char>(str, len) {}
 		operator Char const*() const { return this->c_str(); }
 	};
 
@@ -135,12 +138,14 @@ struct convert<Char const*>
 	{
 		if (sizeof(Char) == 1)
 		{
-			return v8::String::NewFromUtf8(isolate, reinterpret_cast<char const*>(value),
+			return v8::String::NewFromUtf8(isolate,
+				reinterpret_cast<char const*>(value),
 				v8::String::kNormalString, static_cast<int>(len));
 		}
 		else
 		{
-			return v8::String::NewFromTwoByte(isolate, reinterpret_cast<uint16_t const*>(value),
+			return v8::String::NewFromTwoByte(isolate,
+				reinterpret_cast<uint16_t const*>(value),
 				v8::String::kNormalString, static_cast<int>(len));
 		}
 	}
@@ -216,11 +221,13 @@ struct convert<T, typename std::enable_if<std::is_integral<T>::value>::type>
 		{
 			if (is_signed)
 			{
-				return v8::Integer::New(isolate, static_cast<int32_t>(value));
+				return v8::Integer::New(isolate,
+					static_cast<int32_t>(value));
 			}
 			else
 			{
-				return v8::Integer::NewFromUnsigned(isolate, static_cast<uint32_t>(value));
+				return v8::Integer::NewFromUnsigned(isolate,
+					static_cast<uint32_t>(value));
 			}
 		}
 		else
@@ -251,7 +258,8 @@ struct convert<T, typename std::enable_if<std::is_enum<T>::value>::type>
 
 	static to_type to_v8(v8::Isolate* isolate, T value)
 	{
-		return convert<underlying_type>::to_v8(isolate, static_cast<underlying_type>(value));
+		return convert<underlying_type>::to_v8(isolate,
+			static_cast<underlying_type>(value));
 	}
 };
 
@@ -306,8 +314,9 @@ struct convert<std::array<T, N>>
 
 		if (array->Length() != N)
 		{
-			throw std::runtime_error("Invalid array length: expected " + std::to_string(N)
-				+ " actual " + std::to_string(array->Length()));
+			throw std::runtime_error("Invalid array length: expected "
+				+ std::to_string(N) + " actual "
+				+ std::to_string(array->Length()));
 		}
 
 		from_type result;
@@ -404,7 +413,8 @@ struct convert<std::map<Key, Value, Less, Alloc>>
 		{
 			v8::Local<v8::Value> key = prop_names->Get(i);
 			v8::Local<v8::Value> val = object->Get(key);
-			result.emplace(convert<Key>::from_v8(isolate, key), convert<Value>::from_v8(isolate, val));
+			result.emplace(convert<Key>::from_v8(isolate, key),
+				convert<Value>::from_v8(isolate, val));
 		}
 		return result;
 	}
@@ -416,7 +426,8 @@ struct convert<std::map<Key, Value, Less, Alloc>>
 		v8::Local<v8::Object> result = v8::Object::New(isolate);
 		for (auto const& item: value)
 		{
-			result->Set(convert<Key>::to_v8(isolate, item.first), convert<Value>::to_v8(isolate, item.second));
+			result->Set(convert<Key>::to_v8(isolate, item.first),
+				convert<Value>::to_v8(isolate, item.second));
 		}
 		return scope.Escape(result);
 	}
@@ -590,10 +601,11 @@ auto from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 }
 
 template<typename T, typename U>
-auto from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value, U const& default_value)
+auto from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value,U const& default_value)
 	-> decltype(convert<T>::from_v8(isolate, value))
 {
-	return convert<T>::is_valid(isolate, value)? convert<T>::from_v8(isolate, value) : default_value;
+	return convert<T>::is_valid(isolate, value)?
+		convert<T>::from_v8(isolate, value) : default_value;
 }
 
 inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char const* str, size_t len)
@@ -602,19 +614,22 @@ inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char const* str, size_
 }
 
 template<size_t N>
-v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char const (&str)[N], size_t len = N - 1)
+v8::Handle<v8::String> to_v8(v8::Isolate* isolate,
+	char const (&str)[N], size_t len = N - 1)
 {
 	return convert<char const*>::to_v8(isolate, str, len);
 }
 
 #ifdef WIN32
-inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, wchar_t const* str, size_t len)
+inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate,
+	wchar_t const* str, size_t len)
 {
 	return convert<wchar_t const*>::to_v8(isolate, str, len);
 }
 
 template<size_t N>
-v8::Handle<v8::String> to_v8(v8::Isolate* isolate, wchar_t const (&str)[N], size_t len = N - 1)
+v8::Handle<v8::String> to_v8(v8::Isolate* isolate,
+	wchar_t const (&str)[N], size_t len = N - 1)
 {
 	return convert<wchar_t const*>::to_v8(isolate, str, len);
 }
@@ -655,7 +670,8 @@ v8::Local<T> to_local(v8::Isolate* isolate, v8::PersistentBase<T> const& handle)
 	}
 	else
 	{
-		return *reinterpret_cast<v8::Local<T>*>(const_cast<v8::PersistentBase<T>*>(&handle));
+		return *reinterpret_cast<v8::Local<T>*>(
+			const_cast<v8::PersistentBase<T>*>(&handle));
 	}
 }
 

@@ -12,37 +12,55 @@
 
 #include "test.hpp"
 
-static int x() { return 0; }
-static int y(int a) { return a; }
-static int z(v8::Isolate*, int a) { return a; }
+namespace {
 
-static void w(v8::FunctionCallbackInfo<v8::Value> const& args)
+int x()
+{
+	return 0;
+}
+int y(int a)
+{
+	return a;
+}
+int z(v8::Isolate*, int a)
+{
+	return a;
+}
+
+void w(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	return args.GetReturnValue().Set(args.Length());
 }
 
-static_assert(v8pp::detail::select_call_traits<decltype(&x)>::arg_count == 0, "x argc count");
-static_assert(std::is_same<v8pp::detail::select_call_traits<decltype(&x)>::arg_type<0>,
+using v8pp::detail::select_call_traits;
+using v8pp::detail::call_from_v8_traits;
+using v8pp::detail::isolate_arg_call_traits;
+using v8pp::detail::v8_args_call_traits;
+
+static_assert(select_call_traits<decltype(&x)>::arg_count == 0, "x argc count");
+static_assert(std::is_same<select_call_traits<decltype(&x)>::arg_type<0>,
 	void>::value, "x has no args");
 
-static_assert(v8pp::detail::select_call_traits<decltype(&y)>::arg_count == 1, "y argc count");
-static_assert(std::is_same<v8pp::detail::select_call_traits<decltype(&y)>::arg_type<0>,
+static_assert(select_call_traits<decltype(&y)>::arg_count == 1, "y argc count");
+static_assert(std::is_same<select_call_traits<decltype(&y)>::arg_type<0>,
 	int>::value, "y 1st arg");
 
-static_assert(v8pp::detail::select_call_traits<decltype(&z)>::arg_count == 1, "z argc count");
-static_assert(std::is_same<v8pp::detail::select_call_traits<decltype(&z)>::arg_type<0>,
+static_assert(select_call_traits<decltype(&z)>::arg_count == 1, "z argc count");
+static_assert(std::is_same<select_call_traits<decltype(&z)>::arg_type<0>,
 	v8::Isolate*>::value, "z 1st arg");
-static_assert(std::is_same<v8pp::detail::select_call_traits<decltype(&z)>::arg_type<1>,
+static_assert(std::is_same<select_call_traits<decltype(&z)>::arg_type<1>,
 	int>::value, "z 2nd arg");
 
-static_assert(std::is_same<v8pp::detail::select_call_traits<decltype(&x)>,
-	v8pp::detail::call_from_v8_traits<decltype(&x) >> ::value, "");
+static_assert(std::is_same<select_call_traits<decltype(&x)>,
+	call_from_v8_traits<decltype(&x) >> ::value, "");
 
-static_assert(std::is_same<v8pp::detail::select_call_traits<decltype(&z)>,
-	v8pp::detail::isolate_arg_call_traits<decltype(&z) >> ::value, "");
+static_assert(std::is_same<select_call_traits<decltype(&z)>,
+	isolate_arg_call_traits<decltype(&z) >> ::value, "");
 
-static_assert(std::is_same<v8pp::detail::select_call_traits<decltype(&w)>,
-	v8pp::detail::v8_args_call_traits<decltype(&w) >> ::value, "");
+static_assert(std::is_same<select_call_traits<decltype(&w)>,
+	v8_args_call_traits<decltype(&w) >> ::value, "");
+
+} // unnamed namespace
 
 void test_call_from_v8()
 {

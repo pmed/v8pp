@@ -17,15 +17,15 @@ namespace {
 template<typename Ret, typename F>
 void test_ret(F&&)
 {
-	using namespace v8pp::detail;
-	static_assert(std::is_same<Ret, typename function_traits<F>::return_type>::value, "wrong return_type");
+	using R = typename v8pp::detail::function_traits<F>::return_type;
+	static_assert(std::is_same<Ret, R>::value, "wrong return_type");
 }
 
 template<typename ArgsTuple, typename F>
 void test_args(F&&)
 {
-	using namespace v8pp::detail;
-	static_assert(std::is_same<ArgsTuple, typename function_traits<F>::arguments>::value, "wrong arguments");
+	using Args = typename v8pp::detail::function_traits<F>::arguments;
+	static_assert(std::is_same<ArgsTuple, Args>::value, "wrong arguments");
 }
 
 void x() {}
@@ -70,9 +70,14 @@ void test_function_traits()
 
 void test_tuple_tail()
 {
-	static_assert(std::is_same<v8pp::detail::tuple_tail<std::tuple<int>>::type, std::tuple<>>::value, "");
-	static_assert(std::is_same<v8pp::detail::tuple_tail<std::tuple<int, char>>::type, std::tuple<char>>::value, "");
-	static_assert(std::is_same<v8pp::detail::tuple_tail<std::tuple<int, char, bool>>::type, std::tuple<char, bool>>::value, "");
+	using v8pp::detail::tuple_tail;
+
+	static_assert(std::is_same<tuple_tail<std::tuple<int>>::type,
+		std::tuple<>>::value, "");
+	static_assert(std::is_same<tuple_tail<std::tuple<int, char>>::type,
+		std::tuple<char>>::value, "");
+	static_assert(std::is_same<tuple_tail<std::tuple<int, char, bool>>::type,
+		std::tuple<char, bool>>::value, "");
 }
 
 int f() { return 1; }
@@ -91,29 +96,34 @@ struct Z
 
 void test_apply_tuple()
 {
-	v8pp::detail::apply_tuple(f, std::make_tuple());
-	v8pp::detail::apply_tuple(g, std::make_tuple(1));
-	v8pp::detail::apply_tuple(h, std::make_tuple(1, true));
+	using v8pp::detail::apply_tuple;
+	using v8pp::detail::apply;
+
+	apply_tuple(f, std::make_tuple());
+	apply_tuple(g, std::make_tuple(1));
+	apply_tuple(h, std::make_tuple(1, true));
 	
-	check_eq("apply(f)", v8pp::detail::apply(f), 1);
-	check_eq("apply(g)", v8pp::detail::apply(g, 2), 2);
-	check_eq("apply(h)", v8pp::detail::apply(h, 3, true), 3);
+	check_eq("apply(f)", apply(f), 1);
+	check_eq("apply(g)", apply(g, 2), 2);
+	check_eq("apply(h)", apply(h, 3, true), 3);
 }
 
 void test_is_callable()
 {
-	static_assert(v8pp::detail::is_callable<decltype(f)>::value, "f is callable");
-	static_assert(v8pp::detail::is_callable<decltype(g)>::value, "g is callable");
-	static_assert(v8pp::detail::is_callable<decltype(h)>::value, "h is callable");
+	using v8pp::detail::is_callable;
+
+	static_assert(is_callable<decltype(f)>::value, "f is callable");
+	static_assert(is_callable<decltype(g)>::value, "g is callable");
+	static_assert(is_callable<decltype(h)>::value, "h is callable");
 
 	auto lambda = [](){};
-	static_assert(v8pp::detail::is_callable<decltype(lambda)>::value, "lambda is callable");
+	static_assert(is_callable<decltype(lambda)>::value, "lambda is callable");
 
-	static_assert(v8pp::detail::is_callable<Z>::value, "Z is callable");
-	static_assert(!v8pp::detail::is_callable<decltype(&Y::f)>::value, "Y::f is not callable");
+	static_assert(is_callable<Z>::value, "Z is callable");
+	static_assert(!is_callable<decltype(&Y::f)>::value, "Y::f is not callable");
 
-	static_assert(!v8pp::detail::is_callable<int>::value, "int is not callable");
-	static_assert(!v8pp::detail::is_callable<Y>::value, "Y is not callable");
+	static_assert(!is_callable<int>::value, "int is not callable");
+	static_assert(!is_callable<Y>::value, "Y is not callable");
 }
 
 } // unnamed namespace
@@ -126,13 +136,15 @@ void test_utility()
 	test_apply_tuple();
 	test_is_callable();
 
-	check_eq("type_id", v8pp::detail::type_id<int>().name(), "int");
-	check_eq("type_id", v8pp::detail::type_id<bool>().name(), "bool");
+	using v8pp::detail::type_id;
+
+	check_eq("type_id", type_id<int>().name(), "int");
+	check_eq("type_id", type_id<bool>().name(), "bool");
 #ifdef _MSC_VER
-	check_eq("type_id", v8pp::detail::type_id<some_struct>().name(), "struct some_struct");
-	check_eq("type_id", v8pp::detail::type_id<test::some_class>().name(), "class test::some_class");
+	check_eq("type_id", type_id<some_struct>().name(), "struct some_struct");
+	check_eq("type_id", type_id<test::some_class>().name(), "class test::some_class");
 #else
-	check_eq("type_id", v8pp::detail::type_id<some_struct>().name(), "some_struct");
-	check_eq("type_id", v8pp::detail::type_id<test::some_class>().name(), "test::some_class");
+	check_eq("type_id", type_id<some_struct>().name(), "some_struct");
+	check_eq("type_id", type_id<test::some_class>().name(), "test::some_class");
 #endif
 }

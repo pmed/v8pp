@@ -33,7 +33,8 @@ inline v8::Handle<v8::Value> throw_ex(v8::Isolate* isolate, char const* str,
 		std::vector<wchar_t> buf(len);
 		::MultiByteToWideChar(CP_ACP, 0, str, -1, &buf[0], len);
 		uint16_t const* data = reinterpret_cast<uint16_t const*>(&buf[0]);
-		message = v8::String::NewFromTwoByte(isolate, data, v8::String::kNormalString, len - 1);
+		message = v8::String::NewFromTwoByte(isolate, data,
+			v8::String::kNormalString, len - 1);
 	}
 #else
 	message = v8::String::NewFromUtf8(isolate, str);

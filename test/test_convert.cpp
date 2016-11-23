@@ -106,8 +106,10 @@ struct convert<person>
 		v8::Local<v8::Object> obj = value.As<v8::Object>();
 
 		person result;
-		result.name = v8pp::from_v8<std::string>(isolate, obj->Get(v8pp::to_v8(isolate, "name")));
-		result.age = v8pp::from_v8<int>(isolate, obj->Get(v8pp::to_v8(isolate, "age")));
+		result.name = v8pp::from_v8<std::string>(isolate,
+			obj->Get(v8pp::to_v8(isolate, "name")));
+		result.age = v8pp::from_v8<int>(isolate,
+			obj->Get(v8pp::to_v8(isolate, "age")));
 		
 		/* Simpler after #include <v8pp/object.hpp>
 		get_option(isolate, obj, "name", result.name);
@@ -153,16 +155,18 @@ void test_convert()
 
 	check_ex<std::runtime_error>("wrong array length", [isolate, array]()
 	{
-		v8::Local<v8::Array> arr = v8pp::to_v8(isolate, std::array<int, 3>{ 1, 2, 3 });
+		v8::Local<v8::Array> arr = v8pp::to_v8(isolate,
+			std::array<int, 3>{ 1, 2, 3 });
 		v8pp::from_v8<std::array<int, 2>>(isolate, arr);
 	});
 
 	check_eq("initializer list to array",
-		v8pp::from_v8<int_vector>(isolate, v8pp::to_v8(isolate, { 1, 2, 3 })), vector);
+		v8pp::from_v8<int_vector>(isolate, v8pp::to_v8(isolate,
+		{ 1, 2, 3 })), vector);
 
 	std::list<int> list = { 1, 2, 3 };
-	check_eq("pair of iterators to array",
-		v8pp::from_v8<int_vector>(isolate, v8pp::to_v8(isolate, list.begin(), list.end())), vector);
+	check_eq("pair of iterators to array", v8pp::from_v8<int_vector>(isolate,
+		v8pp::to_v8(isolate, list.begin(), list.end())), vector);
 
 	person p;
 	p.name = "Al"; p.age = 33;
