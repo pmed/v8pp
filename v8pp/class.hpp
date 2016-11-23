@@ -105,8 +105,7 @@ public:
 		return false;
 	}
 
-	template<typename T>
-	void add_object(T* object, persistent<v8::Object>&& handle)
+	void add_object(void* object, persistent<v8::Object>&& handle)
 	{
 		auto it = objects_.find(object);
 		if (it != objects_.end())
@@ -118,8 +117,8 @@ public:
 		objects_.emplace(object, std::move(handle));
 	}
 
-	template<typename T>
-	void remove_object(v8::Isolate* isolate, T* object, void (*destroy)(v8::Isolate* isolate, T* obj) = nullptr)
+	void remove_object(v8::Isolate* isolate, void* object,
+		void (*destroy)(v8::Isolate* isolate, void* obj) = nullptr)
 	{
 		auto it = objects_.find(object);
 		assert(objects_.find(object) != objects_.end() && "no object");
@@ -127,10 +126,12 @@ public:
 		{
 			if (!it->second.IsNearDeath())
 			{
-				// remove pointer to wrapped  C++ object from V8 Object internal field
-				// to disable unwrapping for this V8 Object
-				assert(to_local(isolate, it->second)->GetAlignedPointerFromInternalField(0) == object);
-				to_local(isolate, it->second)->SetAlignedPointerInInternalField(0, nullptr);
+				// remove pointer to wrapped  C++ object from V8 Object
+				// internal field to disable unwrapping for this V8 Object
+				assert(to_local(isolate, it->second)
+					->GetAlignedPointerFromInternalField(0) == object);
+				to_local(isolate, it->second)
+					->SetAlignedPointerInInternalField(0, nullptr);
 			}
 			it->second.Reset();
 			if (destroy)
@@ -141,15 +142,15 @@ public:
 		}
 	}
 
-	template<typename T>
-	void remove_objects(v8::Isolate* isolate, void (*destroy)(v8::Isolate* isolate, T* obj))
+	void remove_objects(v8::Isolate* isolate,
+		void (*destroy)(v8::Isolate* isolate, void* obj))
 	{
 		for (auto& object : objects_)
 		{
 			object.second.Reset();
 			if (destroy)
 			{
-				destroy(isolate, static_cast<T*>(object.first));
+				destroy(isolate, object.first);
 			}
 		}
 		objects_.clear();
@@ -319,7 +320,6 @@ public:
 	class_singleton(v8::Isolate* isolate, type_info const& type)
 		: class_info(type)
 		, isolate_(isolate)
-		, ctor_(nullptr)
 	{
 		v8::Local<v8::FunctionTemplate> func = v8::FunctionTemplate::New(isolate_);
 		v8::Local<v8::FunctionTemplate> js_func = v8::FunctionTemplate::New(isolate_,
@@ -343,6 +343,14 @@ public:
 		//  0 - pointer to a wrapped C++ object
 		//  1 - pointer to the class_singleton
 		func->InstanceTemplate()->SetInternalFieldCount(2);
+
+		// no class constructor available by default
+		ctor_ = nullptr;
+		// use destructor from factory<T>::destroy()
+		dtor_ = [](v8::Isolate* isolate, void* obj)
+		{
+			factory<T>::destroy(isolate, static_cast<T*>(obj));
+		};
 	}
 
 	class_singleton(class_singleton const&) = delete;
@@ -469,7 +477,8 @@ public:
 			if (obj->InternalFieldCount() == 2)
 			{
 				void* ptr = obj->GetAlignedPointerFromInternalField(0);
-				class_info* info = static_cast<class_info*>(obj->GetAlignedPointerFromInternalField(1));
+				class_info* info = static_cast<class_info*>(
+					obj->GetAlignedPointerFromInternalField(1));
 				if (info && info->cast(ptr, type()))
 				{
 					return static_cast<T*>(ptr);
@@ -487,17 +496,18 @@ public:
 
 	void destroy_objects()
 	{
-		class_info::remove_objects(isolate_, &factory<T>::destroy);
+		class_info::remove_objects(isolate_, dtor_);
 	}
 
 	void destroy_object(T* obj)
 	{
-		class_info::remove_object(isolate_, obj, &factory<T>::destroy);
+		class_info::remove_object(isolate_, obj, dtor_);
 	}
 
 private:
 	v8::Isolate* isolate_;
-	std::function<T* (v8::FunctionCallbackInfo<v8::Value> const& args)> ctor_;
+	T* (*ctor_)(v8::FunctionCallbackInfo<v8::Value> const& args);
+	void (*dtor_)(v8::Isolate*, void*);
 
 	v8::UniquePersistent<v8::FunctionTemplate> func_;
 	v8::UniquePersistent<v8::FunctionTemplate> js_func_;
