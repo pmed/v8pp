@@ -64,6 +64,10 @@ void test_(v8::Isolate* isolate, Args&&... args)
 {
 	T* obj = v8pp::factory<T>::create(isolate, std::forward<Args>(args)...);
 	v8pp::factory<T>::destroy(isolate, obj);
+
+	std::shared_ptr<T> sp_obj =
+		v8pp::factory<T, true>::create(isolate, std::forward<Args>(args)...);
+	v8pp::factory<T, true>::destroy(isolate, sp_obj);
 }
 
 void test_factories(v8::FunctionCallbackInfo<v8::Value> const& args)
@@ -100,6 +104,22 @@ struct factory<Y>
 	}
 };
 
+template<>
+struct factory<Y, true>
+{
+	static std::shared_ptr<Y> create(v8::Isolate*, int arg)
+	{
+		++ctor_count;
+		return std::shared_ptr<Y>(Y::make(arg), Y::done);
+	}
+
+	static void destroy(v8::Isolate*, std::shared_ptr<Y> const&)
+	{
+		// std::shared_ptr deleter will work
+		++dtor_count;
+	}
+};
+
 } // v8pp
 
 void test_factory()
@@ -112,6 +132,6 @@ void test_factory()
 
 	v8pp::call_v8(isolate, fun, fun);
 	check_eq("all ctors called", ctor_types, 0x0F);
-	check_eq("ctor count", ctor_count, 5);
-	check_eq("dtor count", dtor_count, 5);
+	check_eq("ctor count", ctor_count, 10);
+	check_eq("dtor count", dtor_count, 10);
 }

@@ -25,6 +25,8 @@
 
 namespace v8pp {
 
+bool is_shared_ptr_object(v8::Local<v8::Object> obj);
+
 namespace detail {
 
 template<typename T>
@@ -147,10 +149,21 @@ invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	using arguments = typename function_traits<F>::arguments;
 	static_assert(std::tuple_size<arguments>::value > 0, "");
-	using class_type = typename std::tuple_element<0, arguments>::type;
+	using class_type = typename std::decay<
+		typename std::tuple_element<0, arguments>::type>::type;
 
-	return call_from_v8(from_v8<class_type&>(args.GetIsolate(), args.This()),
-		std::forward<F>(get_external_data<F>(args.Data())), args);
+	v8::Isolate* isolate = args.GetIsolate();
+	v8::Local<v8::Object> obj = args.This();
+	if (is_shared_ptr_object(obj))
+	{
+		return call_from_v8(*class_<class_type, true>::unwrap_object(isolate, obj),
+			std::forward<F>(get_external_data<F>(args.Data())), args);
+	}
+	else
+	{
+		return call_from_v8(*class_<class_type, false>::unwrap_object(isolate, obj),
+			std::forward<F>(get_external_data<F>(args.Data())), args);
+	}
 }
 
 template<typename F>

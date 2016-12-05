@@ -17,7 +17,7 @@
 
 namespace v8pp {
 
-template<typename T>
+template<typename T, bool use_shared_ptr>
 class class_;
 
 /// Module (similar to v8::ObjectTemplate)
@@ -54,8 +54,8 @@ public:
 	}
 
 	/// Set wrapped C++ class in the module with specified name
-	template<typename T>
-	module& set(char const* name, class_<T>& cl)
+	template<typename T, bool use_shared_ptr>
+	module& set(char const* name, class_<T, use_shared_ptr>& cl)
 	{
 		v8::HandleScope scope(isolate_);
 
@@ -93,21 +93,21 @@ public:
 
 	/// Set v8pp::property in the module with specified name
 	template<typename GetFunction, typename SetFunction>
-	module& set(char const *name, property_<GetFunction, SetFunction>&& prop)
+	module& set(char const *name, property_<GetFunction, SetFunction>&& property)
 	{
-		using prop_type = property_<GetFunction, SetFunction>;
+		using property_type = property_<GetFunction, SetFunction>;
 
 		v8::HandleScope scope(isolate_);
 
-		v8::AccessorGetterCallback getter = prop_type::get;
-		v8::AccessorSetterCallback setter = prop_type::set;
-		if (prop_type::is_readonly)
+		v8::AccessorGetterCallback getter = property_type::get;
+		v8::AccessorSetterCallback setter = property_type::set;
+		if (property_type::is_readonly)
 		{
 			setter = nullptr;
 		}
 
 		obj_->SetAccessor(v8pp::to_v8(isolate_, name), getter, setter,
-			detail::set_external_data(isolate_, std::forward<prop_type>(prop)),
+			detail::set_external_data(isolate_, std::forward<property_type>(property)),
 			v8::DEFAULT,
 			v8::PropertyAttribute(v8::DontDelete | (setter ? 0 : v8::ReadOnly)));
 		return *this;

@@ -20,7 +20,7 @@ namespace v8pp {
 
 class module;
 
-template<typename T>
+template<typename T, bool use_shared_ptr>
 class class_;
 
 /// V8 isolate and context wrapper
@@ -58,8 +58,8 @@ public:
 	context& set(char const *name, module& m);
 
 	/// Set class to the context global object
-	template<typename T>
-	context& set(char const* name, class_<T>& cl)
+	template<typename T, bool use_shared_ptr>
+	context& set(char const* name, class_<T, use_shared_ptr>& cl)
 	{
 		v8::HandleScope scope(isolate_);
 		cl.class_function_template()->SetClassName(v8pp::to_v8(isolate_, name));

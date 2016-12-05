@@ -9,14 +9,15 @@
 #ifndef V8PP_FACTORY_HPP_INCLUDED
 #define V8PP_FACTORY_HPP_INCLUDED
 
+#include <memory>
 #include <utility>
 
 #include <v8.h>
 
 namespace v8pp {
 
-// Factory that calls C++ constructor
-template<typename T>
+// Factory that creates new C++ objects of type T
+template<typename T, bool use_shared_ptr = false>
 struct factory
 {
 	static size_t const object_size = sizeof(T);
@@ -35,6 +36,22 @@ struct factory
 		delete object;
 		isolate->AdjustAmountOfExternalAllocatedMemory(
 			-static_cast<int64_t>(object_size));
+	}
+};
+
+// Factory that creates new std::shared_ptr<T> C++ objects of type T
+template<typename T>
+struct factory<T, true>
+{
+	template<typename ...Args>
+	static std::shared_ptr<T> create(v8::Isolate*, Args... args)
+	{
+		return std::make_shared<T>(std::forward<Args>(args)...);
+	}
+
+	static void destroy(v8::Isolate*, std::shared_ptr<T> const&)
+	{
+		// do nothing with reference-counted object
 	}
 };
 
