@@ -109,9 +109,7 @@ struct r_property_impl<Get, Set, true>
 	static void get_impl(class_type& obj, Get get, v8::Local<v8::String>,
 		v8::PropertyCallbackInfo<v8::Value> const& info, getter_tag)
 	{
-		v8::Isolate* isolate = info.GetIsolate();
-
-		info.GetReturnValue().Set(to_v8(isolate, (obj.*get)()));
+		info.GetReturnValue().Set(to_v8(info.GetIsolate(), (obj.*get)()));
 	}
 
 	static void get_impl(class_type& obj, Get get,
@@ -133,27 +131,22 @@ struct r_property_impl<Get, Set, true>
 	static void get_impl(v8::Local<v8::String> name,
 		v8::PropertyCallbackInfo<v8::Value> const& info)
 	{
-		v8::Isolate* isolate = info.GetIsolate();
-
-		auto obj = v8pp::class_<class_type, use_shared_ptr>::unwrap_object(isolate, info.This());
+		auto obj = v8pp::class_<class_type, use_shared_ptr>::unwrap_object(
+			info.GetIsolate(), info.This());
 		assert(obj);
 
 		property_type const& prop = detail::get_external_data<property_type>(info.Data());
 		assert(prop.getter);
 
 		if (obj && prop.getter)
-		try
 		{
 			get_impl(*obj, prop.getter, name, info, select_getter_tag<Get>());
-		}
-		catch (std::exception const& ex)
-		{
-			info.GetReturnValue().Set(throw_ex(isolate, ex.what()));
 		}
 	}
 
 	static void get(v8::Local<v8::String> name,
 		v8::PropertyCallbackInfo<v8::Value> const& info)
+	try
 	{
 		if (is_shared_ptr_object(info.This()))
 		{
@@ -163,6 +156,10 @@ struct r_property_impl<Get, Set, true>
 		{
 			get_impl<false>(name, info);
 		}
+	}
+	catch (std::exception const& ex)
+	{
+		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
 	}
 
 	static void set(v8::Local<v8::String>, v8::Local<v8::Value>,
@@ -180,9 +177,7 @@ struct r_property_impl<Get, Set, false>
 	static void get_impl(Get get, v8::Local<v8::String>,
 		v8::PropertyCallbackInfo<v8::Value> const& info, getter_tag)
 	{
-		v8::Isolate* isolate = info.GetIsolate();
-
-		info.GetReturnValue().Set(to_v8(isolate, get()));
+		info.GetReturnValue().Set(to_v8(info.GetIsolate(), get()));
 	}
 
 	static void get_impl(Get get, v8::Local<v8::String> name,
@@ -201,27 +196,26 @@ struct r_property_impl<Get, Set, false>
 
 	static void get(v8::Local<v8::String> name,
 		v8::PropertyCallbackInfo<v8::Value> const& info)
+	try
 	{
-		v8::Isolate* isolate = info.GetIsolate();
-
 		property_type const& prop = detail::get_external_data<property_type>(info.Data());
 		assert(prop.getter);
 
 		if (prop.getter)
-		try
 		{
 			get_impl(prop.getter, name, info, select_getter_tag<Get>());
 		}
-		catch (std::exception const& ex)
-		{
-			info.GetReturnValue().Set(throw_ex(isolate, ex.what()));
-		}
+	}
+	catch (std::exception const& ex)
+	{
+		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
 	}
 
 	static void set(v8::Local<v8::String>, v8::Local<v8::Value>,
-		v8::PropertyCallbackInfo<void> const&)
+		v8::PropertyCallbackInfo<void> const& info)
 	{
-		assert(false && "never should be called");
+		assert(false && "read-only property");
+		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), "read-only property"));
 	}
 };
 
@@ -240,9 +234,7 @@ struct rw_property_impl<Get, Set, true>
 	{
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<0>;
 
-		v8::Isolate* isolate = info.GetIsolate();
-
-		(obj.*set)(v8pp::from_v8<value_type>(isolate, value));
+		(obj.*set)(v8pp::from_v8<value_type>(info.GetIsolate(), value));
 	}
 
 	static void set_impl(class_type& obj, Set set, v8::Local<v8::String> name,
@@ -259,6 +251,7 @@ struct rw_property_impl<Get, Set, true>
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<1>;
 
 		v8::Isolate* isolate = info.GetIsolate();
+
 		(obj.*set)(isolate, v8pp::from_v8<value_type>(isolate, value));
 	}
 
@@ -266,27 +259,22 @@ struct rw_property_impl<Get, Set, true>
 	static void set_impl(v8::Local<v8::String> name, v8::Local<v8::Value> value,
 		v8::PropertyCallbackInfo<void> const& info)
 	{
-		v8::Isolate* isolate = info.GetIsolate();
-
-		auto obj = v8pp::class_<class_type, use_shared_ptr>::unwrap_object(isolate, info.This());
+		auto obj = v8pp::class_<class_type, use_shared_ptr>::unwrap_object(
+			info.GetIsolate(), info.This());
 		assert(obj);
 
 		property_type const& prop = detail::get_external_data<property_type>(info.Data());
 		assert(prop.setter);
 
 		if (obj && prop.setter)
-		try
 		{
 			set_impl(*obj, prop.setter, name, value, info, select_setter_tag<Set>());
-		}
-		catch (std::exception const& ex)
-		{
-			info.GetReturnValue().Set(throw_ex(isolate, ex.what()));
 		}
 	}
 
 	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value,
 		v8::PropertyCallbackInfo<void> const& info)
+	try
 	{
 		if (is_shared_ptr_object(info.This()))
 		{
@@ -296,6 +284,10 @@ struct rw_property_impl<Get, Set, true>
 		{
 			set_impl<false>(name, value, info);
 		}
+	}
+	catch (std::exception const& ex)
+	{
+		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
 	}
 };
 
@@ -311,9 +303,7 @@ struct rw_property_impl<Get, Set, false>
 	{
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<0>;
 
-		v8::Isolate* isolate = info.GetIsolate();
-
-		set(v8pp::from_v8<value_type>(isolate, value));
+		set(v8pp::from_v8<value_type>(info.GetIsolate(), value));
 	}
 
 	static void set_impl(Set set, v8::Local<v8::String> name,
@@ -331,26 +321,24 @@ struct rw_property_impl<Get, Set, false>
 
 		v8::Isolate* isolate = info.GetIsolate();
 
-		set(isolate, v8pp::from_v8<value_type>(isolate, value));
+		set(isolate, v8pp::from_v8<value_type>(info.GetIsolate(), value));
 	}
 
 	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value,
 		v8::PropertyCallbackInfo<void> const& info)
+	try
 	{
-		v8::Isolate* isolate = info.GetIsolate();
-
 		property_type const& prop = detail::get_external_data<property_type>(info.Data());
 		assert(prop.setter);
 
 		if (prop.setter)
-		try
 		{
 			set_impl(prop.setter, name, value, info, select_setter_tag<Set>());
 		}
-		catch (std::exception const& ex)
-		{
-			info.GetReturnValue().Set(throw_ex(isolate, ex.what()));
-		}
+	}
+	catch (std::exception const& ex)
+	{
+		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
 	}
 };
 
