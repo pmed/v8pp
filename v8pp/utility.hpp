@@ -79,6 +79,27 @@ struct function_traits<R (C::*)>
 {
 };
 
+// const member object pointer
+template<typename C, typename R>
+struct function_traits<const R(C::*)>
+	: function_traits<R(C const&)>
+{
+};
+
+// volatile member object pointer
+template<typename C, typename R>
+struct function_traits<volatile R(C::*)>
+	: function_traits<R(C volatile&)>
+{
+};
+
+// const volatile member object pointer
+template<typename C, typename R>
+struct function_traits<const volatile R(C::*)>
+	: function_traits<R(C const volatile&)>
+{
+};
+
 // function object, std::function, lambda
 template<typename F>
 struct function_traits

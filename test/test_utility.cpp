@@ -51,8 +51,15 @@ void test_function_traits()
 	{
 		float f() const { return 0; }
 		void g(int) {}
-		int h(float, char) const { return 0; }
-		void operator()() const {}
+		int h(float, char) volatile { return 0; }
+		char i(float) const volatile { return 0; }
+		void operator()(int, char&) const volatile {}
+
+		float w;
+		const int x = 1;
+		volatile char y;
+		const volatile bool z = true;
+		mutable volatile short zz;
 	};
 
 	test_ret<float>(&X::f);
@@ -62,10 +69,28 @@ void test_function_traits()
 	test_args<std::tuple<X&, int>>(&X::g);
 
 	test_ret<int>(&X::h);
-	test_args<std::tuple<X const&, float, char>>(&X::h);
+	test_args<std::tuple<X volatile&, float, char>>(&X::h);
+
+	test_ret<char>(&X::i);
+	test_args<std::tuple<X const volatile&, float>>(&X::i);
 
 	test_ret<void>(X());
-	test_args<std::tuple<>>(X());
+	test_args<std::tuple<int, char&>>(X());
+
+	test_ret<float>(&X::w);
+	test_args<std::tuple<X&>>(&X::w);
+
+	test_ret<int>(&X::x);
+	test_args<std::tuple<X const&>>(&X::x);
+
+	test_ret<char>(&X::y);
+	test_args<std::tuple<X volatile&>>(&X::y);
+
+	test_ret<bool>(&X::z);
+	test_args<std::tuple<X const volatile&>>(&X::z);
+
+	test_ret<short>(&X::zz);
+	test_args<std::tuple<X volatile&>>(&X::zz);
 }
 
 void test_tuple_tail()
