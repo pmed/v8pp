@@ -11,15 +11,22 @@
 
 #include "test.hpp"
 
-struct X
+struct Xbase
 {
 	int var = 1;
 
 	int get() const { return var; }
 	void set(int v) { var = v; }
 
-	int fun(int x) { return var + x; }
+	int fun1(int x) { return var + x; }
+	int fun2(int x) const { return var + x; }
+	int fun3(int x) volatile { return var + x; }
+	int fun4(int x) const volatile { return var + x; }
 	static int static_fun(int x) { return x; }
+};
+
+struct X : Xbase
+{
 };
 
 struct Y : X
@@ -56,7 +63,10 @@ void test_class()
 		.set("var", &X::var)
 		.set("rprop", v8pp::property(&X::get))
 		.set("wprop", v8pp::property(&X::get, &X::set))
-		.set("fun", &X::fun)
+		.set("fun1", &X::fun1)
+		.set("fun2", &X::fun2)
+		.set("fun3", &X::fun3)
+		.set("fun4", &X::fun4)
 		.set("static_fun", &X::static_fun)
 		.set("static_lambda", [](int x) { return x + 3; })
 	;
@@ -88,7 +98,10 @@ void test_class()
 	check_eq("X object", run_script<int>(context, "x = new X(); x.konst + x.var"), 100);
 	check_eq("X::rprop", run_script<int>(context, "x = new X(); x.rprop"), 1);
 	check_eq("X::wprop", run_script<int>(context, "x = new X(); ++x.wprop"), 2);
-	check_eq("X::fun(1)", run_script<int>(context, "x = new X(); x.fun(1)"), 2);
+	check_eq("X::fun1(1)", run_script<int>(context, "x = new X(); x.fun1(1)"), 2);
+	check_eq("X::fun2(2)", run_script<int>(context, "x = new X(); x.fun2(2)"), 3);
+	check_eq("X::fun3(3)", run_script<int>(context, "x = new X(); x.fun3(3)"), 4);
+	check_eq("X::fun4(4)", run_script<int>(context, "x = new X(); x.fun4(4)"), 5);
 	check_eq("X::static_fun(1)", run_script<int>(context, "X.static_fun(3)"), 3);
 	check_eq("X::static_lambda(1)", run_script<int>(context, "X.static_lambda(1)"), 4);
 

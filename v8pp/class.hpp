@@ -557,18 +557,23 @@ public:
 		std::is_member_function_pointer<Method>::value, class_&>::type
 	set(char const *name, Method mem_func)
 	{
+		using mem_func_type =
+			typename detail::function_traits<Method>::template pointer_type<T>;
+
 		class_singleton_.class_function_template()->PrototypeTemplate()->Set(
-			isolate(), name, wrap_function_template(isolate(), mem_func));
+			isolate(), name, wrap_function_template(isolate(),
+				static_cast<mem_func_type>(mem_func)));
 		return *this;
 	}
 
 	/// Set static class function
-	template<typename Function, typename Fun = typename std::decay<Function>::type>
-	typename std::enable_if<detail::is_callable<Fun>::value, class_&>::type
+	template<typename Function,
+		typename Func = typename std::decay<Function>::type>
+	typename std::enable_if<detail::is_callable<Func>::value, class_&>::type
 	set(char const *name, Function&& func)
 	{
 		class_singleton_.js_function_template()->Set(isolate(), name,
-			wrap_function_template(isolate(), std::forward<Fun>(func)));
+			wrap_function_template(isolate(), std::forward<Func>(func)));
 		return *this;
 	}
 
@@ -580,8 +585,10 @@ public:
 	{
 		v8::HandleScope scope(isolate());
 
-		v8::AccessorGetterCallback getter = &member_get<Attribute>;
-		v8::AccessorSetterCallback setter = &member_set<Attribute>;
+		using attribute_type = typename
+			detail::function_traits<Attribute>::template pointer_type<T>;
+		v8::AccessorGetterCallback getter = &member_get<attribute_type>;
+		v8::AccessorSetterCallback setter = &member_set<attribute_type>;
 		if (readonly)
 		{
 			setter = nullptr;
@@ -602,10 +609,15 @@ public:
 	set(char const *name, property_<GetMethod, SetMethod>&& prop)
 	{
 		using prop_type = property_<GetMethod, SetMethod>;
+
 		v8::HandleScope scope(isolate());
 
-		v8::AccessorGetterCallback getter = prop_type::get;
-		v8::AccessorSetterCallback setter = prop_type::set;
+		using property_type = property_<
+			typename detail::function_traits<GetMethod>::template pointer_type<T>,
+			typename detail::function_traits<SetMethod>::template pointer_type<T>
+		>;
+		v8::AccessorGetterCallback getter = property_type::get;
+		v8::AccessorSetterCallback setter = property_type::set;
 		if (prop_type::is_readonly)
 		{
 			setter = nullptr;

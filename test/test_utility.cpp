@@ -28,6 +28,20 @@ void test_args(F&&)
 	static_assert(std::is_same<ArgsTuple, Args>::value, "wrong arguments");
 }
 
+template<typename Ret, typename Derived, typename F>
+void test_ret_derived(F&& f)
+{
+	using G = typename v8pp::detail::function_traits<F>::template pointer_type<Derived>;
+	test_ret<Ret, G>(std::forward<F>(f));
+}
+
+template<typename ArgsTuple, typename Derived, typename F>
+void test_args_derived(F&& f)
+{
+	using G = typename v8pp::detail::function_traits<F>::template pointer_type<Derived>;
+	test_args<ArgsTuple, G>(std::forward<F>(f));
+}
+
 void x() {}
 int y(int, float) { return 1; }
 
@@ -91,6 +105,35 @@ void test_function_traits()
 
 	test_ret<short>(&X::zz);
 	test_args<std::tuple<X volatile&>>(&X::zz);
+
+	struct Y : X {};
+
+	test_ret_derived<float, Y>(&Y::f);
+	test_args_derived<std::tuple<Y const&>, Y>(&Y::f);
+
+	test_ret_derived<void, Y>(&Y::g);
+	test_args_derived<std::tuple<Y&, int>, Y>(&Y::g);
+
+	test_ret_derived<int, Y>(&Y::h);
+	test_args_derived<std::tuple<Y volatile&, float, char>, Y>(&Y::h);
+
+	test_ret_derived<char, Y>(&Y::i);
+	test_args_derived<std::tuple<Y const volatile&, float>, Y>(&Y::i);
+
+	test_ret_derived<float, Y>(&Y::w);
+	test_args_derived<std::tuple<Y&>, Y>(&Y::w);
+
+	test_ret_derived<int, Y>(&Y::x);
+	test_args_derived<std::tuple<Y const&>, Y>(&Y::x);
+
+	test_ret_derived<char, Y>(&Y::y);
+	test_args_derived<std::tuple<Y volatile&>, Y>(&Y::y);
+
+	test_ret_derived<bool, Y>(&Y::z);
+	test_args_derived<std::tuple<Y const volatile&>, Y>(&Y::z);
+
+	test_ret_derived<short, Y>(&Y::zz);
+	test_args_derived<std::tuple<Y volatile&>, Y>(&Y::zz);
 }
 
 void test_tuple_tail()

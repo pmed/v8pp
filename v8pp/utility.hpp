@@ -42,6 +42,7 @@ template<typename R, typename ...Args>
 struct function_traits<R (*)(Args...)>
 	: function_traits<R (Args...)>
 {
+	using pointer_type = R (*)(Args...);
 };
 
 // member function pointer
@@ -49,6 +50,8 @@ template<typename C, typename R, typename ...Args>
 struct function_traits<R (C::*)(Args...)>
 	: function_traits<R (C&, Args...)>
 {
+	template<typename D = C>
+	using pointer_type = R (D::*)(Args...);
 };
 
 // const member function pointer
@@ -56,20 +59,26 @@ template<typename C, typename R, typename ...Args>
 struct function_traits<R (C::*)(Args...) const>
 	: function_traits<R (C const&, Args...)>
 {
+	template<typename D = C>
+	using pointer_type = R (D::*)(Args...) const;
 };
 
 // volatile member function pointer
 template<typename C, typename R, typename ...Args>
-struct function_traits<R(C::*)(Args...) volatile>
-	: function_traits<R(C volatile&, Args...)>
+struct function_traits<R (C::*)(Args...) volatile>
+	: function_traits<R (C volatile&, Args...)>
 {
+	template<typename D = C>
+	using pointer_type = R (D::*)(Args...) volatile;
 };
 
 // const volatile member function pointer
 template<typename C, typename R, typename ...Args>
-struct function_traits<R(C::*)(Args...) const volatile>
-	: function_traits<R(C const volatile&, Args...)>
+struct function_traits<R (C::*)(Args...) const volatile>
+	: function_traits<R (C const volatile&, Args...)>
 {
+	template<typename D = C>
+	using pointer_type = R (D::*)(Args...) const volatile;
 };
 
 // member object pointer
@@ -77,27 +86,35 @@ template<typename C, typename R>
 struct function_traits<R (C::*)>
 	: function_traits<R (C&)>
 {
+	template<typename D = C>
+	using pointer_type = R (D::*);
 };
 
 // const member object pointer
 template<typename C, typename R>
-struct function_traits<const R(C::*)>
-	: function_traits<R(C const&)>
+struct function_traits<const R (C::*)>
+	: function_traits<R (C const&)>
 {
+	template<typename D = C>
+	using pointer_type = const R (D::*);
 };
 
 // volatile member object pointer
 template<typename C, typename R>
-struct function_traits<volatile R(C::*)>
-	: function_traits<R(C volatile&)>
+struct function_traits<volatile R (C::*)>
+	: function_traits<R (C volatile&)>
 {
+	template<typename D = C>
+	using pointer_type = volatile R (D::*);
 };
 
 // const volatile member object pointer
 template<typename C, typename R>
-struct function_traits<const volatile R(C::*)>
-	: function_traits<R(C const volatile&)>
+struct function_traits<const volatile R (C::*)>
+	: function_traits<R (C const volatile&)>
 {
+	template<typename D = C>
+	using pointer_type = const volatile R (D::*);
 };
 
 // function object, std::function, lambda
