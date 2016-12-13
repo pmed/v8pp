@@ -128,8 +128,9 @@ struct r_property_impl<Get, Set, true>
 	}
 
 	template<bool use_shared_ptr>
-	static void get_impl(v8::Local<v8::String> name,
+	static void get(v8::Local<v8::String> name,
 		v8::PropertyCallbackInfo<v8::Value> const& info)
+	try
 	{
 		auto obj = v8pp::class_<class_type, use_shared_ptr>::unwrap_object(
 			info.GetIsolate(), info.This());
@@ -143,29 +144,18 @@ struct r_property_impl<Get, Set, true>
 			get_impl(*obj, prop.getter, name, info, select_getter_tag<Get>());
 		}
 	}
-
-	static void get(v8::Local<v8::String> name,
-		v8::PropertyCallbackInfo<v8::Value> const& info)
-	try
-	{
-		if (is_shared_ptr_object(info.This()))
-		{
-			get_impl<true>(name, info);
-		}
-		else
-		{
-			get_impl<false>(name, info);
-		}
-	}
 	catch (std::exception const& ex)
 	{
 		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
 	}
 
-	static void set(v8::Local<v8::String>, v8::Local<v8::Value>,
-		v8::PropertyCallbackInfo<void> const&)
+	template<bool use_shared_ptr>
+	static void set(v8::Local<v8::String> name, v8::Local<v8::Value>,
+		v8::PropertyCallbackInfo<void> const& info)
 	{
-		assert(false && "never should be called");
+		assert(false && "read-only property");
+		info.GetReturnValue().Set(throw_ex(info.GetIsolate(),
+			"read-only property " + from_v8<std::string>(info.GetIsolate(), name)));
 	}
 };
 
@@ -211,11 +201,12 @@ struct r_property_impl<Get, Set, false>
 		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
 	}
 
-	static void set(v8::Local<v8::String>, v8::Local<v8::Value>,
+	static void set(v8::Local<v8::String> name, v8::Local<v8::Value>,
 		v8::PropertyCallbackInfo<void> const& info)
 	{
 		assert(false && "read-only property");
-		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), "read-only property"));
+		info.GetReturnValue().Set(throw_ex(info.GetIsolate(),
+			"read-only property " + from_v8<std::string>(info.GetIsolate(), name)));
 	}
 };
 
@@ -256,8 +247,9 @@ struct rw_property_impl<Get, Set, true>
 	}
 
 	template<bool use_shared_ptr>
-	static void set_impl(v8::Local<v8::String> name, v8::Local<v8::Value> value,
+	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value,
 		v8::PropertyCallbackInfo<void> const& info)
+	try
 	{
 		auto obj = v8pp::class_<class_type, use_shared_ptr>::unwrap_object(
 			info.GetIsolate(), info.This());
@@ -269,20 +261,6 @@ struct rw_property_impl<Get, Set, true>
 		if (obj && prop.setter)
 		{
 			set_impl(*obj, prop.setter, name, value, info, select_setter_tag<Set>());
-		}
-	}
-
-	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value,
-		v8::PropertyCallbackInfo<void> const& info)
-	try
-	{
-		if (is_shared_ptr_object(info.This()))
-		{
-			set_impl<true>(name, value, info);
-		}
-		else
-		{
-			set_impl<false>(name, value, info);
 		}
 	}
 	catch (std::exception const& ex)

@@ -685,8 +685,9 @@ public:
 			typename detail::function_traits<Method>::template pointer_type<T>;
 
 		class_singleton_.class_function_template()->PrototypeTemplate()->Set(
-			isolate(), name, wrap_function_template(isolate(),
-				static_cast<mem_func_type>(mem_func)));
+			isolate(), name, v8::FunctionTemplate::New(isolate(),
+				&detail::forward_function<mem_func_type, use_shared_ptr>,
+				detail::set_external_data(isolate(), std::forward<Method>(mem_func))));
 		return *this;
 	}
 
@@ -740,8 +741,8 @@ public:
 			typename detail::function_traits<GetMethod>::template pointer_type<T>,
 			typename detail::function_traits<SetMethod>::template pointer_type<T>
 		>;
-		v8::AccessorGetterCallback getter = property_type::get;
-		v8::AccessorSetterCallback setter = property_type::set;
+		v8::AccessorGetterCallback getter = property_type::template get<use_shared_ptr>;
+		v8::AccessorSetterCallback setter = property_type::template set<use_shared_ptr>;
 		if (prop_type::is_readonly)
 		{
 			setter = nullptr;
@@ -882,13 +883,6 @@ using shared_class = class_<T, true>;
 inline void cleanup(v8::Isolate* isolate)
 {
 	detail::class_singletons::remove_all(isolate);
-}
-
-/// Is wrapped C++ object stored in std::shared_ptr
-inline bool is_shared_ptr_object(v8::Local<v8::Object> obj)
-{
-	return static_cast<detail::class_info*>(
-		obj->GetAlignedPointerFromInternalField(1))->is_shared_ptr;
 }
 
 } // namespace v8pp
