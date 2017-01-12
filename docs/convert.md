@@ -57,7 +57,7 @@ optional explicit length supplied:
 ```c++
 v8::Isolate* isolate = v8::Isolate::GetCurrent();
 
-v8::Local<v8::String> v8_str1 = v8pp::to_v8(isolate, std::string(UTF-8 encoded std::string");
+v8::Local<v8::String> v8_str1 = v8pp::to_v8(isolate, std::string("UTF-8 encoded std::string"));
 v8::Local<v8::String> v8_str2 = v8pp::to_v8(isolate, "UTF-8 encoded C-string");
 v8::Local<v8::String> v8_str3 = v8pp::to_v8(isolate, L"UTF-16 encoded string with optional explicit length", 21);
 
@@ -75,8 +75,12 @@ function templates to convert a pair of input iterators or initializer list of
 elements to V8 `Array`:
 
 ```c++
-v8::Local<v8::Array> arr = v8pp::to_v8(isolate, std::list<std::string>{ "a", "b", "c" });
-v8::Local<v8::Array> arr2 = v8pp::to_v8(isolate, { 1, 2, 3 });
+std::list<std::string> container{ "a", "b", "c" };
+v8::Local<v8::Array> v8_arr = v8pp::to_v8(isolate, container.begin(), container.end());
+v8::Local<v8::Array> v8_arr2 = v8pp::to_v8(isolate, { 1, 2, 3 });
+
+auto arr = v8pp::from_v8<std::vector<std::string>>(isolate, v8_arr);
+auto arr2 = v8pp::from_v8<std::array<int, 3>>(isolate, v8_arr2);
 ```
 
 The library allows conversion between `std::vector<T>` and `v8::Array` if
@@ -85,19 +89,33 @@ type `T` is convertible.
 The similar is for `std::map<Key, Type>` and `v8::Object` for `Key` and
 `Value` types.
 
+```c++
+std::vector<int> vector{ 1, 2, 3 };
+v8::Local<v8::Array> v8_vector = v8pp::to_v8(isolate, vector);
+
+std::map<std::string, int> map{ { "a", 0 }, { "b", 1 } };
+v8::Local<v8::Object> v8_map = v8pp::to_v8(isolate, map);
+
+auto v = v8pp::from_v8<std::vector<int>>(isolate, v8_vector);
+auto m = v8pp::from_v8<std::map<std::string, int>>(isolate, v8_map);
+```
 
 ## Wrapped C++ objects
 
 [Wrapped](wrapping.md) C++ objects can be converted by pointer or by reference:
 
 ```c++
-v8::Local<v8::Object> obj = v8::class_<MyClass>::create_object(isolate);
+class MyClass {};
+
+v8pp::class_<MyClass> bind_MyClass(isolate);
+
+v8::Local<v8::Object> obj = v8pp::class_<MyClass>::create_object(isolate);
 
 MyClass* ptr = v8pp::from_v8<MyClass*>(isolate, obj);
 MyClass& ref = v8pp::from_v8<MyClass&>(isolate, obj);
 
-MyClass* none = v8pp::from_v8<MyClass*>(isolate, v8::Null()); // none == nullptr
-MyClass& err = v8pp::from_v8<MyClass&>(isolate, v8::Null()); // throws std::runtime_error("expected C++ wrapped object")
+MyClass* none = v8pp::from_v8<MyClass*>(isolate, v8::Null(isolate)); // none == nullptr
+MyClass& err = v8pp::from_v8<MyClass&>(isolate, v8::Object::New(isolate)); // throws std::runtime_error("expected C++ wrapped object")
 
 v8::Local<v8::Object> obj2 = v8pp::to_v8(isolate, ptr); // obj == obj2
 v8::Local<v8::Object> obj3 = v8pp::to_v8(isolate, ref); // obj == obj3
@@ -154,7 +172,8 @@ struct v8pp::convert<Vector3>
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
-		return !value.IsEmpty() && value->IsArray() && value->Length() == 3;
+		return !value.IsEmpty() && value->IsArray()
+			&& value.As<v8::Array>()->Length() == 3;
 	}
 
 	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
@@ -187,6 +206,10 @@ struct v8pp::convert<Vector3>
 		return scope.Escape(arr);
 	}
 };
+
+v8::Local<v8::Array> vec3_js = v8pp::to_v8(isolate, Vector3{ 1, 2, 3 });
+Vector3 vec3 = v8pp::from_v8<Vector3>(isolate, vec3_js); // == { 1, 2, 3 }
+
 ```
 
 
@@ -209,7 +232,8 @@ struct v8pp::convert<Vector3<T>>
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
-		return !value.IsEmpty() && value->IsArray() && value->Length() == 3;
+		return !value.IsEmpty() && value->IsArray()
+			&& value.As<v8::Array>()->Length() == 3;
 	}
 
 	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
@@ -244,5 +268,8 @@ struct v8pp::convert<Vector3<T>>
 };
 
 template<typename T>
-struct v8pp::is_wrapped_class<Vector3<T>> : std::false_type {};
+struct v8pp::is_wrapped_class<Vector3<T>> : std::false_type{};
+
+v8::Local<v8::Array> vec3_js = v8pp::to_v8(isolate, Vector3<int>{ 1, 2, 3 });
+Vector3<int> vec3 = v8pp::from_v8<Vector3<int>>(isolate, vec3_js); // == { 1, 2, 3 }
 ```

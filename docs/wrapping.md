@@ -28,7 +28,7 @@ int f(int x) { return x * 2; }
 
 v8::Isolate* isolate = v8::Isolate::GetCurrent();
 
-v8::Local<v8::Function> v8_fun = v8pp::wrap_function(isolate, "f", &f)
+v8::Local<v8::Function> v8_fun = v8pp::wrap_function(isolate, "f", &f);
 isolate->GetCurrentContext()-> Global()->Set(v8pp::to_v8(isolate, "v8_fun"), v8_fun);
 ```
 
