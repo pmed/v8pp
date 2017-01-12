@@ -142,7 +142,7 @@ Example for a user type:
 ```c++
 struct Vector3
 {
-	float x, y, x;
+	float x, y, z;
 };
 
 // Explicit convertor template specialization
@@ -157,7 +157,7 @@ struct v8pp::convert<Vector3>
 		return !value.IsEmpty() && value->IsArray() && value->Length() == 3;
 	}
 
-	static form_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
 		if (!is_valid(isolate, value))
 		{
@@ -179,7 +179,7 @@ struct v8pp::convert<Vector3>
 	{
 		v8::EscapableHandleScope scope(isolate);
 
-		v8::Local<v8::Arrya> arr = v8::Array::New(isolate, 3);
+		v8::Local<v8::Array> arr = v8::Array::New(isolate, 3);
 		arr->Set(0, v8pp::to_v8(isolate, value.x));
 		arr->Set(1, v8pp::to_v8(isolate, value.y));
 		arr->Set(2, v8pp::to_v8(isolate, value.z));
@@ -198,7 +198,7 @@ with `v8pp::class_` type:
 template<typename T>
 struct Vector3
 {
-	T x, y, x;
+	T x, y, z;
 };
 
 template<typename T>
@@ -212,7 +212,7 @@ struct v8pp::convert<Vector3<T>>
 		return !value.IsEmpty() && value->IsArray() && value->Length() == 3;
 	}
 
-	static form_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
 		if (!is_valid(isolate, value))
 		{
@@ -234,7 +234,7 @@ struct v8pp::convert<Vector3<T>>
 	{
 		v8::EscapableHandleScope scope(isolate);
 
-		v8::Local<v8::Arrya> arr = v8::Array::New(isolate, 3);
+		v8::Local<v8::Array> arr = v8::Array::New(isolate, 3);
 		arr->Set(0, v8pp::to_v8(isolate, value.x));
 		arr->Set(1, v8pp::to_v8(isolate, value.y));
 		arr->Set(2, v8pp::to_v8(isolate, value.z));
