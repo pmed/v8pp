@@ -246,26 +246,7 @@ public:
 		return scope.Escape(obj);
 	}
 
-	template<typename T, typename ...Args>
-	void ctor()
-	{
-		ctor_ = [](v8::FunctionCallbackInfo<v8::Value> const& args) -> void*
-		{
-			using ctor_type = T* (*)(v8::Isolate* isolate, Args...);
-			return call_from_v8(static_cast<ctor_type>(&factory<T>::create), args);
-		};
-	}
-
-	template<typename T, typename U>
-	void inherit()
-	{
-		class_info& base = classes::find(isolate_, type_id<U>());
-		add_base(base, [](void* ptr) -> void*
-		{
-			return static_cast<U*>(static_cast<T*>(ptr));
-		});
-		js_function_template()->Inherit(base.class_function_template());
-	}
+	void set_ctor(ctor_function ctor) { ctor_ = ctor; }
 
 	v8::Handle<v8::Object> wrap_external_object(void* object)
 	{
@@ -476,21 +457,34 @@ template<typename T>
 class class_
 {
 	detail::class_info& class_info_;
-	static void dtor(v8::Isolate* isolate, void* obj)
+
+	template<typename ...Args>
+	struct factory_create
+	{
+		static T* call(v8::FunctionCallbackInfo<v8::Value> const& args)
+		{
+			using ctor_type = T* (*)(v8::Isolate* isolate, Args...);
+			return detail::call_from_v8(static_cast<ctor_type>(&factory<T>::create), args);
+		}
+	};
+
+	static void factory_destroy(v8::Isolate* isolate, void* obj)
 	{
 		factory<T>::destroy(isolate, static_cast<T*>(obj));
 	}
+
+	using ctor_function = T* (*)(v8::FunctionCallbackInfo<v8::Value> const& args);
 public:
 	explicit class_(v8::Isolate* isolate)
-		: class_info_(detail::classes::add(isolate, detail::type_id<T>(), dtor))
+		: class_info_(detail::classes::add(isolate, detail::type_id<T>(), factory_destroy))
 	{
 	}
 
 	/// Set class constructor signature
-	template<typename ...Args>
-	class_& ctor()
+	template<typename ...Args, typename Create = factory_create<Args...>>
+	class_& ctor(ctor_function create = Create::call)
 	{
-		class_info_.template ctor<T, Args...>();
+		class_info_.set_ctor(reinterpret_cast<detail::class_info::ctor_function>(create));
 		return *this;
 	}
 
@@ -500,7 +494,12 @@ public:
 	{
 		static_assert(std::is_base_of<U, T>::value, "Class U should be base for class T");
 		//TODO: std::is_convertible<T*, U*> and check for duplicates in hierarchy?
-		class_info_.template inherit<T, U>();
+		detail::class_info& base = detail::classes::find(isolate(), detail::type_id<U>());
+		class_info_.add_base(base, [](void* ptr) -> void*
+		{
+			return static_cast<U*>(static_cast<T*>(ptr));
+		});
+		class_info_.js_function_template()->Inherit(base.class_function_template());
 		return *this;
 	}
 

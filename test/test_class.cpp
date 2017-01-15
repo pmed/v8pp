@@ -32,6 +32,11 @@ struct X : Xbase
 {
 };
 
+static X* create_X(v8::FunctionCallbackInfo<v8::Value> const& args)
+{
+	return new X;
+}
+
 struct Y : X
 {
 	static int instance_count;
@@ -72,7 +77,7 @@ void test_class()
 
 	v8pp::class_<X> X_class(isolate);
 	X_class
-		.ctor()
+		.ctor(&create_X)
 		.set_const("konst", 99)
 		.set("var", &X::var)
 		.set("rprop", v8pp::property(&X::get))
