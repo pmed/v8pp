@@ -324,8 +324,7 @@ console.log("exit")
 
 ```c++
 // Memory for C++ class will remain when JavaScript object is deleted.
-// v8pp::no_factory avoids creating any constructor for your C++ class from
-// JavaScript, useful for classes you only wish to inject.
+// Useful for classes you only wish to inject.
 typedef v8pp::class_<my_class> my_class_wrapper(isolate);
 v8::Handle<v8::Value> val = my_class_wrapper::reference_external(&my_class::instance());
 // Assuming my_class::instance() returns reference to class
