@@ -129,8 +129,12 @@ void test_class()
 
 	v8pp::class_<Y>::unreference_external(isolate, &y1);
 	check("unref y1", v8pp::from_v8<Y*>(isolate, y1_obj) == nullptr);
-	check("unref y1_obj", v8pp::to_v8(isolate, y1).IsEmpty());
+	check("unref y1_obj", v8pp::to_v8(isolate, &y1).IsEmpty());
 	y1_obj.Clear();
+	check_ex<std::runtime_error>("y1 unreferenced", [isolate, &y1]()
+	{
+		v8pp::to_v8(isolate, y1);
+	});
 
 	v8pp::class_<Y>::destroy_object(isolate, y2);
 	check("unref y2", v8pp::from_v8<Y*>(isolate, y2_obj) == nullptr);

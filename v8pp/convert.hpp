@@ -583,7 +583,9 @@ struct convert<T, typename std::enable_if<is_wrapped_class<T>::value>::type>
 
 	static to_type to_v8(v8::Isolate* isolate, T const& value)
 	{
-		return convert<T*>::to_v8(isolate, &value);
+		v8::Handle<v8::Object> result = convert<T*>::to_v8(isolate, &value);
+		if (!result.IsEmpty()) return result;
+		throw std::runtime_error("expected C++ wrapped object");
 	}
 };
 
