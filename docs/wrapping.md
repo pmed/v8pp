@@ -109,6 +109,13 @@ struct Y : X
 	void set(int x) { var = x; } 
 };
 
+static void ext_fun(v8::FunctionCallbackInfo<v8::Value> const& args)
+{
+	Y* self = v8pp::class_<Y>::unwrap_object(args.GetIsolate(), args.This());
+	if (self) args.GetReturnValue().Set(self->b);
+	else args.GetReturnValue().Set(args[0]);
+}
+
 // bind class X
 v8pp::class_<X> X_class(isolate);
 X_class
@@ -134,6 +141,8 @@ Y_class
 	.set("prop", v8pp::property(&Y::fun));
 	// bind read-write property
 	.set("wprop", v8pp::property(&Y::get, &Y::set));
+	// bind a static function
+	.set("ext_fun", &ext_fun)
 	;
 
 // set class into the module template
@@ -156,6 +165,8 @@ assert(y.get() == 11);
 assert(y.wprop == 11);
 y.wprop == 12;
 assert(y.get() == 12);
+assert(y.ext_fun() == y.b);
+assert(module.Y.ext_fun(100) == 100);
 ```
 
 

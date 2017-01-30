@@ -50,6 +50,14 @@ struct factory<Y>
 };
 } // v8pp
 
+static int extern_fun(v8::FunctionCallbackInfo<v8::Value> const& args)
+{
+	int x = args[0]->Int32Value();
+	X const* self = v8pp::class_<X>::unwrap_object(args.GetIsolate(), args.This());
+	if (self) x += self->var;
+	return x;
+}
+
 void test_class()
 {
 	v8pp::context context;
@@ -69,7 +77,8 @@ void test_class()
 		.set("fun4", &X::fun4)
 		.set("static_fun", &X::static_fun)
 		.set("static_lambda", [](int x) { return x + 3; })
-	;
+		.set("extern_fun", extern_fun)
+		;
 
 	v8pp::class_<Y> Y_class(context.isolate());
 	Y_class
@@ -102,8 +111,10 @@ void test_class()
 	check_eq("X::fun2(2)", run_script<int>(context, "x = new X(); x.fun2(2)"), 3);
 	check_eq("X::fun3(3)", run_script<int>(context, "x = new X(); x.fun3(3)"), 4);
 	check_eq("X::fun4(4)", run_script<int>(context, "x = new X(); x.fun4(4)"), 5);
-	check_eq("X::static_fun(1)", run_script<int>(context, "X.static_fun(3)"), 3);
+	check_eq("X::static_fun(1)", run_script<int>(context, "X.static_fun(1)"), 1);
 	check_eq("X::static_lambda(1)", run_script<int>(context, "X.static_lambda(1)"), 4);
+	check_eq("X::extern_fun(5)", run_script<int>(context, "x = new X(); x.extern_fun(5)"), 6);
+	check_eq("X::extern_fun(6)", run_script<int>(context, "X.extern_fun(6)"), 6);
 
 	check_eq("Y object", run_script<int>(context, "y = new Y(-100); y.konst + y.var"), -1);
 

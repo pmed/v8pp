@@ -572,8 +572,11 @@ public:
 	typename std::enable_if<detail::is_callable<Func>::value, class_&>::type
 	set(char const *name, Function&& func)
 	{
-		class_singleton_.js_function_template()->Set(isolate(), name,
-			wrap_function_template(isolate(), std::forward<Func>(func)));
+		v8::Local<v8::Data> wrapped_fun =
+			wrap_function_template(isolate(), std::forward<Func>(func));
+		class_singleton_.class_function_template()
+			->PrototypeTemplate()->Set(isolate(), name, wrapped_fun);
+		class_singleton_.js_function_template()->Set(isolate(), name, wrapped_fun);
 		return *this;
 	}
 
