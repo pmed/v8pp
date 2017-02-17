@@ -370,7 +370,8 @@ public:
 		v8::EscapableHandleScope scope(isolate_);
 
 		v8::Local<v8::Object> obj = class_function_template()
-			->GetFunction()->NewInstance();
+                                            ->GetFunction()->NewInstance (v8::Isolate::GetCurrent()->GetCurrentContext())
+                                            .FromMaybe(v8::Local<v8::Object>());
 		obj->SetAlignedPointerInInternalField(0, object);
 		obj->SetAlignedPointerInInternalField(1, this);
 
