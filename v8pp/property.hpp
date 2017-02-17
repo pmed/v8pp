@@ -378,6 +378,17 @@ property_<Get, Set> property(Get get, Set set)
 	return prop;
 }
 
+/// Create read/write property from get and set member functions, match getter via const this
+template<class Class, typename Ret, typename Arg>
+property_<Ret (Class::*) () const, void (Class::*) (Arg)>
+property(Ret (Class::*get) () const, void (Class::*set) (Arg))
+{
+	property_<Ret (Class::*) () const, void (Class::*) (Arg)> prop;
+	prop.get_ = get;
+	prop.set_ = set;
+	return prop;
+}
+
 /// Create read-only property from a get function
 template<typename Get>
 property_<Get, Get> property(Get get)
