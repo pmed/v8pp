@@ -578,14 +578,14 @@ struct convert<T, typename std::enable_if<is_wrapped_class<T>::value>::type>
 		{
 			return *object;
 		}
-		throw std::runtime_error("expected C++ wrapped object");
+		throw std::runtime_error("failed to unwrap C++ object");
 	}
 
 	static to_type to_v8(v8::Isolate* isolate, T const& value)
 	{
 		v8::Handle<v8::Object> result = convert<T*>::to_v8(isolate, &value);
 		if (!result.IsEmpty()) return result;
-		throw std::runtime_error("expected C++ wrapped object");
+		throw std::runtime_error("failed to wrap C++ object");
 	}
 };
 
