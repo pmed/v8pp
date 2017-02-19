@@ -134,14 +134,13 @@ struct r_property_impl<Get, Set, true>
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
-		class_type& obj = v8pp::from_v8<class_type&>(isolate, info.This());
-
-		Property const& prop = detail::get_external_data<Property>(info.Data());
-		assert(prop.get_);
-
-		if (prop.get_)
 		try
 		{
+		      class_type& obj = v8pp::from_v8<class_type&>(isolate, info.This());
+
+		      Property const& prop = detail::get_external_data<Property>(info.Data());
+
+		      if (prop.get_)
 			get_impl(obj, prop.get_, name, info, select_getter_tag<Get>());
 		}
 		catch (std::exception const& ex)

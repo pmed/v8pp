@@ -729,9 +729,16 @@ private:
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
-		T const& self = v8pp::from_v8<T const&>(isolate, info.This());
-		Attribute attr = detail::get_external_data<Attribute>(info.Data());
-		info.GetReturnValue().Set(to_v8(isolate, self.*attr));
+                try
+                  {
+                    T const& self = v8pp::from_v8<T const&>(isolate, info.This());
+                    Attribute attr = detail::get_external_data<Attribute>(info.Data());
+                    info.GetReturnValue().Set(to_v8(isolate, self.*attr));
+                  }
+                catch (std::exception const& ex)
+                  {
+                    info.GetReturnValue().Set(throw_ex(isolate, ex.what()));
+                  }
 	}
 
 	template<typename Attribute>
@@ -740,10 +747,17 @@ private:
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
-		T& self = v8pp::from_v8<T&>(isolate, info.This());
-		Attribute ptr = detail::get_external_data<Attribute>(info.Data());
-		using attr_type = typename detail::function_traits<Attribute>::return_type;
-		self.*ptr = v8pp::from_v8<attr_type>(isolate, value);
+                try
+                  {
+                    T& self = v8pp::from_v8<T&>(isolate, info.This());
+                    Attribute ptr = detail::get_external_data<Attribute>(info.Data());
+                    using attr_type = typename detail::function_traits<Attribute>::return_type;
+                    self.*ptr = v8pp::from_v8<attr_type>(isolate, value);
+                  }
+                catch (std::exception const& ex)
+                  {
+                    info.GetReturnValue().Set(throw_ex(isolate, ex.what()));
+                  }
 	}
 };
 
