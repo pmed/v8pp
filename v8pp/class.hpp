@@ -355,6 +355,8 @@ public:
 		{
 			factory<T>::destroy(isolate, static_cast<T*>(obj));
 		};
+
+                class_function_template()->Inherit(js_function_template());
 	}
 
 	class_singleton(class_singleton const&) = delete;
@@ -439,7 +441,6 @@ public:
 			using ctor_type = T* (*)(v8::Isolate* isolate, Args...);
 			return call_from_v8(static_cast<ctor_type>(&factory<T>::create), args);
 		};
-		class_function_template()->Inherit(js_function_template());
 	}
 
 	template<typename U>
