@@ -18,6 +18,9 @@ struct Xbase
 	int get() const { return var; }
 	void set(int v) { var = v; }
 
+	int prop() const { return var; }
+	void prop(int v) { var = v; }
+
 	int fun1(int x) { return var + x; }
 	int fun2(int x) const { return var + x; }
 	int fun3(int x) volatile { return var + x; }
@@ -64,6 +67,9 @@ void test_class()
 	v8::Isolate* isolate = context.isolate();
 	v8::HandleScope scope(isolate);
 
+	using x_prop_get = int (X::*)() const;
+	using x_prop_set = void (X::*)(int);
+
 	v8pp::class_<X> X_class(isolate);
 	X_class
 		.ctor()
@@ -71,6 +77,9 @@ void test_class()
 		.set("var", &X::var)
 		.set("rprop", v8pp::property(&X::get))
 		.set("wprop", v8pp::property(&X::get, &X::set))
+		.set("wprop2", v8pp::property(
+			static_cast<x_prop_get>(&X::prop),
+			static_cast<x_prop_set>(&X::prop)))
 		.set("fun1", &X::fun1)
 		.set("fun2", &X::fun2)
 		.set("fun3", &X::fun3)
@@ -107,6 +116,7 @@ void test_class()
 	check_eq("X object", run_script<int>(context, "x = new X(); x.konst + x.var"), 100);
 	check_eq("X::rprop", run_script<int>(context, "x = new X(); x.rprop"), 1);
 	check_eq("X::wprop", run_script<int>(context, "x = new X(); ++x.wprop"), 2);
+	check_eq("X::wprop2", run_script<int>(context, "x = new X(); ++x.wprop2"), 2);
 	check_eq("X::fun1(1)", run_script<int>(context, "x = new X(); x.fun1(1)"), 2);
 	check_eq("X::fun2(2)", run_script<int>(context, "x = new X(); x.fun2(2)"), 3);
 	check_eq("X::fun3(3)", run_script<int>(context, "x = new X(); x.fun3(3)"), 4);
