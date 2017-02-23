@@ -356,7 +356,7 @@ public:
 			factory<T>::destroy(isolate, static_cast<T*>(obj));
 		};
 
-                class_function_template()->Inherit(js_function_template());
+		func->Inherit(js_func);
 	}
 
 	class_singleton(class_singleton const&) = delete;
@@ -430,7 +430,7 @@ public:
 
 	v8::Local<v8::FunctionTemplate> js_function_template()
 	{
-		return to_local(isolate_, js_func_.IsEmpty()? func_ : js_func_);
+		return to_local(isolate_, js_func_);
 	}
 
 	template<typename ...Args>
