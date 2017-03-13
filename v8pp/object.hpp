@@ -27,7 +27,6 @@ bool get_option(v8::Isolate* isolate, v8::Handle<v8::Object> options,
 	if (dot)
 	{
 		std::string const subname(name, dot);
-		v8::HandleScope scope(isolate);
 		v8::Local<v8::Object> suboptions;
 		return get_option(isolate, options, subname.c_str(), suboptions)
 			&& get_option(isolate, suboptions, dot + 1, value);
