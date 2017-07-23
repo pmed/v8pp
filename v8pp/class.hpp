@@ -16,6 +16,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
+#include <list>
 
 #include "v8pp/config.hpp"
 #include "v8pp/factory.hpp"
@@ -51,14 +52,33 @@ inline std::string pointer_str(void const* ptr)
 class class_info
 {
 public:
-	class_info(v8::Isolate* isolate, type_info const& type)
+	using ctor_function = void* (*)(v8::FunctionCallbackInfo<v8::Value> const& args);
+	using dtor_function = void  (*)(v8::Isolate*, void* obj);
+	using cast_function = void* (*)(void* ptr);
+
+	class_info(v8::Isolate* isolate, type_info const& type, dtor_function dtor)
 		: isolate_(isolate)
 		, type_(type)
+		, ctor_(nullptr) // no wrapped class constructor available by default
+		, dtor_(dtor)
 	{
 		v8::HandleScope scope(isolate_);
 
 		v8::Local<v8::FunctionTemplate> func = v8::FunctionTemplate::New(isolate_);
-		v8::Local<v8::FunctionTemplate> js_func = v8::FunctionTemplate::New(isolate_);
+		v8::Local<v8::FunctionTemplate> js_func = v8::FunctionTemplate::New(isolate_,
+			[](v8::FunctionCallbackInfo<v8::Value> const& args)
+		{
+			v8::Isolate* isolate = args.GetIsolate();
+			class_info* this_ = get_external_data<class_info*>(args.Data());
+			try
+			{
+				return args.GetReturnValue().Set(this_->wrap_object(args));
+			}
+			catch (std::exception const& ex)
+			{
+				args.GetReturnValue().Set(throw_ex(isolate, ex.what()));
+			}
+		}, set_external_data(isolate_, this));
 
 		func_.Reset(isolate_, func);
 		js_func_.Reset(isolate_, js_func);
@@ -71,8 +91,26 @@ public:
 	}
 
 	class_info(class_info const&) = delete;
+	class_info(class_info && src) // = default; Visual C++ can't do this: error C2610
+		: isolate_(std::move(src.isolate_))
+		, type_(std::move(src.type_))
+		, bases_(std::move(src.bases_))
+		, derivatives_(std::move(src.derivatives_))
+		, objects_(std::move(src.objects_))
+		, func_(std::move(src.func_))
+		, js_func_(std::move(src.js_func_))
+		, ctor_(std::move(src.ctor_))
+		, dtor_(std::move(src.dtor_))
+	{
+	}
+
 	class_info& operator=(class_info const&) = delete;
-	virtual ~class_info() = default;
+	class_info& operator=(class_info &&) = delete;
+
+	~class_info()
+	{
+		destroy_objects();
+	}
 
 	v8::Isolate* isolate() const { return isolate_; }
 
@@ -86,30 +124,20 @@ public:
 		return to_local(isolate_, js_func_);
 	}
 
-
 	type_info const& type() const { return type_; }
 
-	using cast_function = void* (*)(void* ptr);
-
-	void add_base(class_info* info, cast_function cast)
+	void add_base(class_info& info, cast_function cast)
 	{
-		if (isolate_ != info->isolate_)
-		{
-			//assert(false && "different isolates");
-			throw std::runtime_error("different isolates: "
-				+ class_name(type_) + " in isolate " + pointer_str(isolate_)
-				+ class_name(info->type_) + " in isolate " + pointer_str(info->isolate_));
-		}
 		auto it = std::find_if(bases_.begin(), bases_.end(),
-			[info](base_class_info const& base) { return base.info == info; });
+			[&info](base_class_info const& base) { return &base.info == &info; });
 		if (it != bases_.end())
 		{
 			//assert(false && "duplicated inheritance");
 			throw std::runtime_error(class_name(type_)
-				+ " is already inherited from " + class_name(info->type_));
+				+ " is already inherited from " + class_name(info.type_));
 		}
 		bases_.emplace_back(info, cast);
-		info->derivatives_.emplace_back(this);
+		info.derivatives_.emplace_back(this);
 	}
 
 	bool cast(void*& ptr, type_info const& type) const
@@ -122,7 +150,7 @@ public:
 		// fast way - search a direct parent
 		for (base_class_info const& base : bases_)
 		{
-			if (base.info->type_ == type)
+			if (base.info.type_ == type)
 			{
 				ptr = base.cast(ptr);
 				return true;
@@ -133,7 +161,7 @@ public:
 		for (base_class_info const& base : bases_)
 		{
 			void* p = base.cast(ptr);
-			if (base.info->cast(p, type))
+			if (base.info.cast(p, type))
 			{
 				ptr = p;
 				return true;
@@ -193,6 +221,16 @@ public:
 		objects_.clear();
 	}
 
+	void destroy_objects()
+	{
+		remove_objects(dtor_);
+	}
+
+	void destroy_object(void* obj)
+	{
+		remove_object(obj, dtor_);
+	}
+
 	v8::Local<v8::Object> find_object(void const* object) const
 	{
 		auto it = objects_.find(const_cast<void*>(object));
@@ -210,21 +248,119 @@ public:
 		return result;
 	}
 
+	v8::Handle<v8::Object> wrap(void* object, bool destroy_after)
+	{
+		v8::EscapableHandleScope scope(isolate_);
+
+		v8::Local<v8::Object> obj = class_function_template()
+			->GetFunction()->NewInstance();
+		obj->SetAlignedPointerInInternalField(0, object);
+		obj->SetAlignedPointerInInternalField(1, this);
+
+		persistent<v8::Object> pobj(isolate(), obj);
+		if (destroy_after)
+		{
+			pobj.SetWeak(this,
+				[](v8::WeakCallbackInfo<class_info> const& data)
+			{
+				class_info* this_ = data.GetParameter();
+				this_->destroy_object(data.GetInternalField(0));
+			}, v8::WeakCallbackType::kInternalFields);
+		}
+		else
+		{
+			pobj.MarkIndependent();
+			pobj.SetWeak(this,
+				[](v8::WeakCallbackInfo<class_info> const& data)
+			{
+				class_info* this_ = data.GetParameter();
+				this_->remove_object(data.GetInternalField(0));
+			}, v8::WeakCallbackType::kInternalFields);
+		}
+
+		class_info::add_object(object, std::move(pobj));
+
+		return scope.Escape(obj);
+	}
+
+	template<typename T, typename ...Args>
+	void ctor()
+	{
+		ctor_ = [](v8::FunctionCallbackInfo<v8::Value> const& args) -> void*
+		{
+			using ctor_type = T* (*)(v8::Isolate* isolate, Args...);
+			return call_from_v8(static_cast<ctor_type>(&factory<T>::create), args);
+		};
+	}
+
+	template<typename T, typename U>
+	void inherit()
+	{
+		class_info& base = class_singletons::find_class<U>(isolate_);
+		add_base(base, [](void* ptr) -> void*
+		{
+			return static_cast<U*>(static_cast<T*>(ptr));
+		});
+		js_function_template()->Inherit(base.class_function_template());
+	}
+
+	v8::Handle<v8::Object> wrap_external_object(void* object)
+	{
+		return wrap(object, false);
+	}
+
+	v8::Handle<v8::Object> wrap_object(void* object)
+	{
+		return wrap(object, true);
+	}
+
+	v8::Handle<v8::Object> wrap_object(v8::FunctionCallbackInfo<v8::Value> const& args)
+	{
+		if (!ctor_)
+		{
+			//assert(false && "create not allowed");
+			throw std::runtime_error(class_name(type_) + " has no constructor");
+		}
+		return wrap_object(ctor_(args));
+	}
+
+	void* unwrap_object(v8::Local<v8::Value> value)
+	{
+		v8::HandleScope scope(isolate());
+
+		while (value->IsObject())
+		{
+			v8::Handle<v8::Object> obj = value->ToObject();
+			if (obj->InternalFieldCount() == 2)
+			{
+				void* ptr = obj->GetAlignedPointerFromInternalField(0);
+				class_info* info = static_cast<class_info*>(
+					obj->GetAlignedPointerFromInternalField(1));
+				if (info && info->cast(ptr, type_))
+				{
+					return ptr;
+				}
+			}
+			value = obj->GetPrototype();
+		}
+		return nullptr;
+	}
+
 private:
 	struct base_class_info
 	{
-		class_info* info;
+		class_info& info;
 		cast_function cast;
 
-		base_class_info(class_info* info, cast_function cast)
+		base_class_info(class_info& info, cast_function cast)
 			: info(info)
 			, cast(cast)
 		{
 		}
 	};
 
-	v8::Isolate* const isolate_;
-	type_info const type_;
+	v8::Isolate* isolate_;
+	type_info type_;
 	std::vector<base_class_info> bases_;
 	std::vector<class_info*> derivatives_;
 
@@ -232,16 +368,16 @@ private:
 
 	v8::UniquePersistent<v8::FunctionTemplate> func_;
 	v8::UniquePersistent<v8::FunctionTemplate> js_func_;
-};
 
-template<typename T>
-class class_singleton;
+	ctor_function ctor_;
+	dtor_function dtor_;
+};
 
 class class_singletons
 {
 public:
 	template<typename T>
-	static class_singleton<T>& add_class(v8::Isolate* isolate)
+	static class_info& add_class(v8::Isolate* isolate)
 	{
 		class_singletons* singletons = instance(add, isolate);
 		type_info const type = type_id<T>();
@@ -252,8 +388,13 @@ public:
 			throw std::runtime_error(class_name(type)
 				+ " is already exist in isolate " + pointer_str(isolate));
 		}
-		singletons->classes_.emplace_back(new class_singleton<T>(isolate, type));
-		return *static_cast<class_singleton<T>*>(singletons->classes_.back().get());
+		// use destructor from factory<T>::destroy()
+		auto dtor = [](v8::Isolate* isolate, void* obj)
+		{
+			factory<T>::destroy(isolate, static_cast<T*>(obj));
+		};
+		singletons->classes_.emplace_back(isolate, type, dtor);
+		return singletons->classes_.back();
 	}
 
 	template<typename T>
@@ -276,7 +417,7 @@ public:
 	}
 
 	template<typename T>
-	static class_singleton<T>& find_class(v8::Isolate* isolate)
+	static class_info& find_class(v8::Isolate* isolate)
 	{
 		class_singletons* singletons = instance(get, isolate);
 		type_info const type = type_id<T>();
@@ -285,7 +426,7 @@ public:
 			auto it = singletons->find(type);
 			if (it != singletons->classes_.end())
 			{
-				return *static_cast<class_singleton<T>*>(it->get());
+				return *it;
 			}
 		}
 		//assert(false && "class not registered");
@@ -299,16 +440,13 @@ public:
 	}
 
 private:
-	using classes = std::vector<std::unique_ptr<class_info>>;
+	using classes = std::list<class_info>;
 	classes classes_;
 
 	classes::iterator find(type_info const& type)
 	{
 		return std::find_if(classes_.begin(), classes_.end(),
-			[&type](std::unique_ptr<class_info> const& info)
-			{
-				return info->type() == type;
-			});
+			[&type](class_info const& info) { return info.type() == type; });
 	}
 
 	enum operation { get, add, remove };
@@ -357,193 +495,16 @@ private:
 	}
 };
 
-template<typename T>
-class class_singleton : public class_info
-{
-public:
-	class_singleton(v8::Isolate* isolate, type_info const& type)
-		: class_info(isolate, type)
-	{
-		js_function_template()->SetCallHandler([](v8::FunctionCallbackInfo<v8::Value> const& args)
-		{
-			v8::Isolate* isolate = args.GetIsolate();
-			try
-			{
-				return args.GetReturnValue().Set(
-					class_singletons::find_class<T>(isolate).wrap_object(args));
-			}
-			catch (std::exception const& ex)
-			{
-				args.GetReturnValue().Set(throw_ex(isolate, ex.what()));
-			}
-		});
-
-		// no class constructor available by default
-		ctor_ = nullptr;
-		// use destructor from factory<T>::destroy()
-		dtor_ = [](v8::Isolate* isolate, void* obj)
-		{
-			factory<T>::destroy(isolate, static_cast<T*>(obj));
-		};
-	}
-
-	class_singleton(class_singleton const&) = delete;
-	class_singleton& operator=(class_singleton const&) = delete;
-
-	~class_singleton()
-	{
-		destroy_objects();
-	}
-
-	v8::Handle<v8::Object> wrap(T* object, bool destroy_after)
-	{
-		v8::EscapableHandleScope scope(isolate());
-
-		v8::Local<v8::Object> obj = class_function_template()
-			->GetFunction()->NewInstance();
-		obj->SetAlignedPointerInInternalField(0, object);
-		obj->SetAlignedPointerInInternalField(1, this);
-
-		persistent<v8::Object> pobj(isolate(), obj);
-		if (destroy_after)
-		{
-			pobj.SetWeak(object,
-#ifdef V8_USE_WEAK_CB_INFO
-				[](v8::WeakCallbackInfo<T> const& data)
-#else
-				[](v8::WeakCallbackData<v8::Object, T> const& data)
-#endif
-			{
-				v8::Isolate* isolate = data.GetIsolate();
-				T* object = data.GetParameter();
-				class_singletons::find_class<T>(isolate).destroy_object(object);
-			}
-#ifdef V8_USE_WEAK_CB_INFO
-				, v8::WeakCallbackType::kParameter
-#endif
-				);
-		}
-		else
-		{
-			pobj.MarkIndependent();
-			pobj.SetWeak(object,
-#ifdef V8_USE_WEAK_CB_INFO
-				[](v8::WeakCallbackInfo<T> const& data)
-#else
-				[](v8::WeakCallbackData<v8::Object, T> const& data)
-#endif
-			{
-				v8::Isolate* isolate = data.GetIsolate();
-				T* object = data.GetParameter();
-				class_singletons::find_class<T>(isolate)
-					.remove_object(object);
-			}
-#ifdef V8_USE_WEAK_CB_INFO
-				, v8::WeakCallbackType::kParameter
-#endif
-				);
-
-		}
-
-		class_info::add_object(object, std::move(pobj));
-
-		return scope.Escape(obj);
-	}
-
-	template<typename ...Args>
-	void ctor()
-	{
-		ctor_ = [](v8::FunctionCallbackInfo<v8::Value> const& args)
-		{
-			using ctor_type = T* (*)(v8::Isolate* isolate, Args...);
-			return call_from_v8(static_cast<ctor_type>(&factory<T>::create), args);
-		};
-	}
-
-	template<typename U>
-	void inherit()
-	{
-		class_singleton<U>* base = &class_singletons::find_class<U>(isolate());
-		add_base(base, [](void* ptr) -> void*
-			{
-				return static_cast<U*>(static_cast<T*>(ptr));
-			});
-		js_function_template()->Inherit(base->class_function_template());
-	}
-
-	v8::Handle<v8::Object> wrap_external_object(T* object)
-	{
-		return wrap(object, false);
-	}
-
-	v8::Handle<v8::Object> wrap_object(T* object)
-	{
-		return wrap(object, true);
-	}
-
-	v8::Handle<v8::Object> wrap_object(v8::FunctionCallbackInfo<v8::Value> const& args)
-	{
-		if (!ctor_)
-		{
-			//assert(false && "create not allowed");
-			throw std::runtime_error(class_name(type()) + " has no constructor");
-		}
-		return wrap_object(ctor_(args));
-	}
-
-	T* unwrap_object(v8::Local<v8::Value> value)
-	{
-		v8::HandleScope scope(isolate());
-
-		while (value->IsObject())
-		{
-			v8::Handle<v8::Object> obj = value->ToObject();
-			if (obj->InternalFieldCount() == 2)
-			{
-				void* ptr = obj->GetAlignedPointerFromInternalField(0);
-				class_info* info = static_cast<class_info*>(
-					obj->GetAlignedPointerFromInternalField(1));
-				if (info && info->cast(ptr, type()))
-				{
-					return static_cast<T*>(ptr);
-				}
-			}
-			value = obj->GetPrototype();
-		}
-		return nullptr;
-	}
-
-	v8::Handle<v8::Object> find_object(T const* obj)
-	{
-		return class_info::find_object(obj);
-	}
-
-	void destroy_objects()
-	{
-		class_info::remove_objects(dtor_);
-	}
-
-	void destroy_object(T* obj)
-	{
-		class_info::remove_object(obj, dtor_);
-	}
-
-private:
-	T* (*ctor_)(v8::FunctionCallbackInfo<v8::Value> const& args);
-	void (*dtor_)(v8::Isolate*, void*);
-};
-
 } // namespace detail
 
 /// Interface for registering C++ classes in V8
 template<typename T>
 class class_
 {
-	using class_singleton = detail::class_singleton<T>;
-	detail::class_singleton<T>& class_singleton_;
+	detail::class_info& class_info_;
 public:
 	explicit class_(v8::Isolate* isolate)
-		: class_singleton_(detail::class_singletons::add_class<T>(isolate))
+		: class_info_(detail::class_singletons::add_class<T>(isolate))
 	{
 	}
 
@@ -551,7 +512,7 @@ public:
 	template<typename ...Args>
 	class_& ctor()
 	{
-		class_singleton_.template ctor<Args...>();
+		class_info_.template ctor<T, Args...>();
 		return *this;
 	}
 
@@ -561,7 +522,7 @@ public:
 	{
 		static_assert(std::is_base_of<U, T>::value, "Class U should be base for class T");
 		//TODO: std::is_convertible<T*, U*> and check for duplicates in hierarchy?
-		class_singleton_.template inherit<U>();
+		class_info_.template inherit<T, U>();
 		return *this;
 	}
 
@@ -574,7 +535,7 @@ public:
 		using mem_func_type =
 			typename detail::function_traits<Method>::template pointer_type<T>;
 
-		class_singleton_.class_function_template()->PrototypeTemplate()->Set(
+		class_info_.class_function_template()->PrototypeTemplate()->Set(
 			isolate(), name, wrap_function_template(isolate(),
 				static_cast<mem_func_type>(mem_func)));
 		return *this;
@@ -588,9 +549,9 @@ public:
 	{
 		v8::Local<v8::Data> wrapped_fun =
 			wrap_function_template(isolate(), std::forward<Func>(func));
-		class_singleton_.class_function_template()
+		class_info_.class_function_template()
 			->PrototypeTemplate()->Set(isolate(), name, wrapped_fun);
-		class_singleton_.js_function_template()->Set(isolate(), name, wrapped_fun);
+		class_info_.js_function_template()->Set(isolate(), name, wrapped_fun);
 		return *this;
 	}
 
@@ -611,7 +572,7 @@ public:
 			setter = nullptr;
 		}
 
-		class_singleton_.class_function_template()->PrototypeTemplate()
+		class_info_.class_function_template()->PrototypeTemplate()
 			->SetAccessor(v8pp::to_v8(isolate(), name), getter, setter,
 				detail::set_external_data(isolate(),
 					std::forward<Attribute>(attribute)), v8::DEFAULT,
@@ -640,7 +601,7 @@ public:
 			setter = nullptr;
 		}
 
-		class_singleton_.class_function_template()->PrototypeTemplate()
+		class_info_.class_function_template()->PrototypeTemplate()
 			->SetAccessor(v8pp::to_v8(isolate(), name),getter, setter,
 				detail::set_external_data(isolate(),
 					std::forward<prop_type>(prop)), v8::DEFAULT,
@@ -654,23 +615,23 @@ public:
 	{
 		v8::HandleScope scope(isolate());
 
-		class_singleton_.class_function_template()->PrototypeTemplate()
+		class_info_.class_function_template()->PrototypeTemplate()
 			->Set(v8pp::to_v8(isolate(), name), to_v8(isolate(), value),
 				v8::PropertyAttribute(v8::ReadOnly | v8::DontDelete));
 		return *this;
 	}
 
 	/// v8::Isolate where the class bindings belongs
-	v8::Isolate* isolate() { return class_singleton_.isolate(); }
+	v8::Isolate* isolate() { return class_info_.isolate(); }
 
 	v8::Local<v8::FunctionTemplate> class_function_template()
 	{
-		return class_singleton_.class_function_template();
+		return class_info_.class_function_template();
 	}
 
 	v8::Local<v8::FunctionTemplate> js_function_template()
 	{
-		return class_singleton_.js_function_template();
+		return class_info_.js_function_template();
 	}
 
 	/// Create JavaScript object which references externally created C++ class.
@@ -699,8 +660,8 @@ public:
 	/// Get wrapped object from V8 value, may return nullptr on fail.
 	static T* unwrap_object(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
-		return detail::class_singletons::find_class<T>(isolate)
-			.unwrap_object(value);
+		return static_cast<T*>(detail::class_singletons::find_class<T>(isolate)
+			.unwrap_object(value));
 	}
 
 	/// Create a wrapped C++ object and import it into JavaScript
