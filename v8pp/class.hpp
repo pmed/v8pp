@@ -85,7 +85,7 @@ public:
 
 		// each JavaScript instance has 2 internal fields:
 		//  0 - pointer to a wrapped C++ object
-		//  1 - pointer to the class_singleton
+		//  1 - pointer to this class_info
 		func->InstanceTemplate()->SetInternalFieldCount(2);
 		func->Inherit(js_func);
 	}
@@ -296,7 +296,7 @@ public:
 	template<typename T, typename U>
 	void inherit()
 	{
-		class_info& base = class_singletons::find_class<U>(isolate_);
+		class_info& base = classes::find(isolate_, type_id<U>());
 		add_base(base, [](void* ptr) -> void*
 		{
 			return static_cast<U*>(static_cast<T*>(ptr));
@@ -373,58 +373,48 @@ private:
 	dtor_function dtor_;
 };
 
-class class_singletons
+class classes
 {
 public:
-	template<typename T>
-	static class_info& add_class(v8::Isolate* isolate)
+	static class_info& add(v8::Isolate* isolate, type_info const& type,
+		class_info::dtor_function dtor)
 	{
-		class_singletons* singletons = instance(add, isolate);
-		type_info const type = type_id<T>();
-		auto it = singletons->find(type);
-		if (it != singletons->classes_.end())
+		classes* info = instance(operation::add, isolate);
+		auto it = info->find(type);
+		if (it != info->classes_.end())
 		{
 			//assert(false && "class already registred");
 			throw std::runtime_error(class_name(type)
 				+ " is already exist in isolate " + pointer_str(isolate));
 		}
-		// use destructor from factory<T>::destroy()
-		auto dtor = [](v8::Isolate* isolate, void* obj)
-		{
-			factory<T>::destroy(isolate, static_cast<T*>(obj));
-		};
-		singletons->classes_.emplace_back(isolate, type, dtor);
-		return singletons->classes_.back();
+		info->classes_.emplace_back(isolate, type, dtor);
+		return info->classes_.back();
 	}
 
-	template<typename T>
-	static void remove_class(v8::Isolate* isolate)
+	static void remove(v8::Isolate* isolate, type_info const& type)
 	{
-		class_singletons* singletons = instance(get, isolate);
-		if (singletons)
+		classes* info = instance(operation::get, isolate);
+		if (info)
 		{
-			type_info const type = type_id<T>();
-			auto it = singletons->find(type);
-			if (it != singletons->classes_.end())
+			auto it = info->find(type);
+			if (it != info->classes_.end())
 			{
-				singletons->classes_.erase(it);
-				if (singletons->classes_.empty())
+				info->classes_.erase(it);
+				if (info->classes_.empty())
 				{
-					instance(remove, isolate);
+					instance(operation::remove, isolate);
 				}
 			}
 		}
 	}
 
-	template<typename T>
-	static class_info& find_class(v8::Isolate* isolate)
+	static class_info& find(v8::Isolate* isolate, type_info const& type)
 	{
-		class_singletons* singletons = instance(get, isolate);
-		type_info const type = type_id<T>();
-		if (singletons)
+		classes* info = instance(operation::get, isolate);
+		if (info)
 		{
-			auto it = singletons->find(type);
-			if (it != singletons->classes_.end())
+			auto it = info->find(type);
+			if (it != info->classes_.end())
 			{
 				return *it;
 			}
@@ -436,57 +426,56 @@ public:
 
 	static void remove_all(v8::Isolate* isolate)
 	{
-		instance(remove, isolate);
+		instance(operation::remove, isolate);
 	}
 
 private:
-	using classes = std::list<class_info>;
-	classes classes_;
+	std::list<class_info> classes_;
 
-	classes::iterator find(type_info const& type)
+	std::list<class_info>::iterator find(type_info const& type)
 	{
 		return std::find_if(classes_.begin(), classes_.end(),
 			[&type](class_info const& info) { return info.type() == type; });
 	}
 
-	enum operation { get, add, remove };
-	static class_singletons* instance(operation op, v8::Isolate* isolate)
+	enum class operation { get, add, remove };
+	static classes* instance(operation op, v8::Isolate* isolate)
 	{
 #if defined(V8PP_ISOLATE_DATA_SLOT)
-		class_singletons* instances = static_cast<class_singletons*>(
+		classes* info = static_cast<classes*>(
 			isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
 		switch (op)
 		{
-		case get:
-			return instances;
-		case add:
-			if (!instances)
+		case operation::get:
+			return info;
+		case operation::add:
+			if (!info)
 			{
-				instances = new class_singletons;
-				isolate->SetData(V8PP_ISOLATE_DATA_SLOT, instances);
+				info = new classes;
+				isolate->SetData(V8PP_ISOLATE_DATA_SLOT, info);
 			}
-			return instances;
-		case remove:
-			if (instances)
+			return info;
+		case operation::remove:
+			if (info)
 			{
-				delete instances;
+				delete info;
 				isolate->SetData(V8PP_ISOLATE_DATA_SLOT, nullptr);
 			}
 		default:
 			return nullptr;
 		}
 #else
-		static std::unordered_map<v8::Isolate*, class_singletons> instances;
+		static std::unordered_map<v8::Isolate*, classes> instances;
 		switch (op)
 		{
-		case get:
+		case operation::get:
 			{
 				auto it = instances.find(isolate);
 				return it != instances.end()? &it->second : nullptr;
 			}
-		case add:
+		case operation::add:
 			return &instances[isolate];
-		case remove:
+		case operation::remove:
 			instances.erase(isolate);
 		default:
 			return nullptr;
@@ -502,9 +491,15 @@ template<typename T>
 class class_
 {
 	detail::class_info& class_info_;
+
+	static void dtor(v8::Isolate* isolate, void* obj)
+	{
+		factory<T>::destroy(isolate, static_cast<T*>(obj));
+	};
+
 public:
 	explicit class_(v8::Isolate* isolate)
-		: class_info_(detail::class_singletons::add_class<T>(isolate))
+		: class_info_(detail::classes::add(isolate, detail::type_id<T>(), dtor))
 	{
 	}
 
@@ -638,14 +633,13 @@ public:
 	/// It will not take ownership of the C++ pointer.
 	static v8::Handle<v8::Object> reference_external(v8::Isolate* isolate, T* ext)
 	{
-		return detail::class_singletons::find_class<T>(isolate)
-			.wrap_external_object(ext);
+		return detail::classes::find(isolate, detail::type_id<T>()).wrap_external_object(ext);
 	}
 
 	/// Remove external reference from JavaScript
 	static void unreference_external(v8::Isolate* isolate, T* ext)
 	{
-		return detail::class_singletons::find_class<T>(isolate)
+		return detail::classes::find(isolate, detail::type_id<T>())
 			.remove_object(ext);
 	}
 
@@ -653,14 +647,14 @@ public:
 	/// when JavaScript object is deleted. You must use "new" to allocate ext.
 	static v8::Handle<v8::Object> import_external(v8::Isolate* isolate, T* ext)
 	{
-		return detail::class_singletons::find_class<T>(isolate)
+		return detail::classes::find(isolate, detail::type_id<T>())
 			.wrap_object(ext);
 	}
 
 	/// Get wrapped object from V8 value, may return nullptr on fail.
 	static T* unwrap_object(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
-		return static_cast<T*>(detail::class_singletons::find_class<T>(isolate)
+		return static_cast<T*>(detail::classes::find(isolate, detail::type_id<T>())
 			.unwrap_object(value));
 	}
 
@@ -675,26 +669,25 @@ public:
 	/// Find V8 object handle for a wrapped C++ object, may return empty handle on fail.
 	static v8::Handle<v8::Object> find_object(v8::Isolate* isolate, T const* obj)
 	{
-		return detail::class_singletons::find_class<T>(isolate)
-			.find_object(obj);
+		return detail::classes::find(isolate, detail::type_id<T>()).find_object(obj);
 	}
 
 	/// Destroy wrapped C++ object
 	static void destroy_object(v8::Isolate* isolate, T* obj)
 	{
-		detail::class_singletons::find_class<T>(isolate).destroy_object(obj);
+		detail::classes::find(isolate, detail::type_id<T>()).destroy_object(obj);
 	}
 
 	/// Destroy all wrapped C++ objects of this class
 	static void destroy_objects(v8::Isolate* isolate)
 	{
-		detail::class_singletons::find_class<T>(isolate).destroy_objects();
+		detail::classes::find(isolate, detail::type_id<T>()).destroy_objects();
 	}
 
 	/// Destroy all wrapped C++ objects and this binding class_
 	static void destroy(v8::Isolate* isolate)
 	{
-		detail::class_singletons::remove_class<T>(isolate);
+		detail::classes::remove(isolate, detail::type_id<T>());
 	}
 
 private:
@@ -738,7 +731,7 @@ private:
 
 inline void cleanup(v8::Isolate* isolate)
 {
-	detail::class_singletons::remove_all(isolate);
+	detail::classes::remove_all(isolate);
 }
 
 } // namespace v8pp
