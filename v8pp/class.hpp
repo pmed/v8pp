@@ -55,12 +55,37 @@ public:
 		: isolate_(isolate)
 		, type_(type)
 	{
+		v8::HandleScope scope(isolate_);
+
+		v8::Local<v8::FunctionTemplate> func = v8::FunctionTemplate::New(isolate_);
+		v8::Local<v8::FunctionTemplate> js_func = v8::FunctionTemplate::New(isolate_);
+
+		func_.Reset(isolate_, func);
+		js_func_.Reset(isolate_, js_func);
+
+		// each JavaScript instance has 2 internal fields:
+		//  0 - pointer to a wrapped C++ object
+		//  1 - pointer to the class_singleton
+		func->InstanceTemplate()->SetInternalFieldCount(2);
+		func->Inherit(js_func);
 	}
+
 	class_info(class_info const&) = delete;
 	class_info& operator=(class_info const&) = delete;
 	virtual ~class_info() = default;
 
 	v8::Isolate* isolate() const { return isolate_; }
+
+	v8::Local<v8::FunctionTemplate> class_function_template()
+	{
+		return to_local(isolate_, func_);
+	}
+
+	v8::Local<v8::FunctionTemplate> js_function_template()
+	{
+		return to_local(isolate_, js_func_);
+	}
+
 
 	type_info const& type() const { return type_; }
 
@@ -203,7 +228,10 @@ private:
 	std::vector<base_class_info> bases_;
 	std::vector<class_info*> derivatives_;
 
-	std::unordered_map<void*, persistent<v8::Object>> objects_;
+	std::unordered_map<void*, v8::UniquePersistent<v8::Object>> objects_;
+
+	v8::UniquePersistent<v8::FunctionTemplate> func_;
+	v8::UniquePersistent<v8::FunctionTemplate> js_func_;
 };
 
 template<typename T>
@@ -336,11 +364,7 @@ public:
 	class_singleton(v8::Isolate* isolate, type_info const& type)
 		: class_info(isolate, type)
 	{
-		v8::HandleScope scope(isolate);
-
-		v8::Local<v8::FunctionTemplate> func = v8::FunctionTemplate::New(isolate);
-		v8::Local<v8::FunctionTemplate> js_func = v8::FunctionTemplate::New(isolate,
-			[](v8::FunctionCallbackInfo<v8::Value> const& args)
+		js_function_template()->SetCallHandler([](v8::FunctionCallbackInfo<v8::Value> const& args)
 		{
 			v8::Isolate* isolate = args.GetIsolate();
 			try
@@ -354,14 +378,6 @@ public:
 			}
 		});
 
-		func_.Reset(isolate, func);
-		js_func_.Reset(isolate, js_func);
-
-		// each JavaScript instance has 2 internal fields:
-		//  0 - pointer to a wrapped C++ object
-		//  1 - pointer to the class_singleton
-		func->InstanceTemplate()->SetInternalFieldCount(2);
-
 		// no class constructor available by default
 		ctor_ = nullptr;
 		// use destructor from factory<T>::destroy()
@@ -369,8 +385,6 @@ public:
 		{
 			factory<T>::destroy(isolate, static_cast<T*>(obj));
 		};
-
-		func->Inherit(js_func);
 	}
 
 	class_singleton(class_singleton const&) = delete;
@@ -434,16 +448,6 @@ public:
 		class_info::add_object(object, std::move(pobj));
 
 		return scope.Escape(obj);
-	}
-
-	v8::Local<v8::FunctionTemplate> class_function_template()
-	{
-		return to_local(isolate(), func_);
-	}
-
-	v8::Local<v8::FunctionTemplate> js_function_template()
-	{
-		return to_local(isolate(), js_func_);
 	}
 
 	template<typename ...Args>
@@ -527,9 +531,6 @@ public:
 private:
 	T* (*ctor_)(v8::FunctionCallbackInfo<v8::Value> const& args);
 	void (*dtor_)(v8::Isolate*, void*);
-
-	v8::UniquePersistent<v8::FunctionTemplate> func_;
-	v8::UniquePersistent<v8::FunctionTemplate> js_func_;
 };
 
 } // namespace detail
