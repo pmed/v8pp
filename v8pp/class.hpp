@@ -51,10 +51,16 @@ inline std::string pointer_str(void const* ptr)
 class class_info
 {
 public:
-	explicit class_info(type_info const& type) : type_(type) {}
+	class_info(v8::Isolate* isolate, type_info const& type)
+		: isolate_(isolate)
+		, type_(type)
+	{
+	}
 	class_info(class_info const&) = delete;
 	class_info& operator=(class_info const&) = delete;
 	virtual ~class_info() = default;
+
+	v8::Isolate* isolate() const { return isolate_; }
 
 	type_info const& type() const { return type_; }
 
@@ -62,6 +68,13 @@ public:
 
 	void add_base(class_info* info, cast_function cast)
 	{
+		if (isolate_ != info->isolate_)
+		{
+			//assert(false && "different isolates");
+			throw std::runtime_error("different isolates: "
+				+ class_name(type_) + " in isolate " + pointer_str(isolate_)
+				+ class_name(info->type_) + " in isolate " + pointer_str(info->isolate_));
+		}
 		auto it = std::find_if(bases_.begin(), bases_.end(),
 			[info](base_class_info const& base) { return base.info == info; });
 		if (it != bases_.end())
@@ -117,7 +130,7 @@ public:
 		objects_.emplace(object, std::move(handle));
 	}
 
-	void remove_object(v8::Isolate* isolate, void* object,
+	void remove_object(void* object,
 		void (*destroy)(v8::Isolate* isolate, void* obj) = nullptr)
 	{
 		auto it = objects_.find(object);
@@ -128,46 +141,45 @@ public:
 			{
 				// remove pointer to wrapped  C++ object from V8 Object
 				// internal field to disable unwrapping for this V8 Object
-				assert(to_local(isolate, it->second)
+				assert(to_local(isolate_, it->second)
 					->GetAlignedPointerFromInternalField(0) == object);
-				to_local(isolate, it->second)
+				to_local(isolate_, it->second)
 					->SetAlignedPointerInInternalField(0, nullptr);
 			}
 			if (destroy && !it->second.IsIndependent())
 			{
-				destroy(isolate, object);
+				destroy(isolate_, object);
 			}
 			it->second.Reset();
 			objects_.erase(it);
 		}
 	}
 
-	void remove_objects(v8::Isolate* isolate,
-		void (*destroy)(v8::Isolate* isolate, void* obj))
+	void remove_objects(void (*destroy)(v8::Isolate* isolate, void* obj))
 	{
 		for (auto& object : objects_)
 		{
 			if (destroy && !object.second.IsIndependent())
 			{
-				destroy(isolate, object.first);
+				destroy(isolate_, object.first);
 			}
 			object.second.Reset();
 		}
 		objects_.clear();
 	}
 
-	v8::Local<v8::Object> find_object(v8::Isolate* isolate, void const* object) const
+	v8::Local<v8::Object> find_object(void const* object) const
 	{
 		auto it = objects_.find(const_cast<void*>(object));
 		if (it != objects_.end())
 		{
-			return to_local(isolate, it->second);
+			return to_local(isolate_, it->second);
 		}
 
 		v8::Local<v8::Object> result;
 		for (class_info const* info : derivatives_)
 		{
-			result = info->find_object(isolate, object);
+			result = info->find_object(object);
 			if (!result.IsEmpty()) break;
 		}
 		return result;
@@ -186,6 +198,7 @@ private:
 		}
 	};
 
+	v8::Isolate* const isolate_;
 	type_info const type_;
 	std::vector<base_class_info> bases_;
 	std::vector<class_info*> derivatives_;
@@ -321,11 +334,12 @@ class class_singleton : public class_info
 {
 public:
 	class_singleton(v8::Isolate* isolate, type_info const& type)
-		: class_info(type)
-		, isolate_(isolate)
+		: class_info(isolate, type)
 	{
-		v8::Local<v8::FunctionTemplate> func = v8::FunctionTemplate::New(isolate_);
-		v8::Local<v8::FunctionTemplate> js_func = v8::FunctionTemplate::New(isolate_,
+		v8::HandleScope scope(isolate);
+
+		v8::Local<v8::FunctionTemplate> func = v8::FunctionTemplate::New(isolate);
+		v8::Local<v8::FunctionTemplate> js_func = v8::FunctionTemplate::New(isolate,
 			[](v8::FunctionCallbackInfo<v8::Value> const& args)
 		{
 			v8::Isolate* isolate = args.GetIsolate();
@@ -340,8 +354,8 @@ public:
 			}
 		});
 
-		func_.Reset(isolate_, func);
-		js_func_.Reset(isolate_, js_func);
+		func_.Reset(isolate, func);
+		js_func_.Reset(isolate, js_func);
 
 		// each JavaScript instance has 2 internal fields:
 		//  0 - pointer to a wrapped C++ object
@@ -369,14 +383,14 @@ public:
 
 	v8::Handle<v8::Object> wrap(T* object, bool destroy_after)
 	{
-		v8::EscapableHandleScope scope(isolate_);
+		v8::EscapableHandleScope scope(isolate());
 
 		v8::Local<v8::Object> obj = class_function_template()
 			->GetFunction()->NewInstance();
 		obj->SetAlignedPointerInInternalField(0, object);
 		obj->SetAlignedPointerInInternalField(1, this);
 
-		persistent<v8::Object> pobj(isolate_, obj);
+		persistent<v8::Object> pobj(isolate(), obj);
 		if (destroy_after)
 		{
 			pobj.SetWeak(object,
@@ -408,7 +422,7 @@ public:
 				v8::Isolate* isolate = data.GetIsolate();
 				T* object = data.GetParameter();
 				class_singletons::find_class<T>(isolate)
-					.remove_object(isolate, object);
+					.remove_object(object);
 			}
 #ifdef V8_USE_WEAK_CB_INFO
 				, v8::WeakCallbackType::kParameter
@@ -422,16 +436,14 @@ public:
 		return scope.Escape(obj);
 	}
 
-	v8::Isolate* isolate() { return isolate_; }
-
 	v8::Local<v8::FunctionTemplate> class_function_template()
 	{
-		return to_local(isolate_, func_);
+		return to_local(isolate(), func_);
 	}
 
 	v8::Local<v8::FunctionTemplate> js_function_template()
 	{
-		return to_local(isolate_, js_func_);
+		return to_local(isolate(), js_func_);
 	}
 
 	template<typename ...Args>
@@ -447,7 +459,7 @@ public:
 	template<typename U>
 	void inherit()
 	{
-		class_singleton<U>* base = &class_singletons::find_class<U>(isolate_);
+		class_singleton<U>* base = &class_singletons::find_class<U>(isolate());
 		add_base(base, [](void* ptr) -> void*
 			{
 				return static_cast<U*>(static_cast<T*>(ptr));
@@ -477,7 +489,7 @@ public:
 
 	T* unwrap_object(v8::Local<v8::Value> value)
 	{
-		v8::HandleScope scope(isolate_);
+		v8::HandleScope scope(isolate());
 
 		while (value->IsObject())
 		{
@@ -499,21 +511,20 @@ public:
 
 	v8::Handle<v8::Object> find_object(T const* obj)
 	{
-		return class_info::find_object(isolate_, obj);
+		return class_info::find_object(obj);
 	}
 
 	void destroy_objects()
 	{
-		class_info::remove_objects(isolate_, dtor_);
+		class_info::remove_objects(dtor_);
 	}
 
 	void destroy_object(T* obj)
 	{
-		class_info::remove_object(isolate_, obj, dtor_);
+		class_info::remove_object(obj, dtor_);
 	}
 
 private:
-	v8::Isolate* isolate_;
 	T* (*ctor_)(v8::FunctionCallbackInfo<v8::Value> const& args);
 	void (*dtor_)(v8::Isolate*, void*);
 
@@ -673,7 +684,7 @@ public:
 	static void unreference_external(v8::Isolate* isolate, T* ext)
 	{
 		return detail::class_singletons::find_class<T>(isolate)
-			.remove_object(isolate, ext);
+			.remove_object(ext);
 	}
 
 	/// As reference_external but delete memory for C++ object

@@ -108,6 +108,15 @@ void test_class()
 		v8pp::class_<Z>::find_object(isolate, nullptr);
 	});
 
+	{
+		v8pp::context context2;
+		v8pp::class_<X> X_class2(context2.isolate());
+		check_ex<std::runtime_error>("X in another isolate", [isolate, &Y_class]()
+		{
+			Y_class.inherit<X>();
+		});
+	}
+
 	context
 		.set("X", X_class)
 		.set("Y", Y_class)
