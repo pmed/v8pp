@@ -21,7 +21,6 @@
 #include "v8pp/config.hpp"
 #include "v8pp/factory.hpp"
 #include "v8pp/function.hpp"
-#include "v8pp/persistent.hpp"
 #include "v8pp/property.hpp"
 
 namespace v8pp {
@@ -109,7 +108,7 @@ public:
 
 	~class_info()
 	{
-		destroy_objects();
+		remove_objects(true);
 	}
 
 	v8::Isolate* isolate() const { return isolate_; }
@@ -171,64 +170,28 @@ public:
 		return false;
 	}
 
-	void add_object(void* object, persistent<v8::Object>&& handle)
-	{
-		auto it = objects_.find(object);
-		if (it != objects_.end())
-		{
-			//assert(false && "duplicate object");
-			throw std::runtime_error(class_name(type())
-				+ " duplicate object " + pointer_str(object));
-		}
-		objects_.emplace(object, std::move(handle));
-	}
-
-	void remove_object(void* object,
-		void (*destroy)(v8::Isolate* isolate, void* obj) = nullptr)
+	void remove_object(void* object, bool call_dtor)
 	{
 		auto it = objects_.find(object);
 		assert(objects_.find(object) != objects_.end() && "no object");
 		if (it != objects_.end())
 		{
-			if (!it->second.IsNearDeath())
-			{
-				// remove pointer to wrapped  C++ object from V8 Object
-				// internal field to disable unwrapping for this V8 Object
-				assert(to_local(isolate_, it->second)
-					->GetAlignedPointerFromInternalField(0) == object);
-				to_local(isolate_, it->second)
-					->SetAlignedPointerInInternalField(0, nullptr);
-			}
-			if (destroy && !it->second.IsIndependent())
-			{
-				destroy(isolate_, object);
-			}
+			v8::HandleScope scope(isolate_);
+			reset_object(*it, call_dtor);
 			it->second.Reset();
 			objects_.erase(it);
 		}
 	}
 
-	void remove_objects(void (*destroy)(v8::Isolate* isolate, void* obj))
+	void remove_objects(bool call_dtor)
 	{
+		v8::HandleScope scope(isolate_);
 		for (auto& object : objects_)
 		{
-			if (destroy && !object.second.IsIndependent())
-			{
-				destroy(isolate_, object.first);
-			}
+			reset_object(object, call_dtor);
 			object.second.Reset();
 		}
 		objects_.clear();
-	}
-
-	void destroy_objects()
-	{
-		remove_objects(dtor_);
-	}
-
-	void destroy_object(void* obj)
-	{
-		remove_object(obj, dtor_);
 	}
 
 	v8::Local<v8::Object> find_object(void const* object) const
@@ -248,37 +211,38 @@ public:
 		return result;
 	}
 
-	v8::Handle<v8::Object> wrap(void* object, bool destroy_after)
+	v8::Handle<v8::Object> wrap(void* object, bool call_dtor)
 	{
+		auto it = objects_.find(object);
+		if (it != objects_.end())
+		{
+			//assert(false && "duplicate object");
+			throw std::runtime_error(class_name(type_)
+				+ " duplicate object " + pointer_str(object));
+		}
+
 		v8::EscapableHandleScope scope(isolate_);
 
 		v8::Local<v8::Object> obj = class_function_template()
 			->GetFunction()->NewInstance();
-		obj->SetAlignedPointerInInternalField(0, object);
-		obj->SetAlignedPointerInInternalField(1, this);
+		void* fields[] = { object, this };
+		int indices[] = { 0, 1 };
+		obj->SetAlignedPointerInInternalFields(2, indices, fields);
 
-		persistent<v8::Object> pobj(isolate(), obj);
-		if (destroy_after)
+		v8::UniquePersistent<v8::Object> pobj(isolate_, obj);
+		pobj.SetWeak(call_dtor? this : nullptr,
+			[](v8::WeakCallbackInfo<class_info> const& data)
 		{
-			pobj.SetWeak(this,
-				[](v8::WeakCallbackInfo<class_info> const& data)
-			{
-				class_info* this_ = data.GetParameter();
-				this_->destroy_object(data.GetInternalField(0));
-			}, v8::WeakCallbackType::kInternalFields);
-		}
-		else
+			bool const call_dtor = (data.GetParameter() != nullptr);
+			void* object = data.GetInternalField(0);
+			class_info* this_ = static_cast<class_info*>(data.GetInternalField(1));
+			this_->remove_object(object, call_dtor);
+		}, v8::WeakCallbackType::kInternalFields);
+		if (!call_dtor)
 		{
 			pobj.MarkIndependent();
-			pobj.SetWeak(this,
-				[](v8::WeakCallbackInfo<class_info> const& data)
-			{
-				class_info* this_ = data.GetParameter();
-				this_->remove_object(data.GetInternalField(0));
-			}, v8::WeakCallbackType::kInternalFields);
 		}
-
-		class_info::add_object(object, std::move(pobj));
+		objects_.emplace(object, std::move(pobj));
 
 		return scope.Escape(obj);
 	}
@@ -326,7 +290,7 @@ public:
 
 	void* unwrap_object(v8::Local<v8::Value> value)
 	{
-		v8::HandleScope scope(isolate());
+		v8::HandleScope scope(isolate_);
 
 		while (value->IsObject())
 		{
@@ -334,11 +298,14 @@ public:
 			if (obj->InternalFieldCount() == 2)
 			{
 				void* ptr = obj->GetAlignedPointerFromInternalField(0);
-				class_info* info = static_cast<class_info*>(
-					obj->GetAlignedPointerFromInternalField(1));
-				if (info && info->cast(ptr, type_))
+				if (ptr)
 				{
-					return ptr;
+					class_info* info = static_cast<class_info*>
+						(obj->GetAlignedPointerFromInternalField(1));
+					if (info && info->cast(ptr, type_))
+					{
+						return ptr;
+					}
 				}
 			}
 			value = obj->GetPrototype();
@@ -347,6 +314,26 @@ public:
 	}
 
 private:
+	void reset_object(std::pair<void* const, v8::UniquePersistent<v8::Object>>& object, bool call_dtor)
+	{
+		if (!object.second.IsNearDeath())
+		{
+			v8::Local<v8::Object> obj = to_local(isolate_, object.second);
+			assert(obj->InternalFieldCount() == 2);
+			assert(obj->GetAlignedPointerFromInternalField(0) == object.first);
+			assert(obj->GetAlignedPointerFromInternalField(1) == this);
+			// remove internal fields to disable unwrapping for this V8 Object
+			void* fields[] = { nullptr, nullptr };
+			int indices[] = { 0, 1 };
+			obj->SetAlignedPointerInInternalFields(2, indices, fields);
+		}
+		if (call_dtor && !object.second.IsIndependent())
+		{
+			dtor_(isolate_, object.first);
+		}
+		object.second.Reset();
+	}
+
 	struct base_class_info
 	{
 		class_info& info;
@@ -491,12 +478,10 @@ template<typename T>
 class class_
 {
 	detail::class_info& class_info_;
-
 	static void dtor(v8::Isolate* isolate, void* obj)
 	{
 		factory<T>::destroy(isolate, static_cast<T*>(obj));
-	};
-
+	}
 public:
 	explicit class_(v8::Isolate* isolate)
 		: class_info_(detail::classes::add(isolate, detail::type_id<T>(), dtor))
@@ -640,11 +625,12 @@ public:
 	static void unreference_external(v8::Isolate* isolate, T* ext)
 	{
 		return detail::classes::find(isolate, detail::type_id<T>())
-			.remove_object(ext);
+			.remove_object(ext, false);
 	}
 
 	/// As reference_external but delete memory for C++ object
-	/// when JavaScript object is deleted. You must use "new" to allocate ext.
+	/// when JavaScript object is deleted. You must use `factory<T>::create()`
+	/// to allocate `ext`
 	static v8::Handle<v8::Object> import_external(v8::Isolate* isolate, T* ext)
 	{
 		return detail::classes::find(isolate, detail::type_id<T>())
@@ -675,13 +661,13 @@ public:
 	/// Destroy wrapped C++ object
 	static void destroy_object(v8::Isolate* isolate, T* obj)
 	{
-		detail::classes::find(isolate, detail::type_id<T>()).destroy_object(obj);
+		detail::classes::find(isolate, detail::type_id<T>()).remove_object(obj, true);
 	}
 
 	/// Destroy all wrapped C++ objects of this class
 	static void destroy_objects(v8::Isolate* isolate)
 	{
-		detail::classes::find(isolate, detail::type_id<T>()).destroy_objects();
+		detail::classes::find(isolate, detail::type_id<T>()).remove_objects(true);
 	}
 
 	/// Destroy all wrapped C++ objects and this binding class_
