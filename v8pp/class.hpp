@@ -133,11 +133,11 @@ public:
 				to_local(isolate, it->second)
 					->SetAlignedPointerInInternalField(0, nullptr);
 			}
-			it->second.Reset();
-			if (destroy)
+			if (destroy && !it->second.IsIndependent())
 			{
 				destroy(isolate, object);
 			}
+			it->second.Reset();
 			objects_.erase(it);
 		}
 	}
@@ -147,11 +147,11 @@ public:
 	{
 		for (auto& object : objects_)
 		{
-			object.second.Reset();
-			if (destroy)
+			if (destroy && !object.second.IsIndependent())
 			{
 				destroy(isolate, object.first);
 			}
+			object.second.Reset();
 		}
 		objects_.clear();
 	}
@@ -397,6 +397,7 @@ public:
 		}
 		else
 		{
+			pobj.MarkIndependent();
 			pobj.SetWeak(object,
 #ifdef V8_USE_WEAK_CB_INFO
 				[](v8::WeakCallbackInfo<T> const& data)

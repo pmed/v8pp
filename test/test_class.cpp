@@ -173,5 +173,8 @@ void test_class()
 
 	check_eq("Y count after GC", Y::instance_count, 1); // y1
 
+	v8pp::class_<Y>::reference_external(context.isolate(), &y1);
+	check_eq("Y count before class_<Y>::destroy", Y::instance_count, 1); // y1
 	v8pp::class_<Y>::destroy(isolate);
+	check_eq("Y count after class_<Y>::destroy", Y::instance_count, 1); // y1
 }
