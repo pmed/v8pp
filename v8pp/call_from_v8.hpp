@@ -11,7 +11,9 @@
 
 #include <functional>
 
+#pragma warning(push, 0)
 #include <v8.h>
+#pragma warning(pop)
 
 #include "v8pp/convert.hpp"
 #include "v8pp/utility.hpp"
