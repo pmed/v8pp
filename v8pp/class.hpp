@@ -434,6 +434,12 @@ public:
 		return to_local(isolate_, js_func_);
 	}
 
+	void ctor(T* (*f)(v8::FunctionCallbackInfo<v8::Value> const& args))
+	{
+		ctor_ = f;
+		class_function_template()->Inherit(js_function_template());
+	}
+
 	template<typename ...Args>
 	void ctor()
 	{
@@ -536,6 +542,12 @@ public:
 	}
 
 	/// Set class constructor signature
+	class_& ctor(T* (*f)(v8::FunctionCallbackInfo<v8::Value> const& args))
+	{
+		class_singleton_.ctor(f);
+		return *this;
+	}
+	
 	template<typename ...Args>
 	class_& ctor()
 	{
