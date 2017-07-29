@@ -16,6 +16,7 @@
 #include <array>
 #include <vector>
 #include <map>
+#include <memory>
 #include <iterator>
 #include <stdexcept>
 #include <type_traits>
@@ -23,7 +24,7 @@
 
 namespace v8pp {
 
-template<typename T>
+template<typename T, bool use_shared_ptr>
 class class_;
 
 // Generic convertor
@@ -531,6 +532,9 @@ template<typename Key, typename Value, typename Less, typename Alloc>
 struct is_wrapped_class<std::map<Key, Value, Less, Alloc>> : std::false_type {};
 
 template<typename T>
+struct is_wrapped_class<std::shared_ptr<T>> : std::false_type {};
+
+template<typename T>
 struct convert<T*, typename std::enable_if<is_wrapped_class<T>::value>::type>
 {
 	using from_type = T*;
@@ -548,12 +552,12 @@ struct convert<T*, typename std::enable_if<is_wrapped_class<T>::value>::type>
 		{
 			return nullptr;
 		}
-		return class_<class_type>::unwrap_object(isolate, value);
+		return class_<class_type, false>::unwrap_object(isolate, value);
 	}
 
 	static to_type to_v8(v8::Isolate* isolate, T const* value)
 	{
-		return class_<class_type>::find_object(isolate, value);
+		return class_<class_type, false>::find_object(isolate, value);
 	}
 };
 
@@ -586,6 +590,34 @@ struct convert<T, typename std::enable_if<is_wrapped_class<T>::value>::type>
 		v8::Handle<v8::Object> result = convert<T*>::to_v8(isolate, &value);
 		if (!result.IsEmpty()) return result;
 		throw std::runtime_error("failed to wrap C++ object");
+	}
+};
+
+template<typename T>
+struct convert<std::shared_ptr<T>,
+	typename std::enable_if<is_wrapped_class<T>::value>::type>
+{
+	using from_type = std::shared_ptr<T>;
+	using to_type = v8::Handle<v8::Object>;
+	using class_type = typename std::remove_cv<T>::type;
+
+	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
+	{
+		return !value.IsEmpty() && value->IsObject();
+	}
+
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	{
+		if (!is_valid(isolate, value))
+		{
+			return nullptr;
+		}
+		return class_<class_type, true>::unwrap_object(isolate, value);
+	}
+
+	static to_type to_v8(v8::Isolate* isolate, std::shared_ptr<T> const& value)
+	{
+		return class_<class_type, true>::find_object(isolate, value);
 	}
 };
 

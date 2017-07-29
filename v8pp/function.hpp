@@ -117,7 +117,7 @@ get_external_data(v8::Handle<v8::Value> value)
 	return external_data<T>::get(value.As<v8::External>());
 }
 
-template<typename F>
+template<typename F, bool use_shared_ptr>
 typename std::enable_if<is_callable<F>::value,
 	typename function_traits<F>::return_type>::type
 invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
@@ -125,34 +125,38 @@ invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
 	return call_from_v8(std::forward<F>(get_external_data<F>(args.Data())), args);
 }
 
-template<typename F>
+template<typename F, bool use_shared_ptr>
 typename std::enable_if<std::is_member_function_pointer<F>::value,
 	typename function_traits<F>::return_type>::type
 invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	using arguments = typename function_traits<F>::arguments;
 	static_assert(std::tuple_size<arguments>::value > 0, "");
-	using class_type = typename std::tuple_element<0, arguments>::type;
+	using class_type = typename std::decay<
+		typename std::tuple_element<0, arguments>::type>::type;
 
-	return call_from_v8(from_v8<class_type&>(args.GetIsolate(), args.This()),
-		std::forward<F>(get_external_data<F>(args.Data())), args);
+	v8::Isolate* isolate = args.GetIsolate();
+	v8::Local<v8::Object> obj = args.This();
+	return call_from_v8(*class_<class_type, use_shared_ptr>::unwrap_object(isolate, obj),
+			std::forward<F>(get_external_data<F>(args.Data())), args);
 }
 
-template<typename F>
+template<typename F, bool use_shared_ptr>
 typename std::enable_if<is_void_return<F>::value>::type
 forward_ret(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	invoke<F>(args);
+	invoke<F, use_shared_ptr>(args);
 }
 
-template<typename F>
+template<typename F, bool use_shared_ptr>
 typename std::enable_if<!is_void_return<F>::value>::type
 forward_ret(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	args.GetReturnValue().Set(to_v8(args.GetIsolate(), invoke<F>(args)));
+	args.GetReturnValue().Set(to_v8(args.GetIsolate(),
+		invoke<F, use_shared_ptr>(args)));
 }
 
-template<typename F>
+template<typename F, bool use_shared_ptr>
 void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	static_assert(is_callable<F>::value || std::is_member_function_pointer<F>::value,
@@ -163,7 +167,7 @@ void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 
 	try
 	{
-		forward_ret<F>(args);
+		forward_ret<F, use_shared_ptr>(args);
 	}
 	catch (std::exception const& ex)
 	{
@@ -178,7 +182,8 @@ template<typename F>
 v8::Handle<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&& func)
 {
 	using F_type = typename std::decay<F>::type;
-	return v8::FunctionTemplate::New(isolate, &detail::forward_function<F_type>,
+	return v8::FunctionTemplate::New(isolate,
+		&detail::forward_function<F_type, false>,
 		detail::set_external_data(isolate, std::forward<F_type>(func)));
 }
 
@@ -191,7 +196,7 @@ v8::Handle<v8::Function> wrap_function(v8::Isolate* isolate,
 {
 	using F_type = typename std::decay<F>::type;
 	v8::Handle<v8::Function> fn = v8::Function::New(isolate,
-		&detail::forward_function<F_type>,
+		&detail::forward_function<F_type, false>,
 		detail::set_external_data(isolate, std::forward<F_type>(func)));
 	if (name && *name)
 	{

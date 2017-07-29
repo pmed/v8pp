@@ -94,10 +94,10 @@ struct rw_property_impl;
 template<typename Get, typename Set>
 struct r_property_impl<Get, Set, true>
 {
-	using Property = property_<Get, Set>;
+	using property_type = property_<Get, Set>;
 
-	using class_type = typename std::tuple_element<0,
-		typename function_traits<Get>::arguments> ::type;
+	using class_type = typename std::decay<typename std::tuple_element<0,
+		typename function_traits<Get>::arguments> ::type>::type;
 
 	static_assert(is_getter<Get>::value
 		|| is_direct_getter<Get>::value
@@ -109,9 +109,7 @@ struct r_property_impl<Get, Set, true>
 	static void get_impl(class_type& obj, Get get, v8::Local<v8::String>,
 		v8::PropertyCallbackInfo<v8::Value> const& info, getter_tag)
 	{
-		v8::Isolate* isolate = info.GetIsolate();
-
-		info.GetReturnValue().Set(to_v8(isolate, (obj.*get)()));
+		info.GetReturnValue().Set(to_v8(info.GetIsolate(), (obj.*get)()));
 	}
 
 	static void get_impl(class_type& obj, Get get,
@@ -129,43 +127,47 @@ struct r_property_impl<Get, Set, true>
 		info.GetReturnValue().Set(to_v8(isolate, (obj.*get)(isolate)));
 	}
 
+	template<bool use_shared_ptr>
 	static void get(v8::Local<v8::String> name,
 		v8::PropertyCallbackInfo<v8::Value> const& info)
+	try
 	{
-		v8::Isolate* isolate = info.GetIsolate();
-		try
+		auto obj = v8pp::class_<class_type, use_shared_ptr>::unwrap_object(
+			info.GetIsolate(), info.This());
+		assert(obj);
+
+		property_type const& prop = detail::get_external_data<property_type>(info.Data());
+		assert(prop.getter);
+
+		if (obj && prop.getter)
 		{
-			class_type& obj = v8pp::from_v8<class_type&>(isolate, info.This());
-			Property const& prop = detail::get_external_data<Property>(info.Data());
-			if (prop.get_)
-			{
-				get_impl(obj, prop.get_, name, info, select_getter_tag<Get>());
-			}
-		}
-		catch (std::exception const& ex)
-		{
-			info.GetReturnValue().Set(throw_ex(isolate, ex.what()));
+			get_impl(*obj, prop.getter, name, info, select_getter_tag<Get>());
 		}
 	}
-
-	static void set(v8::Local<v8::String>, v8::Local<v8::Value>,
-		v8::PropertyCallbackInfo<void> const&)
+	catch (std::exception const& ex)
 	{
-		assert(false && "never should be called");
+		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
+	}
+
+	template<bool use_shared_ptr>
+	static void set(v8::Local<v8::String> name, v8::Local<v8::Value>,
+		v8::PropertyCallbackInfo<void> const& info)
+	{
+		assert(false && "read-only property");
+		info.GetReturnValue().Set(throw_ex(info.GetIsolate(),
+			"read-only property " + from_v8<std::string>(info.GetIsolate(), name)));
 	}
 };
 
 template<typename Get, typename Set>
 struct r_property_impl<Get, Set, false>
 {
-	using Property = property_<Get, Set>;
+	using property_type = property_<Get, Set>;
 
 	static void get_impl(Get get, v8::Local<v8::String>,
 		v8::PropertyCallbackInfo<v8::Value> const& info, getter_tag)
 	{
-		v8::Isolate* isolate = info.GetIsolate();
-
-		info.GetReturnValue().Set(to_v8(isolate, get()));
+		info.GetReturnValue().Set(to_v8(info.GetIsolate(), get()));
 	}
 
 	static void get_impl(Get get, v8::Local<v8::String> name,
@@ -184,27 +186,27 @@ struct r_property_impl<Get, Set, false>
 
 	static void get(v8::Local<v8::String> name,
 		v8::PropertyCallbackInfo<v8::Value> const& info)
+	try
 	{
-		v8::Isolate* isolate = info.GetIsolate();
+		property_type const& prop = detail::get_external_data<property_type>(info.Data());
+		assert(prop.getter);
 
-		Property const& prop = detail::get_external_data<Property>(info.Data());
-		assert(prop.get_);
-
-		if (prop.get_)
-		try
+		if (prop.getter)
 		{
-			get_impl(prop.get_, name, info, select_getter_tag<Get>());
-		}
-		catch (std::exception const& ex)
-		{
-			info.GetReturnValue().Set(throw_ex(isolate, ex.what()));
+			get_impl(prop.getter, name, info, select_getter_tag<Get>());
 		}
 	}
-
-	static void set(v8::Local<v8::String>, v8::Local<v8::Value>,
-		v8::PropertyCallbackInfo<void> const&)
+	catch (std::exception const& ex)
 	{
-		assert(false && "never should be called");
+		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
+	}
+
+	static void set(v8::Local<v8::String> name, v8::Local<v8::Value>,
+		v8::PropertyCallbackInfo<void> const& info)
+	{
+		assert(false && "read-only property");
+		info.GetReturnValue().Set(throw_ex(info.GetIsolate(),
+			"read-only property " + from_v8<std::string>(info.GetIsolate(), name)));
 	}
 };
 
@@ -212,10 +214,10 @@ template<typename Get, typename Set>
 struct rw_property_impl<Get, Set, true>
 	: r_property_impl<Get, Set, std::is_member_function_pointer<Get>::value>
 {
-	using Property = property_<Get, Set>;
+	using property_type = property_<Get, Set>;
 
-	using class_type = typename std::tuple_element<0,
-		typename function_traits<Set>::arguments>::type;
+	using class_type = typename std::decay<typename std::tuple_element<0,
+		typename function_traits<Set>::arguments>::type>::type;
 
 	static void set_impl(class_type& obj, Set set, v8::Local<v8::String>,
 		v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
@@ -223,9 +225,7 @@ struct rw_property_impl<Get, Set, true>
 	{
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<0>;
 
-		v8::Isolate* isolate = info.GetIsolate();
-
-		(obj.*set)(v8pp::from_v8<value_type>(isolate, value));
+		(obj.*set)(v8pp::from_v8<value_type>(info.GetIsolate(), value));
 	}
 
 	static void set_impl(class_type& obj, Set set, v8::Local<v8::String> name,
@@ -242,27 +242,30 @@ struct rw_property_impl<Get, Set, true>
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<1>;
 
 		v8::Isolate* isolate = info.GetIsolate();
+
 		(obj.*set)(isolate, v8pp::from_v8<value_type>(isolate, value));
 	}
 
+	template<bool use_shared_ptr>
 	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value,
 		v8::PropertyCallbackInfo<void> const& info)
+	try
 	{
-		v8::Isolate* isolate = info.GetIsolate();
-		try
+		auto obj = v8pp::class_<class_type, use_shared_ptr>::unwrap_object(
+			info.GetIsolate(), info.This());
+		assert(obj);
+
+		property_type const& prop = detail::get_external_data<property_type>(info.Data());
+		assert(prop.setter);
+
+		if (obj && prop.setter)
 		{
-			class_type& obj = v8pp::from_v8<class_type&>(isolate, info.This());
-			Property const& prop = detail::get_external_data<Property>(info.Data());
-			assert(prop.set_);
-			if (prop.set_)
-			{
-				set_impl(obj, prop.set_, name, value, info, select_setter_tag<Set>());
-			}
+			set_impl(*obj, prop.setter, name, value, info, select_setter_tag<Set>());
 		}
-		catch (std::exception const& ex)
-		{
-			info.GetReturnValue().Set(throw_ex(isolate, ex.what()));
-		}
+	}
+	catch (std::exception const& ex)
+	{
+		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
 	}
 };
 
@@ -270,7 +273,7 @@ template<typename Get, typename Set>
 struct rw_property_impl<Get, Set, false>
 	: r_property_impl<Get, Set, std::is_member_function_pointer<Get>::value>
 {
-	using Property = property_<Get, Set>;
+	using property_type = property_<Get, Set>;
 
 	static void set_impl(Set set, v8::Local<v8::String>,
 		v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
@@ -278,9 +281,7 @@ struct rw_property_impl<Get, Set, false>
 	{
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<0>;
 
-		v8::Isolate* isolate = info.GetIsolate();
-
-		set(v8pp::from_v8<value_type>(isolate, value));
+		set(v8pp::from_v8<value_type>(info.GetIsolate(), value));
 	}
 
 	static void set_impl(Set set, v8::Local<v8::String> name,
@@ -298,26 +299,24 @@ struct rw_property_impl<Get, Set, false>
 
 		v8::Isolate* isolate = info.GetIsolate();
 
-		set(isolate, v8pp::from_v8<value_type>(isolate, value));
+		set(isolate, v8pp::from_v8<value_type>(info.GetIsolate(), value));
 	}
 
 	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value,
 		v8::PropertyCallbackInfo<void> const& info)
+	try
 	{
-		v8::Isolate* isolate = info.GetIsolate();
+		property_type const& prop = detail::get_external_data<property_type>(info.Data());
+		assert(prop.setter);
 
-		Property const& prop = detail::get_external_data<Property>(info.Data());
-		assert(prop.set_);
-
-		if (prop.set_)
-		try
+		if (prop.setter)
 		{
-			set_impl(prop.set_, name, value, info, select_setter_tag<Set>());
+			set_impl(prop.setter, name, value, info, select_setter_tag<Set>());
 		}
-		catch (std::exception const& ex)
-		{
-			info.GetReturnValue().Set(throw_ex(isolate, ex.what()));
-		}
+	}
+	catch (std::exception const& ex)
+	{
+		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
 	}
 };
 
@@ -342,8 +341,8 @@ struct property_
 		`void (v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info)` or \
 		`void (v8::Isolate*, T)`");
 
-	Get get_;
-	Set set_;
+	Get getter;
+	Set setter;
 
 	enum { is_readonly = false };
 };
@@ -360,7 +359,7 @@ struct property_<Get, Get>
 		"void (v8::Local<v8::String> name, v8::PropertyCallbackInfo<v8::Value> const& info)` or "
 		"`T (v8::Isolate*)`");
 
-	Get get_;
+	Get getter;
 
 	enum { is_readonly = true };
 };
@@ -370,8 +369,8 @@ template<typename Get, typename Set>
 property_<Get, Set> property(Get get, Set set)
 {
 	property_<Get, Set> prop;
-	prop.get_ = get;
-	prop.set_ = set;
+	prop.getter = get;
+	prop.setter = set;
 	return prop;
 }
 
@@ -380,7 +379,7 @@ template<typename Get>
 property_<Get, Get> property(Get get)
 {
 	property_<Get, Get> prop;
-	prop.get_ = get;
+	prop.getter = get;
 	return prop;
 }
 

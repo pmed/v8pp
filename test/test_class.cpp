@@ -32,9 +32,10 @@ struct X : Xbase
 {
 };
 
-static X* create_X(v8::FunctionCallbackInfo<v8::Value> const& args)
+template<bool use_shared_ptr, typename X_ptr = typename v8pp::class_<X, use_shared_ptr>::object_pointer_type>
+static X_ptr create_X(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	return new X;
+	return X_ptr(new X);
 }
 
 struct Y : X
@@ -56,18 +57,31 @@ struct factory<Y>
 	static Y* create(v8::Isolate*, int x) { return new Y(x); }
 	static void destroy(v8::Isolate*, Y* object) { delete object; }
 };
+template<>
+struct factory<Y, true>
+{
+	static std::shared_ptr<Y> create(v8::Isolate*, int x)
+	{
+		return std::make_shared<Y>(x);
+	}
+	static void destroy(v8::Isolate*, std::shared_ptr<Y> const&) {}
+};
 } // v8pp
 
+template<bool use_shared_ptr>
 static int extern_fun(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	int x = args[0]->Int32Value();
-	X const* self = v8pp::class_<X>::unwrap_object(args.GetIsolate(), args.This());
+	auto self = v8pp::class_<X, use_shared_ptr>::unwrap_object(args.GetIsolate(), args.This());
 	if (self) x += self->var;
 	return x;
 }
 
-void test_class()
+template<bool use_shared_ptr>
+void test_class_()
 {
+	Y::instance_count = 0;
+
 	v8pp::context context;
 	v8::Isolate* isolate = context.isolate();
 	v8::HandleScope scope(isolate);
@@ -75,9 +89,9 @@ void test_class()
 	using x_prop_get = int (X::*)() const;
 	using x_prop_set = void (X::*)(int);
 
-	v8pp::class_<X> X_class(isolate);
+	v8pp::class_<X, use_shared_ptr> X_class(isolate);
 	X_class
-		.ctor(&create_X)
+		.ctor(&create_X<use_shared_ptr>)
 		.set_const("konst", 99)
 		.set("var", &X::var)
 		.set("rprop", v8pp::property(&X::get))
@@ -91,26 +105,26 @@ void test_class()
 		.set("fun4", &X::fun4)
 		.set("static_fun", &X::static_fun)
 		.set("static_lambda", [](int x) { return x + 3; })
-		.set("extern_fun", extern_fun)
+		.set("extern_fun", extern_fun<use_shared_ptr>)
 		;
 
-	v8pp::class_<Y> Y_class(context.isolate());
+	v8pp::class_<Y, use_shared_ptr> Y_class(isolate);
 	Y_class
-		.inherit<X>()
-		.ctor<int>()
+		.template inherit<X>()
+		.template ctor<int>()
 		;
 
 	check_ex<std::runtime_error>("already wrapped class X", [isolate]()
 	{
-		v8pp::class_<X> X_class(isolate);
+		v8pp::class_<X, use_shared_ptr> X_class(isolate);
 	});
 	check_ex<std::runtime_error>("already inherited class X", [isolate, &Y_class]()
 	{
-		Y_class.inherit<X>();
+		Y_class.template inherit<X>();
 	});
 	check_ex<std::runtime_error>("unwrapped class Z", [isolate]()
 	{
-		v8pp::class_<Z>::find_object(isolate, nullptr);
+		v8pp::class_<Z, use_shared_ptr>::find_object(isolate, nullptr);
 	});
 
 	context
@@ -118,7 +132,7 @@ void test_class()
 		.set("Y", Y_class)
 		;
 
-	check_eq("X object", run_script<int>(context, "x = new X(); x.konst + x.var"), 100);
+	check_eq("X object", run_script<int>(context, "x = new X(); x.var += x.konst"), 100);
 	check_eq("X::rprop", run_script<int>(context, "x = new X(); x.rprop"), 1);
 	check_eq("X::wprop", run_script<int>(context, "x = new X(); ++x.wprop"), 2);
 	check_eq("X::wprop2", run_script<int>(context, "x = new X(); ++x.wprop2"), 2);
@@ -133,19 +147,23 @@ void test_class()
 
 	check_eq("Y object", run_script<int>(context, "y = new Y(-100); y.konst + y.var"), -1);
 
-	Y y1(-1);
-	v8::Handle<v8::Object> y1_obj = v8pp::class_<Y>::reference_external(context.isolate(), &y1);
-	check("y1", v8pp::from_v8<Y*>(isolate, y1_obj) == &y1);
+	auto y1 = v8pp::factory<Y, use_shared_ptr>::create(isolate, -1);
+
+	v8::Handle<v8::Object> y1_obj =
+		v8pp::class_<Y, use_shared_ptr>::reference_external(context.isolate(), y1);
+	check("y1", v8pp::from_v8<decltype(y1)>(isolate, y1_obj) == y1);
 	check("y1_obj", v8pp::to_v8(isolate, y1) == y1_obj);
 
-	Y* y2 = new Y(-2);
-	v8::Handle<v8::Object> y2_obj = v8pp::class_<Y>::import_external(context.isolate(), y2);
-	check("y2", v8pp::from_v8<Y*>(isolate, y2_obj) == y2);
+	auto y2 = v8pp::factory<Y, use_shared_ptr>::create(isolate, -2);
+	v8::Handle<v8::Object> y2_obj =
+		v8pp::class_<Y, use_shared_ptr>::import_external(context.isolate(), y2);
+	check("y2", v8pp::from_v8<decltype(y2)>(isolate, y2_obj) == y2);
 	check("y2_obj", v8pp::to_v8(isolate, y2) == y2_obj);
 
-	v8::Handle<v8::Object> y3_obj = v8pp::class_<Y>::create_object(context.isolate(), -3);
-	Y* y3 = v8pp::class_<Y>::unwrap_object(isolate, y3_obj);
-	check("y3", v8pp::from_v8<Y*>(isolate, y3_obj) == y3);
+	v8::Handle<v8::Object> y3_obj =
+		v8pp::class_<Y, use_shared_ptr>::create_object(context.isolate(), -3);
+	auto y3 = v8pp::class_<Y, use_shared_ptr>::unwrap_object(isolate, y3_obj);
+	check("y3", v8pp::from_v8<decltype(y3)>(isolate, y3_obj) == y3);
 	check("y3_obj", v8pp::to_v8(isolate, y3) == y3_obj);
 	check_eq("y3.var", y3->var, -3);
 
@@ -153,33 +171,44 @@ void test_class()
 	check_eq("Y count", Y::instance_count, 10 + 4); // 10 + y + y1 + y2 + y3
 	run_script<int>(context, "y = null; 0");
 
-	v8pp::class_<Y>::unreference_external(isolate, &y1);
-	check("unref y1", v8pp::from_v8<Y*>(isolate, y1_obj) == nullptr);
-	check("unref y1_obj", v8pp::to_v8(isolate, &y1).IsEmpty());
+	v8pp::class_<Y, use_shared_ptr>::unreference_external(isolate, y1);
+	check("unref y1", !v8pp::from_v8<decltype(y1)>(isolate, y1_obj));
+	check("unref y1_obj", v8pp::to_v8(isolate, y1).IsEmpty());
 	y1_obj.Clear();
 	check_ex<std::runtime_error>("y1 unreferenced", [isolate, &y1]()
 	{
 		v8pp::to_v8(isolate, y1);
 	});
 
-	v8pp::class_<Y>::destroy_object(isolate, y2);
-	check("unref y2", v8pp::from_v8<Y*>(isolate, y2_obj) == nullptr);
+	v8pp::class_<Y, use_shared_ptr>::destroy_object(isolate, y2);
+	check("unref y2", !v8pp::from_v8<decltype(y2)>(isolate, y2_obj));
 	check("unref y2_obj", v8pp::to_v8(isolate, y2).IsEmpty());
 	y2_obj.Clear();
 
-	v8pp::class_<Y>::destroy_object(isolate, y3);
-	check("unref y3", v8pp::from_v8<Y*>(isolate, y3_obj) == nullptr);
+	v8pp::class_<Y, use_shared_ptr>::destroy_object(isolate, y3);
+	check("unref y3", !v8pp::from_v8<decltype(y3)>(isolate, y3_obj));
 	check("unref y3_obj", v8pp::to_v8(isolate, y3).IsEmpty());
 	y3_obj.Clear();
 
 	std::string const v8_flags = "--expose_gc";
 	v8::V8::SetFlagsFromString(v8_flags.data(), (int)v8_flags.length());
-	context.isolate()->RequestGarbageCollectionForTesting(v8::Isolate::GarbageCollectionType::kFullGarbageCollection);
+	context.isolate()->RequestGarbageCollectionForTesting(
+		v8::Isolate::GarbageCollectionType::kFullGarbageCollection);
 
-	check_eq("Y count after GC", Y::instance_count, 1); // y1
+	check_eq("Y count after GC", Y::instance_count,
+		1 + 2 * use_shared_ptr); // y1 + (y2 + y3 when use_shared_ptr)
 
-	v8pp::class_<Y>::reference_external(context.isolate(), &y1);
-	check_eq("Y count before class_<Y>::destroy", Y::instance_count, 1); // y1
-	v8pp::class_<Y>::destroy(isolate);
-	check_eq("Y count after class_<Y>::destroy", Y::instance_count, 1); // y1
+	v8pp::class_<Y, use_shared_ptr>::destroy(isolate);
+	check_eq("Y count after destroy", Y::instance_count,
+		1 + 2 * use_shared_ptr); // y1 + (y2 + y3 when use_shared_ptr)
+
+	v8pp::class_<Y, use_shared_ptr>::destroy(isolate);
+	check_eq("Y count after class_<Y>::destroy", Y::instance_count,
+		1 + 2 * use_shared_ptr); // y1 + (y2 + y3 when use_shared_ptr)
+}
+
+void test_class()
+{
+	test_class_<false>();
+	test_class_<true>();
 }
