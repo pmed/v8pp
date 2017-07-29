@@ -12,9 +12,7 @@
 #include <string>
 #include <vector>
 
-#pragma warning(push, 0)
 #include <v8.h>
-#pragma warning(pop)
 
 #ifdef WIN32
 #include <windows.h>

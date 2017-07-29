@@ -12,9 +12,7 @@
 #include <string>
 #include <map>
 
-#pragma warning(push, 0)
 #include <v8.h>
-#pragma warning(pop)
 
 #include "v8pp/convert.hpp"
 

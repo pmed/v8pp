@@ -225,9 +225,8 @@ public:
 
 		v8::Local<v8::Object> obj = class_function_template()
 			->GetFunction()->NewInstance();
-		void* fields[] = { object, this };
-		int indices[] = { 0, 1 };
-		obj->SetAlignedPointerInInternalFields(2, indices, fields);
+		obj->SetAlignedPointerInInternalField(0, object);
+		obj->SetAlignedPointerInInternalField(1, this);
 
 		v8::UniquePersistent<v8::Object> pobj(isolate_, obj);
 		pobj.SetWeak(call_dtor? this : nullptr,
@@ -323,9 +322,8 @@ private:
 			assert(obj->GetAlignedPointerFromInternalField(0) == object.first);
 			assert(obj->GetAlignedPointerFromInternalField(1) == this);
 			// remove internal fields to disable unwrapping for this V8 Object
-			void* fields[] = { nullptr, nullptr };
-			int indices[] = { 0, 1 };
-			obj->SetAlignedPointerInInternalFields(2, indices, fields);
+			obj->SetAlignedPointerInInternalField(0, nullptr);
+			obj->SetAlignedPointerInInternalField(1, nullptr);
 		}
 		if (call_dtor && !object.second.IsIndependent())
 		{

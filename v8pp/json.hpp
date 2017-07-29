@@ -11,9 +11,7 @@
 
 #include <string>
 
-#pragma warning(push, 0)
 #include <v8.h>
-#pragma warning(pop)
 
 namespace v8pp {
 

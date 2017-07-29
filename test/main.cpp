@@ -13,8 +13,8 @@
 #include <exception>
 #include <string>
 
-#include "v8.h"
-#include "libplatform/libplatform.h"
+#include <v8.h>
+#include <libplatform/libplatform.h>
 
 #include "v8pp/context.hpp"
 

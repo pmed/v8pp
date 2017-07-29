@@ -9,9 +9,7 @@
 #ifndef V8PP_CONVERT_HPP_INCLUDED
 #define V8PP_CONVERT_HPP_INCLUDED
 
-#pragma warning(push, 0)
 #include <v8.h>
-#pragma warning(pop)
 
 #include <climits>
 #include <string>

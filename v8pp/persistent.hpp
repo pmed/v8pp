@@ -9,9 +9,7 @@
 #ifndef V8PP_PERSISTENT_HPP_INCLUDED
 #define V8PP_PERSISTENT_HPP_INCLUDED
 
-#pragma warning(push, 0)
 #include <v8.h>
-#pragma warning(pop)
 
 #include "v8pp/convert.hpp"
 
