@@ -9,6 +9,7 @@
 #ifndef V8PP_UTILITY_HPP_INCLUDED
 #define V8PP_UTILITY_HPP_INCLUDED
 
+#include <functional>
 #include <tuple>
 #include <type_traits>
 

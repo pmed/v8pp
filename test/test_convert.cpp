@@ -18,7 +18,7 @@ void test_conv(v8::Isolate* isolate, T value)
 {
 	v8::Local<v8::Value> v8_value = v8pp::to_v8(isolate, value);
 	auto const value2 = v8pp::from_v8<T>(isolate, v8_value);
-	check_eq(typeid(T).name(), value2, value);
+	check_eq(v8pp::detail::type_id<T>().name(), value2, value);
 }
 
 template<typename Char, size_t N>
