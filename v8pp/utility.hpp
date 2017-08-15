@@ -213,31 +213,6 @@ template<size_t N>
 using make_index_sequence = make_integer_sequence<size_t, N>;
 #endif
 
-/////////////////////////////////////////////////////////////////////////////
-//
-// apply_tuple
-//
-template<typename F, typename Tuple, size_t... Indices>
-typename function_traits<F>::return_type apply_impl(
-	F&& f, Tuple&& t, index_sequence<Indices...>)
-{
-	return std::forward<F>(f)(std::get<Indices>(std::forward<Tuple>(t))...);
-}
-
-template<typename F, typename Tuple>
-typename function_traits<F>::return_type apply_tuple(F&& f, Tuple&& t)
-{
-	using Indices = make_index_sequence<
-		std::tuple_size<typename std::decay<Tuple>::type>::value>;
-	return apply_impl(std::forward<F>(f), std::forward<Tuple>(t), Indices{});
-}
-
-template<typename F, typename ...Args>
-typename function_traits<F>::return_type apply(F&& f, Args&&... args)
-{
-	return std::forward<F>(f)(std::forward<Args>(args)...);
-}
-
 /// Type information for custom RTTI
 class type_info
 {
