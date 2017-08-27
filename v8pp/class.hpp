@@ -621,11 +621,11 @@ public:
 	{
 		using mem_func_type =
 			typename detail::function_traits<Method>::template pointer_type<T>;
-
+		mem_func_type mf(mem_func);
 		class_info_.class_function_template()->PrototypeTemplate()->Set(
 			isolate(), name, v8::FunctionTemplate::New(isolate(),
 				&detail::forward_function<mem_func_type, use_shared_ptr>,
-				detail::set_external_data(isolate(), std::forward<Method>(mem_func))));
+				detail::set_external_data(isolate(), std::forward<mem_func_type>(mf))));
 		return *this;
 	}
 
@@ -653,6 +653,7 @@ public:
 
 		using attribute_type = typename
 			detail::function_traits<Attribute>::template pointer_type<T>;
+		attribute_type attr(attribute);
 		v8::AccessorGetterCallback getter = &member_get<attribute_type>;
 		v8::AccessorSetterCallback setter = &member_set<attribute_type>;
 		if (readonly)
@@ -663,7 +664,7 @@ public:
 		class_info_.class_function_template()->PrototypeTemplate()
 			->SetAccessor(v8pp::to_v8(isolate(), name), getter, setter,
 				detail::set_external_data(isolate(),
-					std::forward<Attribute>(attribute)), v8::DEFAULT,
+					std::forward<attribute_type>(attr)), v8::DEFAULT,
 				v8::PropertyAttribute(v8::DontDelete | (setter? 0 : v8::ReadOnly)));
 		return *this;
 	}
@@ -674,25 +675,24 @@ public:
 		&& std::is_member_function_pointer<SetMethod>::value, class_&>::type
 	set(char const *name, property_<GetMethod, SetMethod>&& property)
 	{
-		using prop_type = property_<GetMethod, SetMethod>;
-
 		v8::HandleScope scope(isolate());
 
 		using property_type = property_<
 			typename detail::function_traits<GetMethod>::template pointer_type<T>,
 			typename detail::function_traits<SetMethod>::template pointer_type<T>
 		>;
+		property_type prop(property);
 		v8::AccessorGetterCallback getter = property_type::template get<use_shared_ptr>;
 		v8::AccessorSetterCallback setter = property_type::template set<use_shared_ptr>;
-		if (prop_type::is_readonly)
+		if (prop.is_readonly)
 		{
 			setter = nullptr;
 		}
 
 		class_info_.class_function_template()->PrototypeTemplate()
-			->SetAccessor(v8pp::to_v8(isolate(), name),getter, setter,
+			->SetAccessor(v8pp::to_v8(isolate(), name), getter, setter,
 				detail::set_external_data(isolate(),
-					std::forward<prop_type>(property)), v8::DEFAULT,
+					std::forward<property_type>(prop)), v8::DEFAULT,
 				v8::PropertyAttribute(v8::DontDelete | (setter ? 0 : v8::ReadOnly)));
 		return *this;
 	}

@@ -207,8 +207,87 @@ void test_class_()
 		1 + 2 * use_shared_ptr); // y1 + (y2 + y3 when use_shared_ptr)
 }
 
+template<bool use_shared_ptr>
+void test_multiple_inheritance()
+{
+	struct A
+	{
+		int x;
+		A() : x(1) {}
+		int f() { return x; }
+		void set_f(int v) { x = v; }
+
+		int z() const { return x; }
+	};
+
+	struct B
+	{
+		int x;
+		B() : x(2) {}
+		int g() { return x; }
+		void set_g(int v) { x = v; }
+
+		int z() const { return x; }
+	};
+
+	struct C : A, B
+	{
+		int x;
+		C() : x(3) {}
+		int h() { return x; }
+		void set_h(int v) { x = v; }
+
+		int z() const { return x; }
+	};
+
+	v8pp::context context;
+	v8::Isolate* isolate = context.isolate();
+	v8::HandleScope scope(isolate);
+
+	v8pp::class_<C, use_shared_ptr> C_class(isolate);
+	C_class
+		.template ctor<>()
+		.set("xA", &A::x)
+		.set("xB", &B::x)
+		.set("xC", &C::x)
+
+		.set("zA", &A::z)
+		.set("zB", &B::z)
+		.set("zC", &C::z)
+
+		.set("f", &A::f)
+		.set("g", &B::g)
+		.set("h", &C::h)
+
+		.set("rF", v8pp::property(&C::f))
+		.set("rG", v8pp::property(&C::g))
+		.set("rH", v8pp::property(&C::h))
+
+		.set("F", v8pp::property(&C::f, &C::set_f))
+		.set("G", v8pp::property(&C::g, &C::set_g))
+		.set("H", v8pp::property(&C::h, &C::set_h))
+		;
+
+
+	context.set("C", C_class);
+	check_eq("get attributes", run_script<int>(context, "c = new C(); c.xA + c.xB + c.xC"), 1 + 2 + 3);
+	check_eq("set attributes", run_script<int>(context,
+		"c = new C(); c.xA = 10; c.xB = 20; c.xC = 30; c.xA + c.xB + c.xC"), 10 + 20 + 30);
+
+	check_eq("functions", run_script<int>(context, "c = new C(); c.f() + c.g() + c.h()"), 1 + 2 + 3);
+	check_eq("z functions", run_script<int>(context, "c = new C(); c.zA() + c.zB() + c.zC()"), 1 + 2 + 3);
+
+	check_eq("rproperties", run_script<int>(context,
+		"c = new C(); c.rF + c.rG + c.rH"), 1 + 2 + 3);
+	check_eq("rwproperties", run_script<int>(context,
+		"c = new C(); c.F = 100; c.G = 200; c.H = 300; c.F + c.G + c.H"), 100 + 200 + 300);
+}
+
 void test_class()
 {
 	test_class_<false>();
 	test_class_<true>();
+
+	test_multiple_inheritance<false>();
+	test_multiple_inheritance<true>();
 }

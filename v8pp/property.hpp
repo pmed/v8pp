@@ -345,6 +345,19 @@ struct property_
 	Set setter;
 
 	enum { is_readonly = false };
+
+	property_(Get getter, Set setter)
+		: getter(getter)
+		, setter(setter)
+	{
+	}
+
+	template<typename OtherGet, typename OtherSet>
+	property_(property_<OtherGet, OtherSet> const& other)
+		: getter(other.getter)
+		, setter(other.setter)
+	{
+	}
 };
 
 /// Read-only property class specialization for get only method
@@ -362,25 +375,31 @@ struct property_<Get, Get>
 	Get getter;
 
 	enum { is_readonly = true };
+
+	explicit property_(Get getter)
+		: getter(getter)
+	{
+	}
+
+	template<typename OtherGet>
+	explicit property_(property_<OtherGet, OtherGet> const& other)
+		: getter(other.getter)
+	{
+	}
 };
 
 /// Create read/write property from get and set member functions
 template<typename Get, typename Set>
 property_<Get, Set> property(Get get, Set set)
 {
-	property_<Get, Set> prop;
-	prop.getter = get;
-	prop.setter = set;
-	return prop;
+	return property_<Get, Set>(get, set);
 }
 
 /// Create read-only property from a get function
 template<typename Get>
 property_<Get, Get> property(Get get)
 {
-	property_<Get, Get> prop;
-	prop.getter = get;
-	return prop;
+	return property_<Get, Get>(get);
 }
 
 } // namespace v8pp
