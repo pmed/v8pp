@@ -53,29 +53,14 @@ inline std::shared_ptr<void> const_pointer_cast(std::shared_ptr<void const> cons
 	return std::const_pointer_cast<void>(ptr);
 }
 
-template<typename T>
-T* static_pointer_cast(void* ptr)
+template<typename T, typename U>
+T* static_pointer_cast(U* ptr)
 {
 	return static_cast<T*>(ptr);
 }
 
-template<typename T>
-T const* static_pointer_cast(void const* ptr)
-{
-	return static_cast<T const*>(ptr);
-}
-
-template<typename T>
-std::shared_ptr<T> static_pointer_cast(std::shared_ptr<void> const& ptr)
-{
-	return std::static_pointer_cast<T>(ptr);
-}
-
-template<typename T>
-std::shared_ptr<T const> static_pointer_cast(std::shared_ptr<void const> const& ptr)
-{
-	return std::static_pointer_cast<T const>(ptr);
-}
+using std::static_pointer_cast;
+using std::const_pointer_cast;
 
 struct class_info
 {
@@ -248,7 +233,7 @@ public:
 		objects_.clear();
 	}
 
-	pointer_type find_object(object_id id) const
+	pointer_type find_object(object_id id, type_info const& type) const
 	{
 		auto it = objects_.find(key(id, std::integral_constant<bool, use_shared_ptr>{}));
 		if (it != objects_.end())
@@ -262,9 +247,9 @@ public:
 		return nullptr;
 	}
 
-	v8::Local<v8::Object> find_v8_object(object_id id) const
+	v8::Local<v8::Object> find_v8_object(pointer_type const& ptr) const
 	{
-		auto it = objects_.find(key(id, std::integral_constant<bool, use_shared_ptr>{}));
+		auto it = objects_.find(ptr);
 		if (it != objects_.end())
 		{
 			return to_local(isolate_, it->second);
@@ -273,7 +258,7 @@ public:
 		v8::Local<v8::Object> result;
 		for (auto const info : derivatives_)
 		{
-			result = info->find_v8_object(id);
+			result = info->find_v8_object(ptr);
 			if (!result.IsEmpty()) break;
 		}
 		return result;
@@ -341,7 +326,7 @@ public:
 						obj->GetAlignedPointerFromInternalField(1));
 					if (registry)
 					{
-						pointer_type ptr = registry->find_object(id);
+						pointer_type ptr = registry->find_object(id, type);
 						if (ptr)
 						{
 							return ptr;
@@ -557,10 +542,10 @@ class class_
 	using const_pointer_type = typename object_registry::const_pointer_type;
 
 public:
-	using object_pointer_type = decltype(
-		detail::static_pointer_cast<T>(std::declval<pointer_type>()));
-	using object_const_pointer_type = decltype(
-		detail::static_pointer_cast<T>(std::declval<const_pointer_type>()));
+	using object_pointer_type = typename std::conditional<use_shared_ptr,
+		std::shared_ptr<T>, T*>::type;
+	using object_const_pointer_type = typename std::conditional<use_shared_ptr,
+		std::shared_ptr<T const>, T const*>::type;
 
 	template<typename ...Args>
 	struct factory_create
@@ -770,7 +755,7 @@ public:
 	{
 		using namespace detail;
 		return classes::find<use_shared_ptr>(isolate, type_id<T>())
-			.find_v8_object(pointer_id(const_pointer_cast(obj)));
+			.find_v8_object(const_pointer_cast(obj));
 	}
 
 	/// Destroy wrapped C++ object

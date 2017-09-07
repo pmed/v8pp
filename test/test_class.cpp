@@ -244,19 +244,23 @@ void test_multiple_inheritance()
 	v8::Isolate* isolate = context.isolate();
 	v8::HandleScope scope(isolate);
 
+	v8pp::class_<B, use_shared_ptr> B_class(isolate);
+	B_class
+		.set("xB", &B::x)
+		.set("zB", &B::z)
+		.set("g", &B::g);
+
 	v8pp::class_<C, use_shared_ptr> C_class(isolate);
 	C_class
+		.template inherit<B>()
 		.template ctor<>()
 		.set("xA", &A::x)
-		.set("xB", &B::x)
 		.set("xC", &C::x)
 
 		.set("zA", &A::z)
-		.set("zB", &B::z)
 		.set("zC", &C::z)
 
 		.set("f", &A::f)
-		.set("g", &B::g)
 		.set("h", &C::h)
 
 		.set("rF", v8pp::property(&C::f))
