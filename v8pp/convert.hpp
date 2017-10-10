@@ -594,8 +594,7 @@ struct convert<T, typename std::enable_if<is_wrapped_class<T>::value>::type>
 };
 
 template<typename T>
-struct convert<std::shared_ptr<T>,
-	typename std::enable_if<is_wrapped_class<T>::value>::type>
+struct convert<std::shared_ptr<T>, typename std::enable_if<is_wrapped_class<T>::value>::type>
 {
 	using from_type = std::shared_ptr<T>;
 	using to_type = v8::Handle<v8::Object>;
@@ -618,6 +617,41 @@ struct convert<std::shared_ptr<T>,
 	static to_type to_v8(v8::Isolate* isolate, std::shared_ptr<T> const& value)
 	{
 		return class_<class_type, true>::find_object(isolate, value);
+	}
+};
+
+struct ref_from_shared_ptr {};
+
+template<typename T>
+struct convert<T, ref_from_shared_ptr>
+{
+	using from_type = T&;
+	using to_type = v8::Handle<v8::Object>;
+
+	static bool is_valid(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	{
+		return convert<std::shared_ptr<T>>::is_valid(isolate, value);
+	}
+
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	{
+		if (!is_valid(isolate, value))
+		{
+			throw std::invalid_argument("expected Object");
+		}
+		if (std::shared_ptr<T> object = convert<std::shared_ptr<T>>::from_v8(isolate, value))
+		{
+//			assert(object.use_count() > 1);
+			return *object;
+		}
+		throw std::runtime_error("failed to unwrap C++ object");
+	}
+
+	static to_type to_v8(v8::Isolate* isolate, T const& value)
+	{
+		v8::Handle<v8::Object> result = convert<std::shared_ptr<T>>::to_v8(isolate, &value);
+		if (!result.IsEmpty()) return result;
+		throw std::runtime_error("failed to wrap C++ object");
 	}
 };
 

@@ -44,6 +44,11 @@ struct Y : X
 
 	explicit Y(int x) { var = x; ++instance_count; }
 	~Y() { --instance_count; }
+
+	int useX(X& x) { return var + x.var; }
+
+	template<bool use_shared_ptr, typename X_ptr = typename v8pp::class_<X, use_shared_ptr>::object_pointer_type>
+	int useX_ptr(X_ptr x) { return var + x->var; }
 };
 
 int Y::instance_count = 0;
@@ -112,6 +117,8 @@ void test_class_()
 	Y_class
 		.template inherit<X>()
 		.template ctor<int>()
+		.set("useX", &Y::useX)
+		.set("useX_ptr", &Y::useX_ptr<use_shared_ptr>)
 		;
 
 	check_ex<std::runtime_error>("already wrapped class X", [isolate]()
@@ -167,7 +174,7 @@ void test_class_()
 	check("y3_obj", v8pp::to_v8(isolate, y3) == y3_obj);
 	check_eq("y3.var", y3->var, -3);
 
-	run_script<int>(context, "for (i = 0; i < 10; ++i) new Y(i); i");
+	run_script<int>(context, "x = new X; for (i = 0; i < 10; ++i) { y = new Y(i); y.useX(x); y.useX_ptr(x); }");
 	check_eq("Y count", Y::instance_count, 10 + 4); // 10 + y + y1 + y2 + y3
 	run_script<int>(context, "y = null; 0");
 

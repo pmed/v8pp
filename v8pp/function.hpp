@@ -122,7 +122,7 @@ typename std::enable_if<is_callable<F>::value,
 	typename function_traits<F>::return_type>::type
 invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	return call_from_v8(std::forward<F>(get_external_data<F>(args.Data())), args);
+	return call_from_v8<F, use_shared_ptr>(std::forward<F>(get_external_data<F>(args.Data())), args);
 }
 
 template<typename F, bool use_shared_ptr>
@@ -137,8 +137,9 @@ invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
 
 	v8::Isolate* isolate = args.GetIsolate();
 	v8::Local<v8::Object> obj = args.This();
-	return call_from_v8(*class_<class_type, use_shared_ptr>::unwrap_object(isolate, obj),
-			std::forward<F>(get_external_data<F>(args.Data())), args);
+	return call_from_v8<class_type, F, use_shared_ptr>(
+		*class_<class_type, use_shared_ptr>::unwrap_object(isolate, obj),
+		std::forward<F>(get_external_data<F>(args.Data())), args);
 }
 
 template<typename F, bool use_shared_ptr>

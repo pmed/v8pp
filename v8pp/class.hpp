@@ -553,8 +553,8 @@ public:
 		static object_pointer_type call(v8::FunctionCallbackInfo<v8::Value> const& args)
 		{
 			using ctor_function = object_pointer_type(*)(v8::Isolate* isolate, Args...);
-			return detail::call_from_v8(static_cast<ctor_function>(
-				&factory<T, use_shared_ptr>::create), args);
+			return detail::call_from_v8<ctor_function, use_shared_ptr>(
+				&factory<T, use_shared_ptr>::create, args);
 		}
 	};
 
