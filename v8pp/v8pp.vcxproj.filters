@@ -18,6 +18,8 @@
     <ClInclude Include="function.hpp" />
     <ClInclude Include="object.hpp" />
     <ClInclude Include="json.hpp" />
+    <ClInclude Include="ptr_traits.hpp" />
+    <ClInclude Include="persistent.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

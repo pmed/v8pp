@@ -9,6 +9,7 @@
 #include "v8pp/factory.hpp"
 #include "v8pp/context.hpp"
 #include "v8pp/call_v8.hpp"
+#include "v8pp/ptr_traits.hpp"
 
 #include "test.hpp"
 
@@ -62,12 +63,11 @@ private:
 template<typename T, typename ...Args>
 void test_(v8::Isolate* isolate, Args&&... args)
 {
-	T* obj = v8pp::factory<T>::create(isolate, std::forward<Args>(args)...);
-	v8pp::factory<T>::destroy(isolate, obj);
+	T* obj = v8pp::factory<T, v8pp::raw_ptr_traits>::create(isolate, std::forward<Args>(args)...);
+	v8pp::factory<T, v8pp::raw_ptr_traits>::destroy(isolate, obj);
 
-	std::shared_ptr<T> sp_obj =
-		v8pp::factory<T, true>::create(isolate, std::forward<Args>(args)...);
-	v8pp::factory<T, true>::destroy(isolate, sp_obj);
+	std::shared_ptr<T> sp_obj = v8pp::factory<T, v8pp::shared_ptr_traits>::create(isolate, std::forward<Args>(args)...);
+	v8pp::factory<T, v8pp::shared_ptr_traits>::destroy(isolate, sp_obj);
 }
 
 void test_factories(v8::FunctionCallbackInfo<v8::Value> const& args)
@@ -89,7 +89,7 @@ void test_factories(v8::FunctionCallbackInfo<v8::Value> const& args)
 namespace v8pp {
 
 template<>
-struct factory<Y>
+struct factory<Y, v8pp::raw_ptr_traits>
 {
 	static Y* create(v8::Isolate*, int arg)
 	{
@@ -105,7 +105,7 @@ struct factory<Y>
 };
 
 template<>
-struct factory<Y, true>
+struct factory<Y, v8pp::shared_ptr_traits>
 {
 	static std::shared_ptr<Y> create(v8::Isolate*, int arg)
 	{

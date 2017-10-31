@@ -22,13 +22,15 @@
 #include <type_traits>
 #include <typeinfo>
 
+#include "v8pp/ptr_traits.hpp"
+
 namespace v8pp {
 
-template<typename T, bool use_shared_ptr>
+template<typename T, typename Traits>
 class class_;
 
 // Generic convertor
-template<typename T, typename Enable = void>
+template<typename T, typename Enable>
 struct convert;
 /*
 {
@@ -552,12 +554,12 @@ struct convert<T*, typename std::enable_if<is_wrapped_class<T>::value>::type>
 		{
 			return nullptr;
 		}
-		return class_<class_type, false>::unwrap_object(isolate, value);
+		return class_<class_type, raw_ptr_traits>::unwrap_object(isolate, value);
 	}
 
 	static to_type to_v8(v8::Isolate* isolate, T const* value)
 	{
-		return class_<class_type, false>::find_object(isolate, value);
+		return class_<class_type, raw_ptr_traits>::find_object(isolate, value);
 	}
 };
 
@@ -611,16 +613,14 @@ struct convert<std::shared_ptr<T>, typename std::enable_if<is_wrapped_class<T>::
 		{
 			return nullptr;
 		}
-		return class_<class_type, true>::unwrap_object(isolate, value);
+		return class_<class_type, shared_ptr_traits>::unwrap_object(isolate, value);
 	}
 
 	static to_type to_v8(v8::Isolate* isolate, std::shared_ptr<T> const& value)
 	{
-		return class_<class_type, true>::find_object(isolate, value);
+		return class_<class_type, shared_ptr_traits>::find_object(isolate, value);
 	}
 };
-
-struct ref_from_shared_ptr {};
 
 template<typename T>
 struct convert<T, ref_from_shared_ptr>

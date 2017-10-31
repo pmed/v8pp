@@ -22,13 +22,11 @@
 #include "v8pp/factory.hpp"
 #include "v8pp/function.hpp"
 #include "v8pp/property.hpp"
+#include "v8pp/ptr_traits.hpp"
 
 namespace v8pp {
 
 namespace detail {
-
-inline void* pointer_id(void* ptr) { return ptr; }
-inline void* pointer_id(std::shared_ptr<void> const& ptr) { return ptr.get(); }
 
 inline std::string pointer_str(void const* ptr)
 {
@@ -43,33 +41,14 @@ inline std::string pointer_str(void const* ptr)
 	return buf;
 }
 
-inline void* const_pointer_cast(void const* ptr)
-{
-	return const_cast<void*>(ptr);
-}
-
-inline std::shared_ptr<void> const_pointer_cast(std::shared_ptr<void const> const& ptr)
-{
-	return std::const_pointer_cast<void>(ptr);
-}
-
-template<typename T, typename U>
-T* static_pointer_cast(U* ptr)
-{
-	return static_cast<T*>(ptr);
-}
-
-using std::static_pointer_cast;
-using std::const_pointer_cast;
-
 struct class_info
 {
 	type_info const type;
-	bool const is_shared_ptr;
+	type_info const traits;
 
-	class_info(type_info const& type, bool is_shared_ptr)
+	class_info(type_info const& type, type_info const& traits)
 		: type(type)
-		, is_shared_ptr(is_shared_ptr)
+		, traits(traits)
 	{
 	}
 
@@ -77,28 +56,24 @@ struct class_info
 
 	std::string class_name() const
 	{
-		return "v8pp::class_<" + type.name()
-			+ (is_shared_ptr ? ", use_shared_ptr>" : ">");
+		return "v8pp::class_<" + type.name() + ", " + traits.name() + ">";
 	}
 };
 
-template<bool use_shared_ptr>
+template<typename Traits>
 class object_registry final : public class_info
 {
 public:
-	using pointer_type = typename std::conditional<use_shared_ptr,
-		std::shared_ptr<void>, void*>::type;
-	using const_pointer_type = typename std::conditional<use_shared_ptr,
-		std::shared_ptr<void const>, void const*>::type;
-
-	using object_id = void*; //TODO: make opaque type
+	using pointer_type = typename Traits::pointer_type;
+	using const_pointer_type = typename Traits::const_pointer_type;
+	using object_id = typename Traits::object_id;
 
 	using ctor_function = pointer_type (*)(v8::FunctionCallbackInfo<v8::Value> const& args);
 	using dtor_function = void         (*)(v8::Isolate*, pointer_type const&);
 	using cast_function = pointer_type (*)(pointer_type const&);
 
 	object_registry(v8::Isolate* isolate, type_info const& type, dtor_function dtor)
-		: class_info(type, use_shared_ptr)
+		: class_info(type, type_id<Traits>())
 		, isolate_(isolate)
 		, ctor_(nullptr) // no wrapped class constructor available by default
 		, dtor_(dtor)
@@ -213,7 +188,7 @@ public:
 
 	void remove_object(object_id const& obj, bool call_dtor)
 	{
-		auto it = objects_.find(key(obj, std::integral_constant<bool, use_shared_ptr>{}));
+		auto it = objects_.find(Traits::key(obj));
 		assert(it != objects_.end() && "no object");
 		if (it != objects_.end())
 		{
@@ -235,7 +210,7 @@ public:
 
 	pointer_type find_object(object_id id, type_info const& type) const
 	{
-		auto it = objects_.find(key(id, std::integral_constant<bool, use_shared_ptr>{}));
+		auto it = objects_.find(Traits::key(id));
 		if (it != objects_.end())
 		{
 			pointer_type ptr = it->first;
@@ -271,7 +246,7 @@ public:
 		{
 			//assert(false && "duplicate object");
 			throw std::runtime_error(class_name()
-				+ " duplicate object " + pointer_str(pointer_id(object)));
+				+ " duplicate object " + pointer_str(Traits::pointer_id(object)));
 		}
 
 		v8::EscapableHandleScope scope(isolate_);
@@ -279,7 +254,7 @@ public:
 		v8::Local<v8::Object> obj = class_function_template()
 			->GetFunction()->NewInstance();
 
-		obj->SetAlignedPointerInInternalField(0, pointer_id(object));
+		obj->SetAlignedPointerInInternalField(0, Traits::pointer_id(object));
 		obj->SetAlignedPointerInInternalField(1, this);
 
 		v8::UniquePersistent<v8::Object> pobj(isolate_, obj);
@@ -346,7 +321,7 @@ private:
 		{
 			v8::Local<v8::Object> obj = to_local(isolate_, object.second);
 			assert(obj->InternalFieldCount() == 2);
-			assert(obj->GetAlignedPointerFromInternalField(0) == pointer_id(object.first));
+			assert(obj->GetAlignedPointerFromInternalField(0) == Traits::pointer_id(object.first));
 			assert(obj->GetAlignedPointerFromInternalField(1) == this);
 			// remove internal fields to disable unwrapping for this V8 Object
 			obj->SetAlignedPointerInInternalField(0, nullptr);
@@ -374,16 +349,6 @@ private:
 	std::vector<base_class_info> bases_;
 	std::vector<object_registry*> derivatives_;
 
-	static std::shared_ptr<void> key(object_id id, std::true_type)
-	{
-		return std::shared_ptr<void>(id, [](void*){});
-	}
-
-	static void* key(object_id id, std::false_type)
-	{
-		return id;
-	}
-
 	std::unordered_map<pointer_type, v8::UniquePersistent<v8::Object>> objects_;
 
 	v8::Isolate* isolate_;
@@ -397,23 +362,23 @@ private:
 class classes
 {
 public:
-	template<bool use_shared_ptr>
-	static object_registry<use_shared_ptr>& add(v8::Isolate* isolate, type_info const& type,
-		typename object_registry<use_shared_ptr>::dtor_function dtor)
+	template<typename Traits>
+	static object_registry<Traits>& add(v8::Isolate* isolate, type_info const& type,
+		typename object_registry<Traits>::dtor_function dtor)
 	{
 		classes* info = instance(operation::add, isolate);
 		auto it = info->find(type);
 		if (it != info->classes_.end())
 		{
 			//assert(false && "class already registred");
-			throw std::runtime_error(class_info(type, use_shared_ptr).class_name()
+			throw std::runtime_error((*it)->class_name()
 				+ " is already exist in isolate " + pointer_str(isolate));
 		}
-		info->classes_.emplace_back(new object_registry<use_shared_ptr>(isolate, type, dtor));
-		return *static_cast<object_registry<use_shared_ptr>*>(info->classes_.back().get());
+		info->classes_.emplace_back(new object_registry<Traits>(isolate, type, dtor));
+		return *static_cast<object_registry<Traits>*>(info->classes_.back().get());
 	}
 
-	template<bool use_shared_ptr>
+	template<typename Traits>
 	static void remove(v8::Isolate* isolate, type_info const& type)
 	{
 		classes* info = instance(operation::get, isolate);
@@ -422,12 +387,13 @@ public:
 			auto it = info->find(type);
 			if (it != info->classes_.end())
 			{
-				if ((*it)->is_shared_ptr != use_shared_ptr)
+				type_info const& traits = type_id<Traits>();
+				if ((*it)->traits != traits)
 				{
 					throw std::runtime_error((*it)->class_name()
 						+ " is already registered in isolate "
 						+ pointer_str(isolate) + " before of "
-						+ class_info(type, use_shared_ptr).class_name());
+						+ class_info(type, traits).class_name());
 				}
 				info->classes_.erase(it);
 				if (info->classes_.empty())
@@ -438,27 +404,28 @@ public:
 		}
 	}
 
-	template<bool use_shared_ptr>
-	static object_registry<use_shared_ptr>& find(v8::Isolate* isolate, type_info const& type)
+	template<typename Traits>
+	static object_registry<Traits>& find(v8::Isolate* isolate, type_info const& type)
 	{
 		classes* info = instance(operation::get, isolate);
+		type_info const& traits = type_id<Traits>();
 		if (info)
 		{
 			auto it = info->find(type);
 			if (it != info->classes_.end())
 			{
-				if ((*it)->is_shared_ptr != use_shared_ptr)
+				if ((*it)->traits != traits)
 				{
 					throw std::runtime_error((*it)->class_name()
 						+ " is already registered in isolate "
 						+ pointer_str(isolate) + " before of "
-						+ class_info(type, use_shared_ptr).class_name());
+						+ class_info(type, traits).class_name());
 				}
-				return *static_cast<object_registry<use_shared_ptr>*>(it->get());
+				return *static_cast<object_registry<Traits>*>(it->get());
 			}
 		}
 		//assert(false && "class not registered");
-		throw std::runtime_error(class_info(type, use_shared_ptr).class_name()
+		throw std::runtime_error(class_info(type, traits).class_name()
 			+ " is not registered in isolate " + pointer_str(isolate));
 	}
 
@@ -529,12 +496,12 @@ private:
 } // namespace detail
 
 /// Interface to access C++ classes bound to V8
-template<typename T, bool use_shared_ptr = false>
+template<typename T, typename Traits = raw_ptr_traits>
 class class_
 {
 	static_assert(is_wrapped_class<T>::value, "T must be a user-defined class");
 
-	using object_registry = detail::object_registry<use_shared_ptr>;
+	using object_registry = detail::object_registry<Traits>;
 	object_registry& class_info_;
 
 	using object_id = typename object_registry::object_id;
@@ -542,25 +509,22 @@ class class_
 	using const_pointer_type = typename object_registry::const_pointer_type;
 
 public:
-	using object_pointer_type = typename std::conditional<use_shared_ptr,
-		std::shared_ptr<T>, T*>::type;
-	using object_const_pointer_type = typename std::conditional<use_shared_ptr,
-		std::shared_ptr<T const>, T const*>::type;
+	using object_pointer_type = typename Traits::template object_pointer_type<T>;
+	using object_const_pointer_type = typename Traits::template object_const_pointer_type<T>;
 
 	template<typename ...Args>
 	struct factory_create
 	{
 		static object_pointer_type call(v8::FunctionCallbackInfo<v8::Value> const& args)
 		{
-			using ctor_function = object_pointer_type(*)(v8::Isolate* isolate, Args...);
-			return detail::call_from_v8<ctor_function, use_shared_ptr>(
-				&factory<T, use_shared_ptr>::create, args);
+			using ctor_function = object_pointer_type (*)(v8::Isolate* isolate, Args...);
+			return detail::call_from_v8<Traits, ctor_function>(&factory<T, Traits>::create, args);
 		}
 	};
 
 	static void factory_destroy(v8::Isolate* isolate, pointer_type const& obj)
 	{
-		factory<T, use_shared_ptr>::destroy(isolate, detail::static_pointer_cast<T>(obj));
+		factory<T, Traits>::destroy(isolate, Traits::template static_pointer_cast<T>(obj));
 	}
 
 	using ctor_function = object_pointer_type (*)(v8::FunctionCallbackInfo<v8::Value> const& args);
@@ -568,7 +532,7 @@ public:
 
 public:
 	explicit class_(v8::Isolate* isolate, dtor_function destroy = factory_destroy)
-		: class_info_(detail::classes::add<use_shared_ptr>(isolate, detail::type_id<T>(), destroy))
+		: class_info_(detail::classes::add<Traits>(isolate, detail::type_id<T>(), destroy))
 	{
 	}
 
@@ -588,11 +552,11 @@ public:
 		static_assert(std::is_base_of<U, T>::value,
 			"Class U should be base for class T");
 		//TODO: std::is_convertible<T*, U*> and check for duplicates in hierarchy?
-		object_registry& base = classes::find<use_shared_ptr>(isolate(), type_id<U>());
+		object_registry& base = classes::find<Traits>(isolate(), type_id<U>());
 		class_info_.add_base(base, [](pointer_type const& ptr) -> pointer_type
 		{
-			return pointer_type(static_pointer_cast<U>(
-				static_pointer_cast<T>(ptr)));
+			return pointer_type(Traits::template static_pointer_cast<U>(
+				Traits::template static_pointer_cast<T>(ptr)));
 		});
 		class_info_.js_function_template()->Inherit(base.class_function_template());
 		return *this;
@@ -609,7 +573,7 @@ public:
 		mem_func_type mf(mem_func);
 		class_info_.class_function_template()->PrototypeTemplate()->Set(
 			isolate(), name, v8::FunctionTemplate::New(isolate(),
-				&detail::forward_function<mem_func_type, use_shared_ptr>,
+				&detail::forward_function<Traits, mem_func_type>,
 				detail::set_external_data(isolate(), std::forward<mem_func_type>(mf))));
 		return *this;
 	}
@@ -667,8 +631,8 @@ public:
 			typename detail::function_traits<SetMethod>::template pointer_type<T>
 		>;
 		property_type prop(property);
-		v8::AccessorGetterCallback getter = property_type::template get<use_shared_ptr>;
-		v8::AccessorSetterCallback setter = property_type::template set<use_shared_ptr>;
+		v8::AccessorGetterCallback getter = property_type::template get<Traits>;
+		v8::AccessorSetterCallback setter = property_type::template set<Traits>;
 		if (prop.is_readonly)
 		{
 			setter = nullptr;
@@ -713,14 +677,14 @@ public:
 		object_pointer_type const& ext)
 	{
 		using namespace detail;
-		return classes::find<use_shared_ptr>(isolate, type_id<T>()).wrap_object(ext, false);
+		return classes::find<Traits>(isolate, type_id<T>()).wrap_object(ext, false);
 	}
 
 	/// Remove external reference from JavaScript
 	static void unreference_external(v8::Isolate* isolate, object_pointer_type const& ext)
 	{
 		using namespace detail;
-		return classes::find<use_shared_ptr>(isolate, type_id<T>()).remove_object(pointer_id(ext), false);
+		return classes::find<Traits>(isolate, type_id<T>()).remove_object(Traits::pointer_id(ext), false);
 	}
 
 	/// As reference_external but delete memory for C++ object
@@ -729,7 +693,7 @@ public:
 	static v8::Handle<v8::Object> import_external(v8::Isolate* isolate, object_pointer_type const& ext)
 	{
 		using namespace detail;
-		return classes::find<use_shared_ptr>(isolate, type_id<T>()).wrap_object(ext, true);
+		return classes::find<Traits>(isolate, type_id<T>()).wrap_object(ext, true);
 	}
 
 	/// Get wrapped object from V8 value, may return nullptr on fail.
@@ -737,8 +701,8 @@ public:
 		v8::Handle<v8::Value> value)
 	{
 		using namespace detail;
-		return static_pointer_cast<T>(
-			classes::find<use_shared_ptr>(isolate, type_id<T>()).unwrap_object(value));
+		return Traits::template static_pointer_cast<T>(
+			classes::find<Traits>(isolate, type_id<T>()).unwrap_object(value));
 	}
 
 	/// Create a wrapped C++ object and import it into JavaScript
@@ -746,7 +710,7 @@ public:
 	static v8::Handle<v8::Object> create_object(v8::Isolate* isolate, Args... args)
 	{
 		return import_external(isolate,
-			factory<T, use_shared_ptr>::create(isolate, std::forward<Args>(args)...));
+			factory<T, Traits>::create(isolate, std::forward<Args>(args)...));
 	}
 
 	/// Find V8 object handle for a wrapped C++ object, may return empty handle on fail.
@@ -754,29 +718,29 @@ public:
 		object_const_pointer_type const& obj)
 	{
 		using namespace detail;
-		return classes::find<use_shared_ptr>(isolate, type_id<T>())
-			.find_v8_object(const_pointer_cast(obj));
+		return classes::find<Traits>(isolate, type_id<T>())
+			.find_v8_object(Traits::const_pointer_cast(obj));
 	}
 
 	/// Destroy wrapped C++ object
 	static void destroy_object(v8::Isolate* isolate, object_pointer_type const& obj)
 	{
 		using namespace detail;
-		classes::find<use_shared_ptr>(isolate, type_id<T>()).remove_object(pointer_id(obj), true);
+		classes::find<Traits>(isolate, type_id<T>()).remove_object(Traits::pointer_id(obj), true);
 	}
 
 	/// Destroy all wrapped C++ objects of this class
 	static void destroy_objects(v8::Isolate* isolate)
 	{
 		using namespace detail;
-		classes::find<use_shared_ptr>(isolate, type_id<T>()).remove_objects(true);
+		classes::find<Traits>(isolate, type_id<T>()).remove_objects(true);
 	}
 
 	/// Destroy all wrapped C++ objects and this binding class_
 	static void destroy(v8::Isolate* isolate)
 	{
 		using namespace detail;
-		classes::remove<use_shared_ptr>(isolate, type_id<T>());
+		classes::remove<Traits>(isolate, type_id<T>());
 	}
 
 private:
@@ -821,7 +785,7 @@ private:
 /// Interface to access C++ classes bound to V8
 /// Objects are stored in std::shared_ptr
 template<typename T>
-using shared_class = class_<T, true>;
+using shared_class = class_<T, shared_ptr_traits>;
 
 inline void cleanup(v8::Isolate* isolate)
 {

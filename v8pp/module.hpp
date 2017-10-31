@@ -17,7 +17,7 @@
 
 namespace v8pp {
 
-template<typename T, bool use_shared_ptr>
+template<typename T, typename Traits>
 class class_;
 
 /// Module (similar to v8::ObjectTemplate)
@@ -54,8 +54,8 @@ public:
 	}
 
 	/// Set wrapped C++ class in the module with specified name
-	template<typename T, bool use_shared_ptr>
-	module& set(char const* name, class_<T, use_shared_ptr>& cl)
+	template<typename T, typename Traits>
+	module& set(char const* name, class_<T, Traits>& cl)
 	{
 		v8::HandleScope scope(isolate_);
 

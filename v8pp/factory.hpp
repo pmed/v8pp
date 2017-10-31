@@ -10,48 +10,31 @@
 #define V8PP_FACTORY_HPP_INCLUDED
 
 #include <memory>
-#include <utility>
 
 #include <v8.h>
 
 namespace v8pp {
 
 // Factory that creates new C++ objects of type T
-template<typename T, bool use_shared_ptr = false>
+template<typename T, typename Traits>
 struct factory
 {
-	static size_t const object_size = sizeof(T);
+	using object_pointer_type = typename Traits::template object_pointer_type<T>;
 
 	template<typename ...Args>
-	static T* create(v8::Isolate* isolate, Args... args)
+	static object_pointer_type create(v8::Isolate* isolate, Args... args)
 	{
-		T* object = new T(std::forward<Args>(args)...);
+		object_pointer_type object = Traits::template create<T>(std::forward<Args>(args)...);
 		isolate->AdjustAmountOfExternalAllocatedMemory(
-			static_cast<int64_t>(object_size));
+			static_cast<int64_t>(Traits::object_size(object)));
 		return object;
 	}
 
-	static void destroy(v8::Isolate* isolate, T* object)
+	static void destroy(v8::Isolate* isolate, object_pointer_type const& object)
 	{
-		delete object;
 		isolate->AdjustAmountOfExternalAllocatedMemory(
-			-static_cast<int64_t>(object_size));
-	}
-};
-
-// Factory that creates new std::shared_ptr<T> C++ objects of type T
-template<typename T>
-struct factory<T, true>
-{
-	template<typename ...Args>
-	static std::shared_ptr<T> create(v8::Isolate*, Args... args)
-	{
-		return std::make_shared<T>(std::forward<Args>(args)...);
-	}
-
-	static void destroy(v8::Isolate*, std::shared_ptr<T> const&)
-	{
-		// do nothing with reference-counted object
+			-static_cast<int64_t>(Traits::object_size(object)));
+		Traits::destroy(object);
 	}
 };
 
