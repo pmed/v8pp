@@ -29,10 +29,10 @@ void set_var(int x) { var = x + 1; }
 
 struct X
 {
-	X(int v, bool u) : var(v) {}
-	int var;
-	int get() const { return var; }
-	voi set(int x) { var = x; } 
+    X(int v, bool u) : var(v) {}
+    int var;
+    int get() const { return var; }
+    voi set(int x) { var = x; } 
 };
 
 // bind free variables and functions
@@ -40,31 +40,31 @@ v8pp::module mylib(isolate);
 mylib
     // set read-only attribute
     .set_const("PI", 3.1415)
-	// set variable available in JavaScript with name `var`
-	.set("var", var)
-	// set function get_var as `fun`
-	.set("fun", &get_var)
-	// set property `prop` with getter get_var() and setter set_var()
+    // set variable available in JavaScript with name `var`
+    .set("var", var)
+    // set function get_var as `fun`
+    .set("fun", &get_var)
+    // set property `prop` with getter get_var() and setter set_var()
     .set("prop", property(get_var, set_var));
 
 // bind class
 v8pp::class_<X> X_class(isolate);
 X_class
-	// specify X constructor signature
-	.ctor<int, bool>()
-	// bind variable
-	.set("var", &X::var)
-	// bind function
-	.set("fun", &X::set)
-	// bind read-only property
-	.set("prop", property(&X::get));
+    // specify X constructor signature
+    .ctor<int, bool>()
+    // bind variable
+    .set("var", &X::var)
+    // bind function
+    .set("fun", &X::set)
+    // bind read-only property
+    .set("prop", property(&X::get));
 
 // set class into the module template
 mylib.set("X", X_class);
 
 // set bindings in global object as `mylib`
 isolate->GetCurrentContext()->Global()->Set(
-	v8::String::NewFromUtf8(isolate, "mylib"), mylib.new_instance());
+    v8::String::NewFromUtf8(isolate, "mylib"), mylib.new_instance());
 ```
 
 After that bindings will be available in JavaScript:
@@ -82,16 +82,16 @@ The library is suitable to make [Node.js](http://nodejs.org/) and [io.js](https:
 
 void RegisterModule(v8::Handle<v8::Object> exports)
 {
-	v8pp::module addon(v8::Isolate::GetCurrent());
+    v8pp::module addon(v8::Isolate::GetCurrent());
 
-	// set bindings... 
-	addon
-		.set("fun", &function)
-		.set("cls", my_class)
-		;
+    // set bindings... 
+    addon
+        .set("fun", &function)
+        .set("cls", my_class)
+        ;
 
-	// set bindings as exports object prototype
-	exports->SetPrototype(addon.new_instance());
+    // set bindings as exports object prototype
+    exports->SetPrototype(addon.new_instance());
 }
 ```
 
@@ -111,22 +111,22 @@ namespace console {
 
 void log(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	v8::HandleScope handle_scope(args.GetIsolate());
+    v8::HandleScope handle_scope(args.GetIsolate());
 
-	for (int i = 0; i < args.Length(); ++i)
-	{
-		if (i > 0) std::cout << ' ';
-		v8::String::Utf8Value str(args[i]);
-		std::cout <<  *str;
-	}
-	std::cout << std::endl;
+    for (int i = 0; i < args.Length(); ++i)
+    {
+        if (i > 0) std::cout << ' ';
+        v8::String::Utf8Value str(args[i]);
+        std::cout <<  *str;
+    }
+    std::cout << std::endl;
 }
 
 v8::Handle<v8::Value> init(v8::Isolate* isolate)
 {
-	v8pp::module m(isolate);
-	m.set("log", &log);
-	return m.new_instance();
+    v8pp::module m(isolate);
+    m.set("log", &log);
+    return m.new_instance();
 }
 
 } // namespace console
@@ -137,7 +137,7 @@ v8::Handle<v8::Value> init(v8::Isolate* isolate)
 ```c++
 V8PP_PLUGIN_INIT(v8::Isolate* isolate)
 {
-	return console::init(isolate);
+    return console::init(isolate);
 }
 ```
 
@@ -153,137 +153,137 @@ namespace file {
 
 bool rename(char const* src, char const* dest)
 {
-	return std::rename(src, dest) == 0;
+    return std::rename(src, dest) == 0;
 }
 
 class file_base
 {
 public:
-	bool is_open() const { return stream_.is_open(); }
-	bool good() const { return stream_.good(); }
-	bool eof() const { return stream_.eof(); }
-	void close() { stream_.close(); }
+    bool is_open() const { return stream_.is_open(); }
+    bool good() const { return stream_.good(); }
+    bool eof() const { return stream_.eof(); }
+    void close() { stream_.close(); }
 
 protected:
-	std::fstream stream_;
+    std::fstream stream_;
 };
 
 class file_writer : public file_base
 {
 public:
-	explicit file_writer(v8::FunctionCallbackInfo<v8::Value> const& args)
-	{
-		if (args.Length() == 1)
-		{
-			v8::String::Utf8Value str(args[0]);
-			open(*str);
-		}
-	}
+    explicit file_writer(v8::FunctionCallbackInfo<v8::Value> const& args)
+    {
+        if (args.Length() == 1)
+        {
+            v8::String::Utf8Value str(args[0]);
+            open(*str);
+        }
+    }
 
-	bool open(char const* path)
-	{
-		stream_.open(path, std::ios_base::out);
-		return stream_.good();
-	}
+    bool open(char const* path)
+    {
+        stream_.open(path, std::ios_base::out);
+        return stream_.good();
+    }
 
-	void print(v8::FunctionCallbackInfo<v8::Value> const& args)
-	{
-		v8::HandleScope scope(args.GetIsolate());
+    void print(v8::FunctionCallbackInfo<v8::Value> const& args)
+    {
+        v8::HandleScope scope(args.GetIsolate());
 
-		for (int i = 0; i < args.Length(); ++i)
-		{
-			if (i > 0) stream_ << ' ';
-			v8::String::Utf8Value str(args[i]);
-			stream_ << *str;
-		}
-	}
+        for (int i = 0; i < args.Length(); ++i)
+        {
+            if (i > 0) stream_ << ' ';
+            v8::String::Utf8Value str(args[i]);
+            stream_ << *str;
+        }
+    }
 
-	void println(v8::FunctionCallbackInfo<v8::Value> const& args)
-	{
-		print(args);
-		stream_ << std::endl;
-	}
+    void println(v8::FunctionCallbackInfo<v8::Value> const& args)
+    {
+        print(args);
+        stream_ << std::endl;
+    }
 };
 
 class file_reader : public file_base
 {
 public:
-	explicit file_reader(char const* path)
-	{
-		open(path);
-	}
+    explicit file_reader(char const* path)
+    {
+        open(path);
+    }
 
-	bool open(const char* path)
-	{
-		stream_.open(path, std::ios_base::in);
-		return stream_.good();
-	}
+    bool open(const char* path)
+    {
+        stream_.open(path, std::ios_base::in);
+        return stream_.good();
+    }
 
-	v8::Handle<v8::Value> getline(v8::Isolate* isolate)
-	{
-		if ( stream_.good() && ! stream_.eof())
-		{
-			std::string line;
-			std::getline(stream_, line);
-			return v8pp::to_v8(isolate, line);
-		}
-		else
-		{
-			return v8::Undefined(isolate);
-		}
-	}
+    v8::Handle<v8::Value> getline(v8::Isolate* isolate)
+    {
+        if ( stream_.good() && ! stream_.eof())
+        {
+            std::string line;
+            std::getline(stream_, line);
+            return v8pp::to_v8(isolate, line);
+        }
+        else
+        {
+            return v8::Undefined(isolate);
+        }
+    }
 };
 
 v8::Handle<v8::Value> init(v8::Isolate* isolate)
 {
-	v8::EscapableHandleScope scope(isolate);
+    v8::EscapableHandleScope scope(isolate);
 
-	// file_base binding, no .ctor() specified, object creation disallowed in JavaScript
-	v8pp::class_<file_base> file_base_class(isolate);
-	file_base_class
-		.set("close", &file_base::close)
-		.set("good", &file_base::good)
-		.set("is_open", &file_base::is_open)
-		.set("eof", &file_base::eof)
-		;
+    // file_base binding, no .ctor() specified, object creation disallowed in JavaScript
+    v8pp::class_<file_base> file_base_class(isolate);
+    file_base_class
+        .set("close", &file_base::close)
+        .set("good", &file_base::good)
+        .set("is_open", &file_base::is_open)
+        .set("eof", &file_base::eof)
+        ;
 
-	// .ctor<> template arguments declares types of file_writer constructor
-	// file_writer inherits from file_base_class
-	v8pp::class_<file_writer> file_writer_class(isolate);
-	file_writer_class
-		.ctor<v8::FunctionCallbackInfo<v8::Value> const&>()
-		.inherit<file_base>()
-		.set("open", &file_writer::open)
-		.set("print", &file_writer::print)
-		.set("println", &file_writer::println)
-		;
+    // .ctor<> template arguments declares types of file_writer constructor
+    // file_writer inherits from file_base_class
+    v8pp::class_<file_writer> file_writer_class(isolate);
+    file_writer_class
+        .ctor<v8::FunctionCallbackInfo<v8::Value> const&>()
+        .inherit<file_base>()
+        .set("open", &file_writer::open)
+        .set("print", &file_writer::print)
+        .set("println", &file_writer::println)
+        ;
 
-	// .ctor<> template arguments declares types of file_reader constructor.
-	// file_base inherits from file_base_class
-	v8pp::class_<file_reader> file_reader_class(isolate);
-	file_reader_class
-		.ctor<char const*>()
-		.inherit<file_base>()
-		.set("open", &file_reader::open)
-		.set("getln", &file_reader::getline)
-		;
+    // .ctor<> template arguments declares types of file_reader constructor.
+    // file_base inherits from file_base_class
+    v8pp::class_<file_reader> file_reader_class(isolate);
+    file_reader_class
+        .ctor<char const*>()
+        .inherit<file_base>()
+        .set("open", &file_reader::open)
+        .set("getln", &file_reader::getline)
+        ;
 
-	// Create a module to add classes and functions to and return a
-	// new instance of the module to be embedded into the v8 context
-	v8pp::module m(isolate);
-	m.set("rename", &rename)
-	 .set("writer", file_writer_class)
-	 .set("reader", file_reader_class)
-		;
+    // Create a module to add classes and functions to and return a
+    // new instance of the module to be embedded into the v8 context
+    v8pp::module m(isolate);
+    m.set("rename", &rename)
+     .set("writer", file_writer_class)
+     .set("reader", file_reader_class)
+        ;
 
-	return scope.Escape(m.new_instance());
+    return scope.Escape(m.new_instance());
 }
 
 } // namespace file
 
 V8PP_PLUGIN_INIT(v8::Isolate* isolate)
 {
-	return file::init(isolate);
+    return file::init(isolate);
 }
 ```
 
@@ -346,6 +346,7 @@ The library uses several preprocessor macros, defined in `v8pp/config.hpp` file:
   * `V8PP_ISOLATE_DATA_SLOT` - A v8::Isolate data slot number, used to store v8pp internal data
   * `V8PP_PLUGIN_INIT_PROC_NAME` - Plugin initialization procedure name that should be exported from a v8pp plugin.
   * `V8PP_PLUGIN_SUFFIX` - Plugin filename suffix that would be added if the plugin name used in `require()` doesn't end with it.
+  * `V8PP_HEADER_ONLY` - Use header-only implemenation, enabled by default.
 
 ## v8pp alternatives
 

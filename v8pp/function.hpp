@@ -119,17 +119,15 @@ get_external_data(v8::Handle<v8::Value> value)
 }
 
 template<typename Traits, typename F>
-typename std::enable_if<is_callable<F>::value,
-	typename function_traits<F>::return_type>::type
-invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
+typename function_traits<F>::return_type
+invoke(v8::FunctionCallbackInfo<v8::Value> const& args, std::false_type /*is_member_function_pointer*/)
 {
 	return call_from_v8<Traits, F>(std::forward<F>(get_external_data<F>(args.Data())), args);
 }
 
 template<typename Traits, typename F>
-typename std::enable_if<std::is_member_function_pointer<F>::value,
-	typename function_traits<F>::return_type>::type
-invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
+typename function_traits<F>::return_type
+invoke(v8::FunctionCallbackInfo<v8::Value> const& args, std::true_type /*is_member_function_pointer*/)
 {
 	using arguments = typename function_traits<F>::arguments;
 	static_assert(std::tuple_size<arguments>::value > 0, "");
@@ -144,18 +142,16 @@ invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
 }
 
 template<typename Traits, typename F>
-typename std::enable_if<is_void_return<F>::value>::type
-forward_ret(v8::FunctionCallbackInfo<v8::Value> const& args)
+void forward_ret(v8::FunctionCallbackInfo<v8::Value> const& args, std::true_type /*is_void_return*/)
 {
-	invoke<Traits, F>(args);
+	invoke<Traits, F>(args, std::is_member_function_pointer<F>());
 }
 
 template<typename Traits, typename F>
-typename std::enable_if<!is_void_return<F>::value>::type
-forward_ret(v8::FunctionCallbackInfo<v8::Value> const& args)
+void forward_ret(v8::FunctionCallbackInfo<v8::Value> const& args, std::false_type /*is_void_return*/)
 {
 	args.GetReturnValue().Set(to_v8(args.GetIsolate(),
-		invoke<Traits, F>(args)));
+		invoke<Traits, F>(args, std::is_member_function_pointer<F>())));
 }
 
 template<typename Traits, typename F>
@@ -169,7 +165,7 @@ void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 
 	try
 	{
-		forward_ret<Traits, F>(args);
+		forward_ret<Traits, F>(args, is_void_return<F>());
 	}
 	catch (std::exception const& ex)
 	{

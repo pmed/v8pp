@@ -22,7 +22,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="class.cpp" />
     <ClCompile Include="context.cpp" />
+    <ClCompile Include="convert.cpp" />
+    <ClCompile Include="json.cpp" />
+    <ClCompile Include="throw_ex.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="call_from_v8.hpp" />
@@ -43,7 +47,10 @@
     <ClInclude Include="utility.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="class.ipp" />
+    <None Include="json.ipp" />
     <None Include="packages.config" />
+    <None Include="throw_ex.ipp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{2E6CFC3D-5A08-4909-8D1A-3469063D169B}</ProjectGuid>

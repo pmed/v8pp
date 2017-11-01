@@ -42,4 +42,14 @@
 #define V8PP_PLUGIN_INIT(isolate) extern "C" V8PP_EXPORT \
 v8::Handle<v8::Value> V8PP_PLUGIN_INIT_PROC_NAME(isolate)
 
+#ifndef V8PP_HEADER_ONLY
+#define V8PP_HEADER_ONLY 1
+#endif
+
+#if V8PP_HEADER_ONLY
+#define V8PP_IMPL inline
+#else
+#define V8PP_IMPL
+#endif
+
 #endif // V8PP_CONFIG_HPP_INCLUDED

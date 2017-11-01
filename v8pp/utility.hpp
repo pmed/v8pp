@@ -230,7 +230,7 @@ private:
 };
 
 /// Get type information for type T
-/// Idea  borrowed from https://github.com/Manu343726/ctti
+/// The idea is borrowed from https://github.com/Manu343726/ctti
 template<typename T>
 type_info type_id()
 {

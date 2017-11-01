@@ -10,37 +10,15 @@
 #define V8PP_THROW_EX_HPP_INCLUDED
 
 #include <string>
-#include <vector>
 
 #include <v8.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
+#include "v8pp/config.hpp"
 
 namespace v8pp {
 
-inline v8::Handle<v8::Value> throw_ex(v8::Isolate* isolate, char const* str,
-	v8::Local<v8::Value> (*exception_ctor)(v8::Handle<v8::String>) = v8::Exception::Error)
-{
-	v8::EscapableHandleScope scope(isolate);
-
-	v8::Handle<v8::String> message;
-#ifdef _WIN32
-	int const len = ::MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0);
-	if (len > 0)
-	{
-		std::vector<wchar_t> buf(len);
-		::MultiByteToWideChar(CP_ACP, 0, str, -1, &buf[0], len);
-		uint16_t const* data = reinterpret_cast<uint16_t const*>(&buf[0]);
-		message = v8::String::NewFromTwoByte(isolate, data,
-			v8::String::kNormalString, len - 1);
-	}
-#else
-	message = v8::String::NewFromUtf8(isolate, str);
-#endif
-	return scope.Escape(isolate->ThrowException(exception_ctor(message)));
-}
+v8::Handle<v8::Value> throw_ex(v8::Isolate* isolate, char const* str,
+	v8::Local<v8::Value> (*exception_ctor)(v8::Handle<v8::String>) = v8::Exception::Error);
 
 inline v8::Handle<v8::Value> throw_ex(v8::Isolate* isolate, std::string const& str,
 	v8::Local<v8::Value> (*exception_ctor)(v8::Handle<v8::String>) = v8::Exception::Error)
@@ -49,5 +27,9 @@ inline v8::Handle<v8::Value> throw_ex(v8::Isolate* isolate, std::string const& s
 }
 
 } // namespace v8pp
+
+#if V8PP_HEADER_ONLY
+#include "v8pp/throw_ex.ipp"
+#endif
 
 #endif // V8PP_THROW_EX_HPP_INCLUDED

@@ -9,8 +9,6 @@
 #ifndef V8PP_CLASS_HPP_INCLUDED
 #define V8PP_CLASS_HPP_INCLUDED
 
-#include <cstdio>
-
 #include <algorithm>
 #include <memory>
 #include <type_traits>
@@ -28,36 +26,18 @@ namespace v8pp {
 
 namespace detail {
 
-inline std::string pointer_str(void const* ptr)
-{
-	std::string buf(sizeof(void*) * 2 + 3, 0); // +3 for 0x and \0 terminator
-	int const len =
-#if defined(_MSC_VER) && (_MSC_VER < 1900)
-		sprintf_s(&buf[0], buf.size(), "%p", ptr);
-#else
-		snprintf(&buf[0], buf.size(), "%p", ptr);
-#endif
-	buf.resize(len < 0 ? 0 : len);
-	return buf;
-}
+std::string pointer_str(void const* ptr);
 
 struct class_info
 {
 	type_info const type;
 	type_info const traits;
 
-	class_info(type_info const& type, type_info const& traits)
-		: type(type)
-		, traits(traits)
-	{
-	}
+	class_info(type_info const& type, type_info const& traits);
 
 	virtual ~class_info() = default; // make virtual to delete derived object_registry
 
-	std::string class_name() const
-	{
-		return "v8pp::class_<" + type.name() + ", " + traits.name() + ">";
-	}
+	std::string class_name() const;
 };
 
 template<typename Traits>
@@ -429,68 +409,16 @@ public:
 			+ " is not registered in isolate " + pointer_str(isolate));
 	}
 
-	static void remove_all(v8::Isolate* isolate)
-	{
-		instance(operation::remove, isolate);
-	}
+	static void remove_all(v8::Isolate* isolate);
 
 private:
 	using classes_info = std::vector<std::unique_ptr<class_info>>;
 	classes_info classes_;
 
-	classes_info::iterator find(type_info const& type)
-	{
-		return std::find_if(classes_.begin(), classes_.end(),
-			[&type](classes_info::value_type const& info)
-			{
-				return info->type == type;
-			});
-	}
+	classes_info::iterator find(type_info const& type);
 
 	enum class operation { get, add, remove };
-	static classes* instance(operation op, v8::Isolate* isolate)
-	{
-#if defined(V8PP_ISOLATE_DATA_SLOT)
-		classes* info = static_cast<classes*>(
-			isolate->GetData(V8PP_ISOLATE_DATA_SLOT));
-		switch (op)
-		{
-		case operation::get:
-			return info;
-		case operation::add:
-			if (!info)
-			{
-				info = new classes;
-				isolate->SetData(V8PP_ISOLATE_DATA_SLOT, info);
-			}
-			return info;
-		case operation::remove:
-			if (info)
-			{
-				delete info;
-				isolate->SetData(V8PP_ISOLATE_DATA_SLOT, nullptr);
-			}
-		default:
-			return nullptr;
-		}
-#else
-		static std::unordered_map<v8::Isolate*, classes> instances;
-		switch (op)
-		{
-		case operation::get:
-			{
-				auto it = instances.find(isolate);
-				return it != instances.end()? &it->second : nullptr;
-			}
-		case operation::add:
-			return &instances[isolate];
-		case operation::remove:
-			instances.erase(isolate);
-		default:
-			return nullptr;
-		}
-#endif
-	}
+	static classes* instance(operation op, v8::Isolate* isolate);
 };
 
 } // namespace detail
@@ -787,11 +715,12 @@ private:
 template<typename T>
 using shared_class = class_<T, shared_ptr_traits>;
 
-inline void cleanup(v8::Isolate* isolate)
-{
-	detail::classes::remove_all(isolate);
-}
+void cleanup(v8::Isolate* isolate);
 
 } // namespace v8pp
+
+#if V8PP_HEADER_ONLY
+#include "v8pp/class.ipp"
+#endif
 
 #endif // V8PP_CLASS_HPP_INCLUDED

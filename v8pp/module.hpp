@@ -11,7 +11,6 @@
 
 #include <v8.h>
 
-#include "v8pp/config.hpp"
 #include "v8pp/function.hpp"
 #include "v8pp/property.hpp"
 
@@ -24,12 +23,14 @@ class class_;
 class module
 {
 public:
+	/// Create new module in the specified V8 isolate
 	explicit module(v8::Isolate* isolate)
 		: isolate_(isolate)
 		, obj_(v8::ObjectTemplate::New(isolate))
 	{
 	}
 
+	/// Create new module in the specified V8 isolate for existing ObjectTemplate
 	explicit module(v8::Isolate* isolate, v8::Handle<v8::ObjectTemplate> obj)
 		: isolate_(isolate)
 		, obj_(obj)
