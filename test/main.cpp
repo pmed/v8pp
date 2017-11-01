@@ -28,7 +28,6 @@ void run_tests()
 	void test_call_from_v8();
 	void test_function();
 	void test_ptr_traits();
-	void test_factory();
 	void test_module();
 	void test_class();
 	void test_property();
@@ -45,7 +44,6 @@ void run_tests()
 		{ "test_ptr_traits", test_ptr_traits },
 		{ "test_call_v8", test_call_v8 },
 		{ "test_call_from_v8", test_call_from_v8 },
-		{ "test_factory", test_factory },
 		{ "test_module", test_module },
 		{ "test_class", test_class },
 		{ "test_property", test_property },

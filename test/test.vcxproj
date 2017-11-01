@@ -32,7 +32,6 @@
     <ClCompile Include="test_class.cpp" />
     <ClCompile Include="test_context.cpp" />
     <ClCompile Include="test_convert.cpp" />
-    <ClCompile Include="test_factory.cpp" />
     <ClCompile Include="test_function.cpp" />
     <ClCompile Include="test_json.cpp" />
     <ClCompile Include="test_module.cpp" />

@@ -13,7 +13,6 @@
     <ClInclude Include="module.hpp" />
     <ClInclude Include="throw_ex.hpp" />
     <ClInclude Include="class.hpp" />
-    <ClInclude Include="factory.hpp" />
     <ClInclude Include="call_from_v8.hpp" />
     <ClInclude Include="call_v8.hpp" />
     <ClInclude Include="utility.hpp" />

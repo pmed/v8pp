@@ -56,24 +56,6 @@ int Y::instance_count = 0;
 
 struct Z {};
 
-namespace v8pp {
-template<>
-struct factory<Y, v8pp::raw_ptr_traits>
-{
-	static Y* create(v8::Isolate*, int x) { return new Y(x); }
-	static void destroy(v8::Isolate*, Y* object) { delete object; }
-};
-template<>
-struct factory<Y, v8pp::shared_ptr_traits>
-{
-	static std::shared_ptr<Y> create(v8::Isolate*, int x)
-	{
-		return std::make_shared<Y>(x);
-	}
-	static void destroy(v8::Isolate*, std::shared_ptr<Y> const&) {}
-};
-} // v8pp
-
 template<typename Traits>
 static int extern_fun(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
@@ -155,14 +137,14 @@ void test_class_()
 
 	check_eq("Y object", run_script<int>(context, "y = new Y(-100); y.konst + y.var"), -1);
 
-	auto y1 = v8pp::factory<Y, Traits>::create(isolate, -1);
+	auto y1 = Traits::template create<Y>(-1);
 
 	v8::Local<v8::Object> y1_obj =
 		v8pp::class_<Y, Traits>::reference_external(context.isolate(), y1);
 	check("y1", v8pp::from_v8<decltype(y1)>(isolate, y1_obj) == y1);
 	check("y1_obj", v8pp::to_v8(isolate, y1) == y1_obj);
 
-	auto y2 = v8pp::factory<Y, Traits>::create(isolate, -2);
+	auto y2 = Traits::template create<Y>(-2);
 	v8::Local<v8::Object> y2_obj =
 		v8pp::class_<Y, Traits>::import_external(context.isolate(), y2);
 	check("y2", v8pp::from_v8<decltype(y2)>(isolate, y2_obj) == y2);

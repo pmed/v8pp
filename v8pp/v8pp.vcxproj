@@ -39,7 +39,6 @@
     <ClInclude Include="config.hpp" />
     <ClInclude Include="context.hpp" />
     <ClInclude Include="convert.hpp" />
-    <ClInclude Include="factory.hpp" />
     <ClInclude Include="function.hpp" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="module.hpp" />

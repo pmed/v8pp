@@ -17,7 +17,6 @@
 #include <list>
 
 #include "v8pp/config.hpp"
-#include "v8pp/factory.hpp"
 #include "v8pp/function.hpp"
 #include "v8pp/property.hpp"
 #include "v8pp/ptr_traits.hpp"
@@ -440,32 +439,47 @@ public:
 	using object_pointer_type = typename Traits::template object_pointer_type<T>;
 	using object_const_pointer_type = typename Traits::template object_const_pointer_type<T>;
 
+	using ctor_function = object_pointer_type(*)(v8::FunctionCallbackInfo<v8::Value> const& args);
+	using dtor_function = void(*)(v8::Isolate* isolate, pointer_type const& obj);
+
 	template<typename ...Args>
-	struct factory_create
+	static object_pointer_type object_create(v8::Isolate* isolate, Args&&...args)
+	{
+		object_pointer_type object = Traits::template create<T>(std::forward<Args>(args)...);
+		isolate->AdjustAmountOfExternalAllocatedMemory(
+			static_cast<int64_t>(Traits::object_size(object)));
+		return object;
+	}
+
+	template<typename ...Args>
+	struct object_create_from_v8
 	{
 		static object_pointer_type call(v8::FunctionCallbackInfo<v8::Value> const& args)
 		{
-			using ctor_function = object_pointer_type (*)(v8::Isolate* isolate, Args...);
-			return detail::call_from_v8<Traits, ctor_function>(&factory<T, Traits>::create, args);
+			using ctor_function = object_pointer_type (*)(v8::Isolate* isolate, Args&&...);
+			object_pointer_type object = detail::call_from_v8<Traits>(Traits::template create<T, Args...>, args);
+			args.GetIsolate()->AdjustAmountOfExternalAllocatedMemory(
+				static_cast<int64_t>(Traits::object_size(object)));
+			return object;
 		}
 	};
 
-	static void factory_destroy(v8::Isolate* isolate, pointer_type const& obj)
+	static void object_destroy(v8::Isolate* isolate, pointer_type const& ptr)
 	{
-		factory<T, Traits>::destroy(isolate, Traits::template static_pointer_cast<T>(obj));
+		object_pointer_type object = Traits::template static_pointer_cast<T>(ptr);
+		Traits::destroy(object);
+		isolate->AdjustAmountOfExternalAllocatedMemory(
+			-static_cast<int64_t>(Traits::object_size(object)));
 	}
 
-	using ctor_function = object_pointer_type (*)(v8::FunctionCallbackInfo<v8::Value> const& args);
-	using dtor_function = void (*)(v8::Isolate* isolate, pointer_type const& obj);
-
 public:
-	explicit class_(v8::Isolate* isolate, dtor_function destroy = factory_destroy)
+	explicit class_(v8::Isolate* isolate, dtor_function destroy = object_destroy)
 		: class_info_(detail::classes::add<Traits>(isolate, detail::type_id<T>(), destroy))
 	{
 	}
 
 	/// Set class constructor signature
-	template<typename ...Args, typename Create = factory_create<Args...>>
+	template<typename ...Args, typename Create = object_create_from_v8<Args...>>
 	class_& ctor(ctor_function create = Create::call)
 	{
 		class_info_.set_ctor(reinterpret_cast<typename object_registry::ctor_function>(create));
@@ -616,7 +630,7 @@ public:
 	}
 
 	/// As reference_external but delete memory for C++ object
-	/// when JavaScript object is deleted. You must use `factory<T>::create()`
+	/// when JavaScript object is deleted. You must use `Traits::create<T>()`
 	/// to allocate `ext`
 	static v8::Local<v8::Object> import_external(v8::Isolate* isolate, object_pointer_type const& ext)
 	{
@@ -634,10 +648,9 @@ public:
 
 	/// Create a wrapped C++ object and import it into JavaScript
 	template<typename ...Args>
-	static v8::Local<v8::Object> create_object(v8::Isolate* isolate, Args... args)
+	static v8::Local<v8::Object> create_object(v8::Isolate* isolate, Args&&... args)
 	{
-		return import_external(isolate,
-			factory<T, Traits>::create(isolate, std::forward<Args>(args)...));
+		return import_external(isolate, object_create(isolate, std::forward<Args>(args)...));
 	}
 
 	/// Find V8 object handle for a wrapped C++ object, may return empty handle on fail.

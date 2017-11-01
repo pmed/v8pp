@@ -54,7 +54,7 @@ struct call_from_v8_traits
 			typename Traits::template convert_ptr<U>,
 			typename Traits::template convert_ref<U>
 		>::type,
-		convert<Arg>
+		convert<T>
 	>::type;
 
 	template<size_t Index, typename Traits>

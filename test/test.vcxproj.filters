@@ -4,7 +4,6 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="test_call_v8.cpp" />
     <ClCompile Include="test_throw_ex.cpp" />
-    <ClCompile Include="test_factory.cpp" />
     <ClCompile Include="test_convert.cpp" />
     <ClCompile Include="test_class.cpp" />
     <ClCompile Include="test_call_from_v8.cpp" />
