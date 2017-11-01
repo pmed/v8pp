@@ -129,12 +129,12 @@ v8::Local<v8::Value> init(v8::Isolate* isolate)
 	// Create a module to add classes and functions to and return a
 	// new instance of the module to be embedded into the v8 context
 	v8pp::module m(isolate);
-	m.set("rename", [](char const* src, char const* dest) -> bool
+	m.set_function("rename", [](char const* src, char const* dest) -> bool
 	{
 		return std::rename(src, dest) == 0;
 	});
-	m.set("writer", file_writer_class);
-	m.set("reader", file_reader_class);
+	m.set_class("writer", file_writer_class);
+	m.set_class("reader", file_reader_class);
 
 	return scope.Escape(m.new_instance());
 }

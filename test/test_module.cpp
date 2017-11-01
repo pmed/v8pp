@@ -38,12 +38,12 @@ void test_module()
 		;
 
 	module
-		.set("consts", consts)
-		.set("var", var)
-		.set("fun", &fun)
-		.set("empty", v8::Null(context.isolate()))
-		.set("rprop", v8pp::property(get_x))
-		.set("wprop", v8pp::property(get_x, set_x))
+		.set_submodule("consts", consts)
+		.set_var("var", var)
+		.set_function("fun", &fun)
+		.set_value("empty", v8::Null(context.isolate()))
+		.set_property("rprop", get_x)
+		.set_property("wprop", get_x, set_x)
 		;
 	context.set("module", module);
 
