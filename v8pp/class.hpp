@@ -506,7 +506,7 @@ public:
 	/// Set C++ class member function
 	template<typename Method>
 	typename std::enable_if<std::is_member_function_pointer<Method>::value, class_&>::type
-	set_function(char const *name, Method mem_func)
+	function(char const *name, Method mem_func)
 	{
 		using mem_func_type =
 			typename detail::function_traits<Method>::template pointer_type<T>;
@@ -521,7 +521,7 @@ public:
 	/// Set static class function
 	template<typename Function, typename Func = typename std::decay<Function>::type>
 	typename std::enable_if<detail::is_callable<Func>::value, class_&>::type
-	set_function(char const *name, Function&& func)
+	function(char const *name, Function&& func)
 	{
 		v8::HandleScope scope(isolate());
 
@@ -535,7 +535,7 @@ public:
 
 	/// Set class member variable
 	template<typename Attribute>
-	class_& set_var(char const *name, Attribute attribute)
+	class_& var(char const *name, Attribute attribute)
 	{
 		static_assert(std::is_member_object_pointer<Attribute>::value,
 			"Attribute must be pointer to member data");
@@ -555,7 +555,7 @@ public:
 
 	/// Set read/write class property with getter and setter
 	template<typename GetFunction, typename SetFunction>
-	class_& set_property(char const *name, GetFunction&& get, SetFunction&& set)
+	class_& property(char const *name, GetFunction&& get, SetFunction&& set)
 	{
 		using Getter = typename std::conditional<
 			std::is_member_function_pointer<GetFunction>::value,
@@ -588,7 +588,7 @@ public:
 
 	/// Set read-only class property with getter
 	template<typename GetFunction>
-	class_& set_property(char const *name, GetFunction&& get)
+	class_& property(char const *name, GetFunction&& get)
 	{
 		using Getter = typename std::conditional<
 			std::is_member_function_pointer<GetFunction>::value,
@@ -613,7 +613,7 @@ public:
 
 	/// Set value as a read-only constant
 	template<typename Value>
-	class_& set_const(char const* name, Value const& value)
+	class_& const_(char const* name, Value const& value)
 	{
 		v8::HandleScope scope(isolate());
 

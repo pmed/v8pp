@@ -30,22 +30,22 @@ void test_module()
 	v8pp::module consts(context.isolate());
 
 	consts
-		.set_const("bool", true)
-		.set_const("char", 'Z')
-		.set_const("int", 100)
-		.set_const("str", "str")
-		.set_const("num", 99.9)
+		.const_("bool", true)
+		.const_("char", 'Z')
+		.const_("int", 100)
+		.const_("str", "str")
+		.const_("num", 99.9)
 		;
 
 	module
-		.set_submodule("consts", consts)
-		.set_var("var", var)
-		.set_function("fun", &fun)
-		.set_value("empty", v8::Null(context.isolate()))
-		.set_property("rprop", get_x)
-		.set_property("wprop", get_x, set_x)
+		.submodule("consts", consts)
+		.var("var", var)
+		.function("fun", &fun)
+		.value("empty", v8::Null(context.isolate()))
+		.property("rprop", get_x)
+		.property("wprop", get_x, set_x)
 		;
-	context.set_module("module", module);
+	context.module("module", module);
 
 	check_eq("module.consts.bool",
 		run_script<bool>(context, "module.consts.bool"), true);

@@ -224,16 +224,16 @@ context::~context()
 	}
 }
 
-context& context::set_value(char const* name, v8::Local<v8::Value> value)
+context& context::value(char const* name, v8::Local<v8::Value> value)
 {
 	v8::HandleScope scope(isolate_);
-	to_local(isolate_, impl_)->Global()->Set(isolate_->GetCurrentContext(), to_v8(isolate_, name), value);
+	global()->Set(isolate_->GetCurrentContext(), to_v8(isolate_, name), value);
 	return *this;
 }
 
-context& context::set_module(char const* name, module& m)
+context& context::module(char const* name, v8pp::module& m)
 {
-	return set_value(name, m.new_instance());
+	return value(name, m.new_instance());
 }
 
 v8::Local<v8::Value> context::run_file(std::string const& filename)

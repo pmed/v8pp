@@ -99,10 +99,10 @@ v8::Local<v8::Value> init(v8::Isolate* isolate)
 	// file_base binding, no .ctor() specified, object creation disallowed in JavaScript
 	v8pp::class_<file_base> file_base_class(isolate);
 	file_base_class
-		.set_function("close", &file_base::close)
-		.set_function("good", &file_base::good)
-		.set_function("is_open", &file_base::is_open)
-		.set_function("eof", &file_base::eof)
+		.function("close", &file_base::close)
+		.function("good", &file_base::good)
+		.function("is_open", &file_base::is_open)
+		.function("eof", &file_base::eof)
 		;
 
 	// .ctor<> template arguments declares types of file_writer constructor
@@ -111,9 +111,9 @@ v8::Local<v8::Value> init(v8::Isolate* isolate)
 	file_writer_class
 		.ctor<v8::FunctionCallbackInfo<v8::Value> const&>()
 		.inherit<file_base>()
-		.set_function("open", &file_writer::open)
-		.set_function("print", &file_writer::print)
-		.set_function("println", &file_writer::println)
+		.function("open", &file_writer::open)
+		.function("print", &file_writer::print)
+		.function("println", &file_writer::println)
 		;
 
 	// .ctor<> template arguments declares types of file_reader constructor.
@@ -122,19 +122,19 @@ v8::Local<v8::Value> init(v8::Isolate* isolate)
 	file_reader_class
 		.ctor<char const*>()
 		.inherit<file_base>()
-		.set_function("open", &file_reader::open)
-		.set_function("getln", &file_reader::getline)
+		.function("open", &file_reader::open)
+		.function("getln", &file_reader::getline)
 		;
 
 	// Create a module to add classes and functions to and return a
 	// new instance of the module to be embedded into the v8 context
 	v8pp::module m(isolate);
-	m.set_function("rename", [](char const* src, char const* dest) -> bool
+	m.function("rename", [](char const* src, char const* dest) -> bool
 	{
 		return std::rename(src, dest) == 0;
 	});
-	m.set_class("writer", file_writer_class);
-	m.set_class("reader", file_reader_class);
+	m.class_("writer", file_writer_class);
+	m.class_("reader", file_reader_class);
 
 	return scope.Escape(m.new_instance());
 }

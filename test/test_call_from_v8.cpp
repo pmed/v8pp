@@ -85,10 +85,10 @@ void test_call_from_v8()
 	v8::Isolate* isolate = context.isolate();
 	v8::HandleScope scope(isolate);
 
-	context.set_function("x", x);
-	context.set_function("y", y);
-	context.set_function("z", z);
-	context.set_function("w", w);
+	context.function("x", x);
+	context.function("y", y);
+	context.function("z", z);
+	context.function("w", w);
 
 	check_eq("x", run_script<int>(context, "x()"), 0);
 	check_eq("y", run_script<int>(context, "y(1)"), 1);

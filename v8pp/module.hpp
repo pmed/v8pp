@@ -42,40 +42,40 @@ public:
 
 	/// Set a V8 value in the module with specified name
 	template<typename Data>
-	module& set_value(char const* name, v8::Local<Data> value)
+	module& value(char const* name, v8::Local<Data> value)
 	{
 		obj_->Set(v8pp::to_v8(isolate_, name), value);
 		return *this;
 	}
 
 	/// Set submodule in the module with specified name
-	module& set_submodule(char const* name, module& m)
+	module& submodule(char const* name, v8pp::module& m)
 	{
-		return set_value(name, m.obj_);
+		return value(name, m.obj_);
 	}
 
 	/// Set wrapped C++ class in the module with specified name
 	template<typename T, typename Traits>
-	module& set_class(char const* name, class_<T, Traits>& cl)
+	module& class_(char const* name, v8pp::class_<T, Traits>& cl)
 	{
 		v8::HandleScope scope(isolate_);
 
 		cl.class_function_template()->SetClassName(v8pp::to_v8(isolate_, name));
-		return set_value(name, cl.js_function_template());
+		return value(name, cl.js_function_template());
 	}
 
 	/// Set a C++ function in the module with specified name
 	template<typename Function, typename Traits = raw_ptr_traits>
-	module& set_function(char const* name, Function&& func)
+	module& function(char const* name, Function&& func)
 	{
 		using Fun = typename std::decay<Function>::type;
 		static_assert(detail::is_callable<Fun>::value, "Function must be callable");
-		return set_value(name, wrap_function_template<Traits>(isolate_, std::forward<Function>(func)));
+		return value(name, wrap_function_template<Traits>(isolate_, std::forward<Function>(func)));
 	}
 
 	/// Set a C++ variable in the module with specified name
 	template<typename Variable>
-	module& set_var(char const *name, Variable& var)
+	module& var(char const *name, Variable& var)
 	{
 		static_assert(!detail::is_callable<Variable>::value, "Variable must not be callable");
 		v8::HandleScope scope(isolate_);
@@ -89,7 +89,7 @@ public:
 
 	/// Set property in the module with specified name and get/set functions
 	template<typename GetFunction, typename SetFunction>
-	module& set_property(char const *name, GetFunction&& get, SetFunction&& set)
+	module& property(char const *name, GetFunction&& get, SetFunction&& set)
 	{
 		using Getter = typename std::decay<GetFunction>::type;
 		using Setter = typename std::decay<SetFunction>::type;
@@ -109,7 +109,7 @@ public:
 
 	/// Set read-only property in the module with specified name and get function
 	template<typename GetFunction>
-	module& set_property(char const *name, GetFunction&& get)
+	module& property(char const *name, GetFunction&& get)
 	{
 		using Getter = typename std::decay<GetFunction>::type;
 		static_assert(detail::is_callable<Getter>::value, "GetFunction must be callable");
@@ -126,7 +126,7 @@ public:
 	}
 
 	/// Set another module as a read-only property
-	module& set_const(char const* name, module& m)
+	module& const_(char const* name, module& m)
 	{
 		v8::HandleScope scope(isolate_);
 
@@ -137,7 +137,7 @@ public:
 
 	/// Set a value convertible to JavaScript as a read-only property
 	template<typename Value>
-	module& set_const(char const* name, Value const& value)
+	module& const_(char const* name, Value const& value)
 	{
 		v8::HandleScope scope(isolate_);
 

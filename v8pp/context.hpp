@@ -37,6 +37,9 @@ public:
 	/// V8 isolate associated with this context
 	v8::Isolate* isolate() { return isolate_; }
 
+	/// Global object in this context
+	v8::Local<v8::Object> global() { return to_local(isolate_, impl_)->Global(); }
+
 	/// Library search path
 	std::string const& lib_path() const { return lib_path_; }
 
@@ -53,27 +56,27 @@ public:
 		std::string const& filename = "");
 
 	/// Set a V8 value in the context global object with specified name
-	context& set_value(char const* name, v8:Local<v8::Value> value);
+	context& value(char const* name, v8::Local<v8::Value> value);
 
 	/// Set module to the context global object
-	context& set_module(char const *name, module& m);
+	context& module(char const *name, v8pp::module& m);
 
 	/// Set functions to the context global object
 	template<typename Function, typename Traits = raw_ptr_traits>
-	context& set_function(char const* name, Function&& func)
+	context& function(char const* name, Function&& func)
 	{
 		using Fun = typename std::decay<Function>::type;
 		static_assert(detail::is_callable<Fun>::value, "Function must be callable");
-		return set_value(name, wrap_function<Traits>(isolate_, name, std::forward<Function>(func)));
+		return value(name, wrap_function<Traits>(isolate_, name, std::forward<Function>(func)));
 	}
 
 	/// Set class to the context global object
 	template<typename T, typename Traits>
-	context& set_class(char const* name, class_<T, Traits>& cl)
+	context& class_(char const* name, v8pp::class_<T, Traits>& cl)
 	{
 		v8::HandleScope scope(isolate_);
 		cl.class_function_template()->SetClassName(v8pp::to_v8(isolate_, name));
-		return set_value(name, cl.js_function_template()->GetFunction(isolate_->GetCurrentContext()).ToLocalChecked());
+		return value(name, cl.js_function_template()->GetFunction(isolate_->GetCurrentContext()).ToLocalChecked());
 	}
 
 private:
