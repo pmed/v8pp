@@ -15,6 +15,7 @@
 #include <v8.h>
 
 #include "v8pp/convert.hpp"
+#include "v8pp/function.hpp"
 
 namespace v8pp {
 
@@ -52,18 +53,27 @@ public:
 		std::string const& filename = "");
 
 	/// Set a V8 value in the context global object with specified name
-	context& set(char const* name, v8::Local<v8::Value> value);
+	context& set_value(char const* name, v8:Local<v8::Value> value);
 
 	/// Set module to the context global object
-	context& set(char const *name, module& m);
+	context& set_module(char const *name, module& m);
+
+	/// Set functions to the context global object
+	template<typename Function>
+	context& set_function(char const* name, Function&& func)
+	{
+		using Fun = typename std::decay<Function>::type;
+		static_assert(detail::is_callable<Fun>::value, "Function must be callable");
+		return set_value(name, wrap_function(isolate_, name, std::forward<Function>(func)));
+	}
 
 	/// Set class to the context global object
 	template<typename T, typename Traits>
-	context& set(char const* name, class_<T, Traits>& cl)
+	context& set_class(char const* name, class_<T, Traits>& cl)
 	{
 		v8::HandleScope scope(isolate_);
 		cl.class_function_template()->SetClassName(v8pp::to_v8(isolate_, name));
-		return set(name, cl.js_function_template()->GetFunction(isolate_->GetCurrentContext()).ToLocalChecked());
+		return set_value(name, cl.js_function_template()->GetFunction(isolate_->GetCurrentContext()).ToLocalChecked());
 	}
 
 private:

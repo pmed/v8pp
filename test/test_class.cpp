@@ -118,8 +118,8 @@ void test_class_()
 	});
 
 	context
-		.set("X", X_class)
-		.set("Y", Y_class)
+		.set_class("X", X_class)
+		.set_class("Y", Y_class)
 		;
 
 	check_eq("X object", run_script<int>(context, "x = new X(); x.var += x.konst"), 100);
@@ -265,7 +265,7 @@ void test_multiple_inheritance()
 		;
 
 
-	context.set("C", C_class);
+	context.set_class("C", C_class);
 	check_eq("get attributes", run_script<int>(context, "c = new C(); c.xA + c.xB + c.xC"), 1 + 2 + 3);
 	check_eq("set attributes", run_script<int>(context,
 		"c = new C(); c.xA = 10; c.xB = 20; c.xC = 30; c.xA + c.xB + c.xC"), 10 + 20 + 30);

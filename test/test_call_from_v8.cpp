@@ -85,13 +85,13 @@ void test_call_from_v8()
 	v8::Isolate* isolate = context.isolate();
 	v8::HandleScope scope(isolate);
 
-	context.set("x", v8pp::wrap_function(isolate, "x", &x));
-	context.set("y", v8pp::wrap_function(isolate, "y", &y));
-	context.set("z", v8pp::wrap_function(isolate, "z", &z));
-//	context.set("w", v8pp::wrap_function(isolate, "w", &w));
+	context.set_function("x", x);
+	context.set_function("y", y);
+	context.set_function("z", z);
+	context.set_function("w", w);
 
-//	check_eq("x", run_script<int>(context, "x()"), 0);
-//	check_eq("y", run_script<int>(context, "y(1)"), 1);
-//	check_eq("z", run_script<int>(context, "z(2)"), 2);
-//	check_eq("w", run_script<int>(context, "w(2, 'd', true, null)"), 4);
+	check_eq("x", run_script<int>(context, "x()"), 0);
+	check_eq("y", run_script<int>(context, "y(1)"), 1);
+	check_eq("z", run_script<int>(context, "z(2)"), 2);
+	check_eq("w", run_script<int>(context, "w(2, 'd', true, null)"), 4);
 }

@@ -45,7 +45,7 @@ void test_module()
 		.set_property("rprop", get_x)
 		.set_property("wprop", get_x, set_x)
 		;
-	context.set("module", module);
+	context.set_module("module", module);
 
 	check_eq("module.consts.bool",
 		run_script<bool>(context, "module.consts.bool"), true);
