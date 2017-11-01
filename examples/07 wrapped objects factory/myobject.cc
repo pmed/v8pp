@@ -19,10 +19,10 @@ void MyObject::Init() {
   v8pp::class_<MyObject> MyObject_class(isolate);
 
   // Prototype
-  MyObject_class.set("plusOne", &MyObject::PlusOne);
+  MyObject_class.function("plusOne", &MyObject::PlusOne);
 
   v8pp::module bindings(isolate);
-  bindings.set("MyObject", MyObject_class);
+  bindings.class_("MyObject", MyObject_class);
 
   static Persistent<Object> bindings_(isolate, bindings.new_instance());
 }

@@ -31,9 +31,9 @@ void InitAll(Handle<Object> exports) {
   v8pp::class_<MyObject> MyObject_class(isolate);
 
   v8pp::module addon(isolate);
-  addon.set("MyObject", MyObject_class); 
-  addon.set("createObject", &CreateObject);
-  addon.set("add", &Add);
+  addon.class_("MyObject", MyObject_class); 
+  addon.function("createObject", &CreateObject);
+  addon.function("add", &Add);
   exports->SetPrototype(isolate->GetCurrentContext(), addon.new_instance());
   node::AtExit([](void* param)
   {
