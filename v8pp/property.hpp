@@ -386,20 +386,6 @@ struct property_<Get, Get>
 	}
 };
 
-/// Create read/write property from get and set member functions
-template<typename Get, typename Set>
-property_<Get, Set> property(Get get, Set set)
-{
-	return property_<Get, Set>(get, set);
-}
-
-/// Create read-only property from a get function
-template<typename Get>
-property_<Get, Get> property(Get get)
-{
-	return property_<Get, Get>(get);
-}
-
 } // namespace v8pp
 
 #endif // V8PP_PROPERTY_HPP_INCLUDED
