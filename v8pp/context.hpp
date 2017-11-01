@@ -59,12 +59,12 @@ public:
 	context& set_module(char const *name, module& m);
 
 	/// Set functions to the context global object
-	template<typename Function>
+	template<typename Function, typename Traits = raw_ptr_traits>
 	context& set_function(char const* name, Function&& func)
 	{
 		using Fun = typename std::decay<Function>::type;
 		static_assert(detail::is_callable<Fun>::value, "Function must be callable");
-		return set_value(name, wrap_function(isolate_, name, std::forward<Function>(func)));
+		return set_value(name, wrap_function<Traits>(isolate_, name, std::forward<Function>(func)));
 	}
 
 	/// Set class to the context global object

@@ -456,7 +456,6 @@ public:
 	{
 		static object_pointer_type call(v8::FunctionCallbackInfo<v8::Value> const& args)
 		{
-			using ctor_function = object_pointer_type (*)(v8::Isolate* isolate, Args&&...);
 			object_pointer_type object = detail::call_from_v8<Traits>(Traits::template create<T, Args...>, args);
 			args.GetIsolate()->AdjustAmountOfExternalAllocatedMemory(
 				static_cast<int64_t>(Traits::object_size(object)));
@@ -506,89 +505,113 @@ public:
 
 	/// Set C++ class member function
 	template<typename Method>
-	typename std::enable_if<
-		std::is_member_function_pointer<Method>::value, class_&>::type
-	set(char const *name, Method mem_func)
+	typename std::enable_if<std::is_member_function_pointer<Method>::value, class_&>::type
+	set_function(char const *name, Method mem_func)
 	{
 		using mem_func_type =
 			typename detail::function_traits<Method>::template pointer_type<T>;
-		mem_func_type mf(mem_func);
+
+		v8::HandleScope scope(isolate());
+
 		class_info_.class_function_template()->PrototypeTemplate()->Set(
-			isolate(), name, v8::FunctionTemplate::New(isolate(),
-				&detail::forward_function<Traits, mem_func_type>,
-				detail::set_external_data(isolate(), std::forward<mem_func_type>(mf))));
+			isolate(), name, wrap_function_template<Traits>(isolate(), mem_func_type(mem_func)));
 		return *this;
 	}
 
 	/// Set static class function
-	template<typename Function,
-		typename Func = typename std::decay<Function>::type>
+	template<typename Function, typename Func = typename std::decay<Function>::type>
 	typename std::enable_if<detail::is_callable<Func>::value, class_&>::type
-	set(char const *name, Function&& func)
+	set_function(char const *name, Function&& func)
 	{
+		v8::HandleScope scope(isolate());
+
 		v8::Local<v8::Data> wrapped_fun =
-			wrap_function_template(isolate(), std::forward<Func>(func));
+			wrap_function_template<Traits>(isolate(), std::forward<Function>(func));
 		class_info_.class_function_template()
 			->PrototypeTemplate()->Set(isolate(), name, wrapped_fun);
 		class_info_.js_function_template()->Set(isolate(), name, wrapped_fun);
 		return *this;
 	}
 
-	/// Set class member data
+	/// Set class member variable
 	template<typename Attribute>
-	typename std::enable_if<
-		std::is_member_object_pointer<Attribute>::value, class_&>::type
-	set(char const *name, Attribute attribute, bool readonly = false)
+	class_& set_var(char const *name, Attribute attribute)
 	{
+		static_assert(std::is_member_object_pointer<Attribute>::value,
+			"Attribute must be pointer to member data");
+
 		v8::HandleScope scope(isolate());
 
 		using attribute_type = typename
 			detail::function_traits<Attribute>::template pointer_type<T>;
-		attribute_type attr(attribute);
-		v8::AccessorGetterCallback getter = &member_get<attribute_type>;
-		v8::AccessorSetterCallback setter = &member_set<attribute_type>;
-		if (readonly)
-		{
-			setter = nullptr;
-		}
-
+		attribute_type attr = attribute;
 		class_info_.class_function_template()->PrototypeTemplate()
-			->SetAccessor(v8pp::to_v8(isolate(), name), getter, setter,
-				detail::set_external_data(isolate(),
-					std::forward<attribute_type>(attr)), v8::DEFAULT,
-				v8::PropertyAttribute(v8::DontDelete | (setter? 0 : v8::ReadOnly)));
+			->SetAccessor(v8pp::to_v8(isolate(), name),
+				&member_get<attribute_type>, &member_set<attribute_type>,
+				detail::set_external_data(isolate(), std::forward<attribute_type>(attr)),
+				v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
 		return *this;
 	}
 
 	/// Set read/write class property with getter and setter
-	template<typename GetMethod, typename SetMethod>
-	typename std::enable_if<std::is_member_function_pointer<GetMethod>::value
-		&& std::is_member_function_pointer<SetMethod>::value, class_&>::type
-	set(char const *name, property_<GetMethod, SetMethod>&& property)
+	template<typename GetFunction, typename SetFunction>
+	class_& set_property(char const *name, GetFunction&& get, SetFunction&& set)
 	{
+		using Getter = typename std::conditional<
+			std::is_member_function_pointer<GetFunction>::value,
+			typename detail::function_traits<GetFunction>::template pointer_type<T>,
+			typename std::decay<GetFunction>::type
+		>::type;
+
+		using Setter = typename std::conditional<
+			std::is_member_function_pointer<SetFunction>::value,
+			typename detail::function_traits<SetFunction>::template pointer_type<T>,
+			typename std::decay<SetFunction>::type
+		>::type;
+
+		static_assert(std::is_member_function_pointer<GetFunction>::value
+			|| detail::is_callable<Getter>::value, "GetFunction must be callable");
+		static_assert(std::is_member_function_pointer<SetFunction>::value
+			|| detail::is_callable<Setter>::value, "SetFunction must be callable");
+
+		using property_type = property_<Getter, Setter>;
+
 		v8::HandleScope scope(isolate());
 
-		using property_type = property_<
-			typename detail::function_traits<GetMethod>::template pointer_type<T>,
-			typename detail::function_traits<SetMethod>::template pointer_type<T>
-		>;
-		property_type prop(property);
-		v8::AccessorGetterCallback getter = property_type::template get<Traits>;
-		v8::AccessorSetterCallback setter = property_type::template set<Traits>;
-		if (prop.is_readonly)
-		{
-			setter = nullptr;
-		}
-
 		class_info_.class_function_template()->PrototypeTemplate()
-			->SetAccessor(v8pp::to_v8(isolate(), name), getter, setter,
-				detail::set_external_data(isolate(),
-					std::forward<property_type>(prop)), v8::DEFAULT,
-				v8::PropertyAttribute(v8::DontDelete | (setter ? 0 : v8::ReadOnly)));
+			->SetAccessor(v8pp::to_v8(isolate(), name),
+				property_type::template get<Traits>, property_type::template set<Traits>,
+				detail::set_external_data(isolate(), property_type(get, set)),
+				v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
 		return *this;
 	}
 
-	/// Set value as a read-only property
+	/// Set read-only class property with getter
+	template<typename GetFunction>
+	class_& set_property(char const *name, GetFunction&& get)
+	{
+		using Getter = typename std::conditional<
+			std::is_member_function_pointer<GetFunction>::value,
+			typename detail::function_traits<GetFunction>::template pointer_type<T>,
+			typename std::decay<GetFunction>::type
+		>::type;
+
+		static_assert(std::is_member_function_pointer<GetFunction>::value
+			|| detail::is_callable<Getter>::value, "GetFunction must be callable");
+
+		using property_type = property_<Getter, Getter>;
+
+		v8::HandleScope scope(isolate());
+
+		class_info_.class_function_template()->PrototypeTemplate()
+			->SetAccessor(v8pp::to_v8(isolate(), name),
+				property_type::template get<Traits>, property_type::template set<Traits>,
+				detail::set_external_data(isolate(), property_type(get)),
+				v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete | v8::ReadOnly));
+		return *this;
+	}
+
+	/// Set value as a read-only constant
 	template<typename Value>
 	class_& set_const(char const* name, Value const& value)
 	{

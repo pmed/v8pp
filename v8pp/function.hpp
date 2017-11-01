@@ -92,7 +92,7 @@ private:
 
 template<typename T>
 typename std::enable_if<is_pointer_cast_allowed<T>::value, v8::Local<v8::Value>>::type
-set_external_data(v8::Isolate* isolate, T value)
+set_external_data(v8::Isolate* isolate, T const& value)
 {
 	return v8::External::New(isolate, pointer_cast<T>(value));
 }
@@ -176,31 +176,44 @@ void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 } // namespace detail
 
 /// Wrap C++ function into new V8 function template
-template<typename F>
+template<typename Traits, typename F>
 v8::Local<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&& func)
 {
 	using F_type = typename std::decay<F>::type;
 	return v8::FunctionTemplate::New(isolate,
-		&detail::forward_function<raw_ptr_traits, F_type>,
+		&detail::forward_function<Traits, F_type>,
 		detail::set_external_data(isolate, std::forward<F_type>(func)));
+}
+
+template<typename F>
+v8::Handle<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&& func)
+{
+	return wrap_function_template<raw_ptr_traits>(isolate, std::forward<F>(func));
 }
 
 /// Wrap C++ function into new V8 function
 /// Set nullptr or empty string for name
 /// to make the function anonymous
-template<typename F>
+template<typename Traits, typename F>
 v8::Local<v8::Function> wrap_function(v8::Isolate* isolate,
 	char const* name, F&& func)
 {
 	using F_type = typename std::decay<F>::type;
 	v8::Local<v8::Function> fn = v8::Function::New(isolate->GetCurrentContext(),
-		&detail::forward_function<raw_ptr_traits, F_type>,
+		&detail::forward_function<Traits, F_type>,
 		detail::set_external_data(isolate, std::forward<F_type>(func))).ToLocalChecked();
 	if (name && *name)
 	{
 		fn->SetName(to_v8(isolate, name));
 	}
 	return fn;
+}
+
+template<typename F>
+v8::Handle<v8::Function> wrap_function(v8::Isolate* isolate,
+	char const* name, F&& func)
+{
+	return wrap_function<raw_ptr_traits>(isolate, name, std::forward<F>(func));
 }
 
 } // namespace v8pp

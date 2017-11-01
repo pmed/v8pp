@@ -65,12 +65,12 @@ public:
 	}
 
 	/// Set a C++ function in the module with specified name
-	template<typename Function>
+	template<typename Function, typename Traits = raw_ptr_traits>
 	module& set_function(char const* name, Function&& func)
 	{
 		using Fun = typename std::decay<Function>::type;
 		static_assert(detail::is_callable<Fun>::value, "Function must be callable");
-		return set_value(name, wrap_function_template(isolate_, std::forward<Function>(func)));
+		return set_value(name, wrap_function_template<Traits>(isolate_, std::forward<Function>(func)));
 	}
 
 	/// Set a C++ variable in the module with specified name

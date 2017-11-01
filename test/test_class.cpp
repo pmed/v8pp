@@ -81,27 +81,26 @@ void test_class_()
 	X_class
 		.ctor(&create_X<Traits>)
 		.set_const("konst", 99)
-		.set("var", &X::var)
-		.set("rprop", v8pp::property(&X::get))
-		.set("wprop", v8pp::property(&X::get, &X::set))
-		.set("wprop2", v8pp::property(
-			static_cast<x_prop_get>(&X::prop),
-			static_cast<x_prop_set>(&X::prop)))
-		.set("fun1", &X::fun1)
-		.set("fun2", &X::fun2)
-		.set("fun3", &X::fun3)
-		.set("fun4", &X::fun4)
-		.set("static_fun", &X::static_fun)
-		.set("static_lambda", [](int x) { return x + 3; })
-		.set("extern_fun", extern_fun<Traits>)
+		.set_var("var", &X::var)
+		.set_property("rprop", &X::get)
+		.set_property("wprop", &X::get, &X::set)
+		.set_property("wprop2", static_cast<x_prop_get>(&X::prop), static_cast<x_prop_set>(&X::prop))
+//TODO:		.set_property("lprop", [](X const& x) { return x.var; }, [](X& x, int n) { x.var = n; })
+		.set_function("fun1", &X::fun1)
+		.set_function("fun2", &X::fun2)
+		.set_function("fun3", &X::fun3)
+		.set_function("fun4", &X::fun4)
+		.set_function("static_fun", &X::static_fun)
+		.set_function("static_lambda", [](int x) { return x + 3; })
+		.set_function("extern_fun", extern_fun<Traits>)
 		;
 
 	v8pp::class_<Y, Traits> Y_class(isolate);
 	Y_class
 		.template inherit<X>()
 		.template ctor<int>()
-		.set("useX", &Y::useX)
-		.set("useX_ptr", &Y::useX_ptr<Traits>)
+		.set_function("useX", &Y::useX)
+		.set_function("useX_ptr", &Y::useX_ptr<Traits>)
 		;
 
 	check_ex<std::runtime_error>("already wrapped class X", [isolate]()
@@ -238,30 +237,30 @@ void test_multiple_inheritance()
 
 	v8pp::class_<B, Traits> B_class(isolate);
 	B_class
-		.set("xB", &B::x)
-		.set("zB", &B::z)
-		.set("g", &B::g);
+		.set_var("xB", &B::x)
+		.set_function("zB", &B::z)
+		.set_function("g", &B::g);
 
 	v8pp::class_<C, Traits> C_class(isolate);
 	C_class
 		.template inherit<B>()
 		.template ctor<>()
-		.set("xA", &A::x)
-		.set("xC", &C::x)
+		.set_var("xA", &A::x)
+		.set_var("xC", &C::x)
 
-		.set("zA", &A::z)
-		.set("zC", &C::z)
+		.set_function("zA", &A::z)
+		.set_function("zC", &C::z)
 
-		.set("f", &A::f)
-		.set("h", &C::h)
+		.set_function("f", &A::f)
+		.set_function("h", &C::h)
 
-		.set("rF", v8pp::property(&C::f))
-		.set("rG", v8pp::property(&C::g))
-		.set("rH", v8pp::property(&C::h))
+		.set_property("rF", &C::f)
+		.set_property("rG", &C::g)
+		.set_property("rH", &C::h)
 
-		.set("F", v8pp::property(&C::f, &C::set_f))
-		.set("G", v8pp::property(&C::g, &C::set_g))
-		.set("H", v8pp::property(&C::h, &C::set_h))
+		.set_property("F", &C::f, &C::set_f)
+		.set_property("G", &C::g, &C::set_g)
+		.set_property("H", &C::h, &C::set_h)
 		;
 
 

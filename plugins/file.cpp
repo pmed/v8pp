@@ -99,10 +99,10 @@ v8::Local<v8::Value> init(v8::Isolate* isolate)
 	// file_base binding, no .ctor() specified, object creation disallowed in JavaScript
 	v8pp::class_<file_base> file_base_class(isolate);
 	file_base_class
-		.set("close", &file_base::close)
-		.set("good", &file_base::good)
-		.set("is_open", &file_base::is_open)
-		.set("eof", &file_base::eof)
+		.set_function("close", &file_base::close)
+		.set_function("good", &file_base::good)
+		.set_function("is_open", &file_base::is_open)
+		.set_function("eof", &file_base::eof)
 		;
 
 	// .ctor<> template arguments declares types of file_writer constructor
@@ -111,9 +111,9 @@ v8::Local<v8::Value> init(v8::Isolate* isolate)
 	file_writer_class
 		.ctor<v8::FunctionCallbackInfo<v8::Value> const&>()
 		.inherit<file_base>()
-		.set("open", &file_writer::open)
-		.set("print", &file_writer::print)
-		.set("println", &file_writer::println)
+		.set_function("open", &file_writer::open)
+		.set_function("print", &file_writer::print)
+		.set_function("println", &file_writer::println)
 		;
 
 	// .ctor<> template arguments declares types of file_reader constructor.
@@ -122,8 +122,8 @@ v8::Local<v8::Value> init(v8::Isolate* isolate)
 	file_reader_class
 		.ctor<char const*>()
 		.inherit<file_base>()
-		.set("open", &file_reader::open)
-		.set("getln", &file_reader::getline)
+		.set_function("open", &file_reader::open)
+		.set_function("getln", &file_reader::getline)
 		;
 
 	// Create a module to add classes and functions to and return a
