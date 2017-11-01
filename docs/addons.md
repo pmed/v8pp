@@ -23,7 +23,7 @@ To use `v8pp` in a native Node.js addon append it as a dependency in the addon
 }
 ```
 
-This library uses C++11 with RTTI and exceptions which should be enabled by overriding
+This library uses C++11 with exceptions which should be enabled by overriding
 C++ compiler flags in `bindings.gyp` file:
 ```
 {
@@ -31,9 +31,9 @@ C++ compiler flags in `bindings.gyp` file:
 	[
 		{
 			'target_name': 'addon',
-			'cflags_cc': ['-std=c++11', '-fexceptions', '-frtti'],
-			'msvs_settings': { 'VCCLCompilerTool': { 'ExceptionHandling': 1, 'RuntimeTypeInfo': 'true' } },
-			'xcode_settings': { 'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',  'GCC_ENABLE_CPP_RTTI': 'YES', },
+			'cflags_cc': ['-std=c++11', '-fexceptions'],
+			'msvs_settings': { 'VCCLCompilerTool': { 'ExceptionHandling': 1 } },
+			'xcode_settings': { 'GCC_ENABLE_CPP_EXCEPTIONS': 'YES' },
 			'defines!': ['V8_DEPRECATION_WARNINGS=1'],
 			'include_dirs': [ '<!(node -e require(\'v8pp\'))'],
 			'sources': ['hello.cc'],

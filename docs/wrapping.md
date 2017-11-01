@@ -46,11 +46,11 @@ Class `v8pp::module` in a [`v8pp/module.hpp`](../v8pp/module.hpp) header file
 is a thin wrapper that constructs a `v8::ObjectTemplate`. This class also has
 a constructor to re-use an existing `v8::ObjectTemplate` instance.
 
-The `v8pp::module` class contains a number of `set(name, value)` function
-overloads that allows binding to V8 for other `v8pp::modules`, C++ functions,
-global variables, and classes wrapped with `v8pp::class_` template.
+The `v8pp::module` class contains functions that allows binding to V8 for other
+`v8pp::modules`, C++ functions, global variables, and classes wrapped
+with `v8pp::class_` template.
 
-These `set` functions return reference to the `v8pp::module` instance to allow
+These binding functions return reference to the `v8pp::module` instance to allow
 call chaining:
 
 ```c++
@@ -63,13 +63,13 @@ float fun(float a, float b) { return a + b; }
 v8pp::module module(isolate), submodule(isolate);
 
 submodule
-	.set("x", x)       // bind C++ variable x
-	.set("f", &fun)    // bind C++ function
+	.var("x", x)            // bind C++ variable x
+	.function("f", &fun)    // bind C++ function
 	;
 
 module
-	.set("sub", submodule) // bind submodule
-	.set_const("PI", 3.1415926)  // bind constant
+	.submodule("sub", submodule) // bind submodule
+	.const_("PI", 3.1415926)     // bind constant
 
 // create a  module object and bind it to the global V8 object
 isolate->GetCurrentContext()-> Global()->Set(v8pp::to_v8(isolate, "module"), module.new_instance());
@@ -122,9 +122,9 @@ X_class
 	// specify X constructor signature
 	.ctor<bool>()
 	// bind class member variable
-	.set("b", &X::b)
+	.var("b", &X::b)
 	// set const property
-	.set_const("str", "abc")
+	.const_("str", "abc")
 	;
 
 // Bind class Y
@@ -135,19 +135,19 @@ Y_class
 	// inherit bindings from base class
 	.inherit<X>()
 	// bind member functions
-	.set("get", &Y::get)
-	.set("set", &Y::set)
+	.function("get", &Y::get)
+	.function("set", &Y::set)
 	// bind read-only property
-	.set("prop", v8pp::property(&Y::fun));
+	.property("prop", &Y::fun)
 	// bind read-write property
-	.set("wprop", v8pp::property(&Y::get, &Y::set));
+	.property("wprop", &Y::get, &Y::set)
 	// bind a static function
-	.set("ext_fun", &ext_fun)
+	.function("ext_fun", &ext_fun)
 	;
 
 // set class into the module template
-module.set("X", X_class);
-module.set("Y", Y_class);
+module.class_("X", X_class);
+module.class_("Y", Y_class);
 ```
 
 ```javascript
@@ -167,38 +167,4 @@ y.wprop == 12;
 assert(y.get() == 12);
 assert(y.ext_fun() == y.b);
 assert(module.Y.ext_fun(100) == 100);
-```
-
-
-### v8pp::factory
-
-Creation of  wrapped classes instances can be customized by `v8pp::factory<T>`
-class template specialization. This approach allows to wrap classes with 
-different construction policies:
-
-```c++
-class Z
-{
-public:
-	static Z* make(int) { return new Z }
-	static void done(Z* z) { delete z; }
-private:
-	Z() {}
-	~Z() {}
-};
-
-// Specialize Z factory
-template<>
-struct v8pp::factory<Z>
-{
-	static Z* create(v8::Isolate*, int arg)
-	{
-		return Z::make(arg);
-	}
-
-	static void destroy(v8::Isolate*, Z* obj)
-	{
-		Z::done(obj);
-	}
-};
 ```

@@ -20,3 +20,5 @@ mostly for [`plugins`](./plugins.md):
 
   * `#define V8PP_PLUGIN_INIT(isolate)` - a shortcurt delcaration for plugin
     initialization function.
+
+  * `#define V8PP_HEADER_ONLY 1` - Use header-only implemenation, enabled by default.
