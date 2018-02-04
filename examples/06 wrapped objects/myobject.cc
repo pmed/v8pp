@@ -28,7 +28,7 @@ void MyObject::Init(Handle<Object> exports) {
   v8pp::module addon(isolate);
   addon.set("MyObject", MyObject_class);
 
-  exports->SetPrototype(addon.new_instance());
+  exports->SetPrototype(isolate->GetCurrentContext(), addon.new_instance());
   node::AtExit([](void* param)
   {
       v8pp::cleanup(static_cast<Isolate*>(param));

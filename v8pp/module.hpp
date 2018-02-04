@@ -31,7 +31,7 @@ public:
 	}
 
 	/// Create new module in the specified V8 isolate for existing ObjectTemplate
-	explicit module(v8::Isolate* isolate, v8::Handle<v8::ObjectTemplate> obj)
+	explicit module(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> obj)
 		: isolate_(isolate)
 		, obj_(obj)
 	{
@@ -42,7 +42,7 @@ public:
 
 	/// Set a V8 value in the module with specified name
 	template<typename Data>
-	module& set(char const* name, v8::Handle<Data> value)
+	module& set(char const* name, v8::Local<Data> value)
 	{
 		obj_->Set(v8pp::to_v8(isolate_, name), value);
 		return *this;
@@ -136,7 +136,10 @@ public:
 	}
 
 	/// Create a new module instance in V8
-	v8::Local<v8::Object> new_instance() { return obj_->NewInstance(); }
+	v8::Local<v8::Object> new_instance()
+	{
+		return obj_->NewInstance(isolate_->GetCurrentContext()).ToLocalChecked();
+	}
 
 private:
 	template<typename Variable>
@@ -160,7 +163,7 @@ private:
 	}
 
 	v8::Isolate* isolate_;
-	v8::Handle<v8::ObjectTemplate> obj_;
+	v8::Local<v8::ObjectTemplate> obj_;
 };
 
 } // namespace v8pp

@@ -128,7 +128,7 @@ void test_factory()
 
 	v8::Isolate* isolate = context.isolate();
 	v8::HandleScope scope(isolate);
-	v8::Handle<v8::Function> fun = v8::Function::New(isolate, test_factories);
+	v8::Local<v8::Function> fun = v8::Function::New(isolate->GetCurrentContext(), test_factories).ToLocalChecked();
 
 	v8pp::call_v8(isolate, fun, fun);
 	check_eq("all ctors called", ctor_types, 0x0F);

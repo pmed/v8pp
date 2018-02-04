@@ -32,7 +32,7 @@ namespace v8pp {
 struct context::dynamic_module
 {
 	void* handle;
-	v8::UniquePersistent<v8::Value> exports;
+	v8::Global<v8::Value> exports;
 
 	dynamic_module() = default;
 	dynamic_module(dynamic_module&& other)
@@ -109,7 +109,7 @@ void context::load_module(v8::FunctionCallbackInfo<v8::Value> const& args)
 					" not found in " + filename);
 			}
 
-			using module_init_proc = v8::Handle<v8::Value>(*)(v8::Isolate*);
+			using module_init_proc = v8::Local<v8::Value>(*)(v8::Isolate*);
 			module_init_proc init_proc = reinterpret_cast<module_init_proc>(sym);
 			result = init_proc(isolate);
 			module.exports.Reset(isolate, result);
@@ -180,15 +180,15 @@ context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator)
 
 	v8::HandleScope scope(isolate_);
 
-	v8::Handle<v8::Value> data = detail::set_external_data(isolate_, this);
-	v8::Handle<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate_);
+	v8::Local<v8::Value> data = detail::set_external_data(isolate_, this);
+	v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate_);
 
 	global->Set(isolate_, "require",
 		v8::FunctionTemplate::New(isolate_, context::load_module, data));
 	global->Set(isolate_, "run",
 		v8::FunctionTemplate::New(isolate_, context::run_file, data));
 
-	v8::Handle<v8::Context> impl = v8::Context::New(isolate_, nullptr, global);
+	v8::Local<v8::Context> impl = v8::Context::New(isolate_, nullptr, global);
 	impl->Enter();
 	impl_.Reset(isolate_, impl);
 }
@@ -224,10 +224,10 @@ context::~context()
 	}
 }
 
-context& context::set(char const* name, v8::Handle<v8::Value> value)
+context& context::set(char const* name, v8::Local<v8::Value> value)
 {
 	v8::HandleScope scope(isolate_);
-	to_local(isolate_, impl_)->Global()->Set(to_v8(isolate_, name), value);
+	to_local(isolate_, impl_)->Global()->Set(isolate_->GetCurrentContext(), to_v8(isolate_, name), value);
 	return *this;
 }
 
@@ -236,7 +236,7 @@ context& context::set(char const* name, module& m)
 	return set(name, m.new_instance());
 }
 
-v8::Handle<v8::Value> context::run_file(std::string const& filename)
+v8::Local<v8::Value> context::run_file(std::string const& filename)
 {
 	std::ifstream stream(filename.c_str());
 	if (!stream)
@@ -248,18 +248,20 @@ v8::Handle<v8::Value> context::run_file(std::string const& filename)
 	return run_script(std::string(begin, end), filename);
 }
 
-v8::Handle<v8::Value> context::run_script(std::string const& source,
+v8::Local<v8::Value> context::run_script(std::string const& source,
 	std::string const& filename)
 {
 	v8::EscapableHandleScope scope(isolate_);
+	v8::Local<v8::Context> context = isolate_->GetCurrentContext();
 
-	v8::Local<v8::Script> script = v8::Script::Compile(
-		to_v8(isolate_, source), to_v8(isolate_, filename));
+	v8::ScriptOrigin origin(to_v8(isolate_, filename));
+	v8::Local<v8::Script> script = v8::Script::Compile(context,
+		to_v8(isolate_, source), &origin).ToLocalChecked();
 
 	v8::Local<v8::Value> result;
 	if (!script.IsEmpty())
 	{
-		result = script->Run();
+		result = script->Run(context).ToLocalChecked();
 	}
 	return scope.Escape(result);
 }

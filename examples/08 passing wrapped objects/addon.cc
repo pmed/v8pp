@@ -34,7 +34,7 @@ void InitAll(Handle<Object> exports) {
   addon.set("MyObject", MyObject_class); 
   addon.set("createObject", &CreateObject);
   addon.set("add", &Add);
-  exports->SetPrototype(addon.new_instance());
+  exports->SetPrototype(isolate->GetCurrentContext(), addon.new_instance());
   node::AtExit([](void* param)
   {
       v8pp::cleanup(static_cast<Isolate*>(param));

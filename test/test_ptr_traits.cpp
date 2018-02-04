@@ -181,7 +181,7 @@ void test_ptr_traits()
 	v8::Isolate* isolate = context.isolate();
 	v8::HandleScope scope(isolate);
 
-	v8::Handle<v8::Function> fun = v8::Function::New(isolate, test_create_destroy);
+	v8::Local<v8::Function> fun = v8::Function::New(isolate->GetCurrentContext(), test_create_destroy).ToLocalChecked();
 	v8pp::call_v8(isolate, fun, fun);
 	check_eq("all ctors called", ctor_types, 0x0F);
 	check_eq("ctor count", ctor_count, 6);

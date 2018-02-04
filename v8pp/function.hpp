@@ -87,7 +87,7 @@ private:
 	}
 	using data_storage = typename std::aligned_storage<sizeof(T)>::type;
 	data_storage storage_;
-	v8::UniquePersistent<v8::External> pext_;
+	v8::Global<v8::External> pext_;
 };
 
 template<typename T>
@@ -106,14 +106,14 @@ set_external_data(v8::Isolate* isolate, T&& value)
 
 template<typename T>
 typename std::enable_if<is_pointer_cast_allowed<T>::value, T>::type
-get_external_data(v8::Handle<v8::Value> value)
+get_external_data(v8::Local<v8::Value> value)
 {
 	return pointer_cast<T>(value.As<v8::External>()->Value());
 }
 
 template<typename T>
 typename std::enable_if<!is_pointer_cast_allowed<T>::value, T&>::type
-get_external_data(v8::Handle<v8::Value> value)
+get_external_data(v8::Local<v8::Value> value)
 {
 	return external_data<T>::get(value.As<v8::External>());
 }
@@ -177,7 +177,7 @@ void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 
 /// Wrap C++ function into new V8 function template
 template<typename F>
-v8::Handle<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&& func)
+v8::Local<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&& func)
 {
 	using F_type = typename std::decay<F>::type;
 	return v8::FunctionTemplate::New(isolate,
@@ -189,13 +189,13 @@ v8::Handle<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&
 /// Set nullptr or empty string for name
 /// to make the function anonymous
 template<typename F>
-v8::Handle<v8::Function> wrap_function(v8::Isolate* isolate,
+v8::Local<v8::Function> wrap_function(v8::Isolate* isolate,
 	char const* name, F&& func)
 {
 	using F_type = typename std::decay<F>::type;
-	v8::Handle<v8::Function> fn = v8::Function::New(isolate,
+	v8::Local<v8::Function> fn = v8::Function::New(isolate->GetCurrentContext(),
 		&detail::forward_function<raw_ptr_traits, F_type>,
-		detail::set_external_data(isolate, std::forward<F_type>(func)));
+		detail::set_external_data(isolate, std::forward<F_type>(func))).ToLocalChecked();
 	if (name && *name)
 	{
 		fn->SetName(to_v8(isolate, name));

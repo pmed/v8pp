@@ -25,7 +25,7 @@ void log(v8::FunctionCallbackInfo<v8::Value> const& args)
 	std::cout << std::endl;
 }
 
-v8::Handle<v8::Value> init(v8::Isolate* isolate)
+v8::Local<v8::Value> init(v8::Isolate* isolate)
 {
 	v8pp::module m(isolate);
 	m.set("log", &log);

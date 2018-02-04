@@ -16,15 +16,15 @@
 namespace v8pp {
 
 /// Moveable unique V8 persistent handle.
-/// Due to v8::UniquePersistent has no move constructor
+/// Due to v8::Global has no move constructor
 /// and assign operator defined, it cannot be stored in
 /// std::map, std::unordered_map.
 /// To resolve this issue add move support in dervied class.
 /// See https://groups.google.com/d/topic/v8-users/KV_LZqz41Ac/discussion
 template<typename T>
-struct persistent : public v8::UniquePersistent<T>
+struct persistent : public v8::Global<T>
 {
-	using base_class = v8::UniquePersistent<T>;
+	using base_class = v8::Global<T>;
 
 	persistent()
 		: base_class()
@@ -61,7 +61,7 @@ struct persistent : public v8::UniquePersistent<T>
 	persistent& operator=(persistent const&) = delete;
 };
 
-/// Pointer to C++ object wrapped in V8 with v8::UniquePersistent handle
+/// Pointer to C++ object wrapped in V8 with v8::Global handle
 template<typename T>
 class persistent_ptr
 {
@@ -82,7 +82,7 @@ public:
 	}
 
 	/// Create a persistent pointer from V8 Value, store persistent handle
-	explicit persistent_ptr(v8::Isolate* isolate, v8::Handle<v8::Value> handle)
+	explicit persistent_ptr(v8::Isolate* isolate, v8::Local<v8::Value> handle)
 		: value_()
 	{
 		reset(isolate, from_v8<T*>(isolate, handle));
@@ -162,7 +162,7 @@ public:
 
 private:
 	T* value_;
-	v8::UniquePersistent<v8::Value> handle_;
+	v8::Global<v8::Value> handle_;
 };
 
 } // namespace v8pp

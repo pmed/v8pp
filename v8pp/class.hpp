@@ -220,7 +220,7 @@ public:
 		return result;
 	}
 
-	v8::Handle<v8::Object> wrap_object(pointer_type const& object, bool call_dtor)
+	v8::Local<v8::Object> wrap_object(pointer_type const& object, bool call_dtor)
 	{
 		auto it = objects_.find(object);
 		if (it != objects_.end())
@@ -232,14 +232,15 @@ public:
 
 		v8::EscapableHandleScope scope(isolate_);
 
+		v8::Local<v8::Context> context = isolate_->GetCurrentContext();
 		v8::Local<v8::Object> obj = class_function_template()
-			->GetFunction()->NewInstance();
+			->GetFunction(context).ToLocalChecked()->NewInstance(context).ToLocalChecked();
 
 		obj->SetAlignedPointerInInternalField(0, Traits::pointer_id(object));
 		obj->SetAlignedPointerInInternalField(1, this);
 		obj->SetAlignedPointerInInternalField(2, call_dtor? /*dtor_*/this : nullptr);
 
-		v8::UniquePersistent<v8::Object> pobj(isolate_, obj);
+		v8::Global<v8::Object> pobj(isolate_, obj);
 		pobj.SetWeak(this, [](v8::WeakCallbackInfo<object_registry> const& data)
 		{
 			object_id object = data.GetInternalField(0);
@@ -251,7 +252,7 @@ public:
 		return scope.Escape(obj);
 	}
 
-	v8::Handle<v8::Object> wrap_object(v8::FunctionCallbackInfo<v8::Value> const& args)
+	v8::Local<v8::Object> wrap_object(v8::FunctionCallbackInfo<v8::Value> const& args)
 	{
 		if (!ctor_)
 		{
@@ -267,7 +268,7 @@ public:
 
 		while (value->IsObject())
 		{
-			v8::Handle<v8::Object> obj = value->ToObject();
+			v8::Local<v8::Object> obj = value.As<v8::Object>();
 			if (obj->InternalFieldCount() == 3)
 			{
 				object_id id = obj->GetAlignedPointerFromInternalField(0);
@@ -291,7 +292,7 @@ public:
 	}
 
 private:
-	void reset_object(std::pair<pointer_type const, v8::UniquePersistent<v8::Object>>& object)
+	void reset_object(std::pair<pointer_type const, v8::Global<v8::Object>>& object)
 	{
 		bool call_dtor = true;
 		if (!object.second.IsNearDeath())
@@ -328,11 +329,11 @@ private:
 	std::vector<base_class_info> bases_;
 	std::vector<object_registry*> derivatives_;
 
-	std::unordered_map<pointer_type, v8::UniquePersistent<v8::Object>> objects_;
+	std::unordered_map<pointer_type, v8::Global<v8::Object>> objects_;
 
 	v8::Isolate* isolate_;
-	v8::UniquePersistent<v8::FunctionTemplate> func_;
-	v8::UniquePersistent<v8::FunctionTemplate> js_func_;
+	v8::Global<v8::FunctionTemplate> func_;
+	v8::Global<v8::FunctionTemplate> js_func_;
 
 	ctor_function ctor_;
 	dtor_function dtor_;
@@ -600,7 +601,7 @@ public:
 
 	/// Create JavaScript object which references externally created C++ class.
 	/// It will not take ownership of the C++ pointer.
-	static v8::Handle<v8::Object> reference_external(v8::Isolate* isolate,
+	static v8::Local<v8::Object> reference_external(v8::Isolate* isolate,
 		object_pointer_type const& ext)
 	{
 		using namespace detail;
@@ -617,15 +618,14 @@ public:
 	/// As reference_external but delete memory for C++ object
 	/// when JavaScript object is deleted. You must use `factory<T>::create()`
 	/// to allocate `ext`
-	static v8::Handle<v8::Object> import_external(v8::Isolate* isolate, object_pointer_type const& ext)
+	static v8::Local<v8::Object> import_external(v8::Isolate* isolate, object_pointer_type const& ext)
 	{
 		using namespace detail;
 		return classes::find<Traits>(isolate, type_id<T>()).wrap_object(ext, true);
 	}
 
 	/// Get wrapped object from V8 value, may return nullptr on fail.
-	static object_pointer_type unwrap_object(v8::Isolate* isolate,
-		v8::Handle<v8::Value> value)
+	static object_pointer_type unwrap_object(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
 		using namespace detail;
 		return Traits::template static_pointer_cast<T>(
@@ -634,14 +634,14 @@ public:
 
 	/// Create a wrapped C++ object and import it into JavaScript
 	template<typename ...Args>
-	static v8::Handle<v8::Object> create_object(v8::Isolate* isolate, Args... args)
+	static v8::Local<v8::Object> create_object(v8::Isolate* isolate, Args... args)
 	{
 		return import_external(isolate,
 			factory<T, Traits>::create(isolate, std::forward<Args>(args)...));
 	}
 
 	/// Find V8 object handle for a wrapped C++ object, may return empty handle on fail.
-	static v8::Handle<v8::Object> find_object(v8::Isolate* isolate,
+	static v8::Local<v8::Object> find_object(v8::Isolate* isolate,
 		object_const_pointer_type const& obj)
 	{
 		using namespace detail;

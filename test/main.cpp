@@ -109,8 +109,8 @@ int main(int argc, char const * argv[])
 		}
 	}
 
-	v8::V8::InitializeICU();
-	//v8::V8::InitializeExternalStartupData(argv[0]);
+	//v8::V8::InitializeICU();
+	v8::V8::InitializeExternalStartupData(argv[0]);
 	std::unique_ptr<v8::Platform> platform(v8::platform::CreateDefaultPlatform());
 	v8::V8::InitializePlatform(platform.get());
 	v8::V8::Initialize();

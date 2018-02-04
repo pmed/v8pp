@@ -75,9 +75,9 @@ template<>
 struct convert<person>
 {
 	using from_type = person;
-	using to_type = v8::Handle<v8::Object>;
+	using to_type = v8::Local<v8::Object>;
 
-	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
+	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
 	{
 		return !value.IsEmpty() && value->IsObject();
 	}
@@ -86,8 +86,8 @@ struct convert<person>
 	{
 		v8::EscapableHandleScope scope(isolate);
 		v8::Local<v8::Object> obj = v8::Object::New(isolate);
-		obj->Set(v8pp::to_v8(isolate, "name"), v8pp::to_v8(isolate, p.name));
-		obj->Set(v8pp::to_v8(isolate, "age"), v8pp::to_v8(isolate, p.age));
+		obj->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "name"), v8pp::to_v8(isolate, p.name));
+		obj->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "age"), v8pp::to_v8(isolate, p.age));
 		/* Simpler after #include <v8pp/object.hpp>
 		set_option(isolate, obj, "name", p.name);
 		set_option(isolate, obj, "age", p.age);
@@ -95,7 +95,7 @@ struct convert<person>
 		return scope.Escape(obj);
 	}
 
-	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
 		if (!is_valid(isolate, value))
 		{
@@ -107,9 +107,9 @@ struct convert<person>
 
 		person result;
 		result.name = v8pp::from_v8<std::string>(isolate,
-			obj->Get(v8pp::to_v8(isolate, "name")));
+			obj->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "name")).ToLocalChecked());
 		result.age = v8pp::from_v8<int>(isolate,
-			obj->Get(v8pp::to_v8(isolate, "age")));
+			obj->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "age")).ToLocalChecked());
 		
 		/* Simpler after #include <v8pp/object.hpp>
 		get_option(isolate, obj, "name", result.name);

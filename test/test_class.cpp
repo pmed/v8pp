@@ -76,7 +76,7 @@ struct factory<Y, v8pp::shared_ptr_traits>
 template<typename Traits>
 static int extern_fun(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	int x = args[0]->Int32Value();
+	int x = args[0]->Int32Value(args.GetIsolate()->GetCurrentContext()).ToChecked();
 	auto self = v8pp::class_<X, Traits>::unwrap_object(args.GetIsolate(), args.This());
 	if (self) x += self->var;
 	return x;
@@ -156,18 +156,18 @@ void test_class_()
 
 	auto y1 = v8pp::factory<Y, Traits>::create(isolate, -1);
 
-	v8::Handle<v8::Object> y1_obj =
+	v8::Local<v8::Object> y1_obj =
 		v8pp::class_<Y, Traits>::reference_external(context.isolate(), y1);
 	check("y1", v8pp::from_v8<decltype(y1)>(isolate, y1_obj) == y1);
 	check("y1_obj", v8pp::to_v8(isolate, y1) == y1_obj);
 
 	auto y2 = v8pp::factory<Y, Traits>::create(isolate, -2);
-	v8::Handle<v8::Object> y2_obj =
+	v8::Local<v8::Object> y2_obj =
 		v8pp::class_<Y, Traits>::import_external(context.isolate(), y2);
 	check("y2", v8pp::from_v8<decltype(y2)>(isolate, y2_obj) == y2);
 	check("y2_obj", v8pp::to_v8(isolate, y2) == y2_obj);
 
-	v8::Handle<v8::Object> y3_obj =
+	v8::Local<v8::Object> y3_obj =
 		v8pp::class_<Y, Traits>::create_object(context.isolate(), -3);
 	auto y3 = v8pp::class_<Y, Traits>::unwrap_object(isolate, y3_obj);
 	check("y3", v8pp::from_v8<decltype(y3)>(isolate, y3_obj) == y3);

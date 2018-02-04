@@ -12,7 +12,7 @@
 namespace {
 
 void test(v8pp::context& context, std::string const& type,
-	v8::Local<v8::Value>(*exception_ctor)(v8::Handle<v8::String>))
+	v8::Local<v8::Value>(*exception_ctor)(v8::Local<v8::String>))
 {
 	v8::Isolate* isolate = context.isolate();
 

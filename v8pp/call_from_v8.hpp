@@ -58,7 +58,7 @@ struct call_from_v8_traits
 	>::type;
 
 	template<size_t Index, typename Traits>
-	static decltype(arg_convert<Index, Traits>::from_v8(std::declval<v8::Isolate*>(), std::declval<v8::Handle<v8::Value>>()))
+	static decltype(arg_convert<Index, Traits>::from_v8(std::declval<v8::Isolate*>(), std::declval<v8::Local<v8::Value>>()))
 	arg_from_v8(v8::FunctionCallbackInfo<v8::Value> const& args)
 	{
 		return arg_convert<Index, Traits>::from_v8(args.GetIsolate(), args[Index - Offset]);

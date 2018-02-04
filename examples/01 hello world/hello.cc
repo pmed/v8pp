@@ -18,7 +18,7 @@ char const* Method() {
 void init(Handle<Object> exports) {
   v8pp::module addon(Isolate::GetCurrent());
   addon.set("hello", &Method);
-  exports->SetPrototype(addon.new_instance());
+  exports->SetPrototype(Isolate::GetCurrent()->GetCurrentContext(), addon.new_instance());
 }
 
 NODE_MODULE(addon, init)

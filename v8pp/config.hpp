@@ -40,7 +40,7 @@
 #endif
 
 #define V8PP_PLUGIN_INIT(isolate) extern "C" V8PP_EXPORT \
-v8::Handle<v8::Value> V8PP_PLUGIN_INIT_PROC_NAME(isolate)
+v8::Local<v8::Value> V8PP_PLUGIN_INIT_PROC_NAME(isolate)
 
 #ifndef V8PP_HEADER_ONLY
 #define V8PP_HEADER_ONLY 1

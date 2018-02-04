@@ -21,7 +21,7 @@ namespace v8pp {
 /// Dot symbols in option name delimits subobjects name.
 /// return false if the value doesn't exist in the options object
 template<typename T>
-bool get_option(v8::Isolate* isolate, v8::Handle<v8::Object> options,
+bool get_option(v8::Isolate* isolate, v8::Local<v8::Object> options,
 	char const* name, T& value)
 {
 	char const* dot = strchr(name, '.');
@@ -32,8 +32,9 @@ bool get_option(v8::Isolate* isolate, v8::Handle<v8::Object> options,
 		return get_option(isolate, options, subname.c_str(), suboptions)
 			&& get_option(isolate, suboptions, dot + 1, value);
 	}
-	v8::Local<v8::Value> val = options->Get(v8pp::to_v8(isolate, name));
-	if (val.IsEmpty() || val->IsUndefined())
+	v8::Local<v8::Value> val;
+	if (!options->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, name)).ToLocal(&val)
+		|| val->IsUndefined())
 	{
 		return false;
 	}
@@ -45,7 +46,7 @@ bool get_option(v8::Isolate* isolate, v8::Handle<v8::Object> options,
 /// Dot symbols in option name delimits subobjects name.
 /// return false if the value doesn't exists in the options subobject
 template<typename T>
-bool set_option(v8::Isolate* isolate, v8::Handle<v8::Object> options,
+bool set_option(v8::Isolate* isolate, v8::Local<v8::Object> options,
 	char const* name, T const& value)
 {
 	char const* dot = strchr(name, '.');
@@ -57,14 +58,14 @@ bool set_option(v8::Isolate* isolate, v8::Handle<v8::Object> options,
 		return get_option(isolate, options, subname.c_str(), suboptions)
 			&& set_option(isolate, suboptions, dot + 1, value);
 	}
-	options->Set(v8pp::to_v8(isolate, name), to_v8(isolate, value));
+	options->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, name), to_v8(isolate, value));
 	return true;
 }
 
 /// Set named constant in V8 object
 /// Subobject names are not supported
 template<typename T>
-void set_const(v8::Isolate* isolate, v8::Handle<v8::Object> options,
+void set_const(v8::Isolate* isolate, v8::Local<v8::Object> options,
 	char const* name, T const& value)
 {
 	options->DefineOwnProperty(isolate->GetCurrentContext(),

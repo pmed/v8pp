@@ -116,11 +116,11 @@ T run_script(v8pp::context& context, std::string const& source)
 
 	v8::HandleScope scope(isolate);
 	v8::TryCatch try_catch;
-	v8::Handle<v8::Value> result = context.run_script(source);
+	v8::Local<v8::Value> result = context.run_script(source);
 	if (try_catch.HasCaught())
 	{
 		std::string const msg = v8pp::from_v8<std::string>(isolate,
-			try_catch.Exception()->ToString());
+			try_catch.Exception()->ToString(isolate->GetCurrentContext()).ToLocalChecked());
 		throw std::runtime_error(msg);
 	}
 	return v8pp::from_v8<T>(isolate, result);
