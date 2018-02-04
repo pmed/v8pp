@@ -67,7 +67,8 @@ template<typename T>
 void set_const(v8::Isolate* isolate, v8::Handle<v8::Object> options,
 	char const* name, T const& value)
 {
-	options->ForceSet(v8pp::to_v8(isolate, name), to_v8(isolate, value),
+	options->DefineOwnProperty(isolate->GetCurrentContext(),
+		v8pp::to_v8(isolate, name), to_v8(isolate, value),
 		v8::PropertyAttribute(v8::ReadOnly | v8::DontDelete));
 }
 
