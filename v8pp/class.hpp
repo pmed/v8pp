@@ -79,10 +79,11 @@ public:
 		func_.Reset(isolate, func);
 		js_func_.Reset(isolate, js_func);
 
-		// each JavaScript instance has 2 internal fields:
+		// each JavaScript instance has 3 internal fields:
 		//  0 - pointer to a wrapped C++ object
 		//  1 - pointer to this object_registry
-		func->InstanceTemplate()->SetInternalFieldCount(2);
+		//  2 - pointer to the object destructor
+		func->InstanceTemplate()->SetInternalFieldCount(3);
 		func->Inherit(js_func);
 	}
 
@@ -105,7 +106,7 @@ public:
 
 	~object_registry()
 	{
-		remove_objects(true);
+		remove_objects();
 	}
 
 	v8::Isolate* isolate() { return isolate_; }
@@ -166,24 +167,24 @@ public:
 		return false;
 	}
 
-	void remove_object(object_id const& obj, bool call_dtor)
+	void remove_object(object_id const& obj)
 	{
 		auto it = objects_.find(Traits::key(obj));
 		assert(it != objects_.end() && "no object");
 		if (it != objects_.end())
 		{
 			v8::HandleScope scope(isolate_);
-			reset_object(*it, call_dtor);
+			reset_object(*it);
 			objects_.erase(it);
 		}
 	}
 
-	void remove_objects(bool call_dtor)
+	void remove_objects()
 	{
 		v8::HandleScope scope(isolate_);
 		for (auto& object : objects_)
 		{
-			reset_object(object, call_dtor);
+			reset_object(object);
 		}
 		objects_.clear();
 	}
@@ -236,20 +237,15 @@ public:
 
 		obj->SetAlignedPointerInInternalField(0, Traits::pointer_id(object));
 		obj->SetAlignedPointerInInternalField(1, this);
+		obj->SetAlignedPointerInInternalField(2, call_dtor? /*dtor_*/this : nullptr);
 
 		v8::UniquePersistent<v8::Object> pobj(isolate_, obj);
-		pobj.SetWeak(call_dtor? this : nullptr,
-			[](v8::WeakCallbackInfo<object_registry> const& data)
+		pobj.SetWeak(this, [](v8::WeakCallbackInfo<object_registry> const& data)
 		{
-			bool const call_dtor = (data.GetParameter() != nullptr);
 			object_id object = data.GetInternalField(0);
 			object_registry* this_ = static_cast<object_registry*>(data.GetInternalField(1));
-			this_->remove_object(object, call_dtor);
+			this_->remove_object(object);
 		}, v8::WeakCallbackType::kInternalFields);
-		if (!call_dtor)
-		{
-			pobj.MarkIndependent();
-		}
 		objects_.emplace(object, std::move(pobj));
 
 		return scope.Escape(obj);
@@ -272,7 +268,7 @@ public:
 		while (value->IsObject())
 		{
 			v8::Handle<v8::Object> obj = value->ToObject();
-			if (obj->InternalFieldCount() == 2)
+			if (obj->InternalFieldCount() == 3)
 			{
 				object_id id = obj->GetAlignedPointerFromInternalField(0);
 				if (id)
@@ -295,19 +291,22 @@ public:
 	}
 
 private:
-	void reset_object(std::pair<pointer_type const, v8::UniquePersistent<v8::Object>>& object, bool call_dtor)
+	void reset_object(std::pair<pointer_type const, v8::UniquePersistent<v8::Object>>& object)
 	{
+		bool call_dtor = true;
 		if (!object.second.IsNearDeath())
 		{
 			v8::Local<v8::Object> obj = to_local(isolate_, object.second);
-			assert(obj->InternalFieldCount() == 2);
+			assert(obj->InternalFieldCount() == 3);
 			assert(obj->GetAlignedPointerFromInternalField(0) == Traits::pointer_id(object.first));
 			assert(obj->GetAlignedPointerFromInternalField(1) == this);
+			call_dtor = (obj->GetAlignedPointerFromInternalField(2) != nullptr);
 			// remove internal fields to disable unwrapping for this V8 Object
 			obj->SetAlignedPointerInInternalField(0, nullptr);
 			obj->SetAlignedPointerInInternalField(1, nullptr);
+			obj->SetAlignedPointerInInternalField(2, nullptr);
 		}
-		if (call_dtor && !object.second.IsIndependent())
+		if (call_dtor)
 		{
 			dtor_(isolate_, object.first);
 		}
@@ -612,7 +611,7 @@ public:
 	static void unreference_external(v8::Isolate* isolate, object_pointer_type const& ext)
 	{
 		using namespace detail;
-		return classes::find<Traits>(isolate, type_id<T>()).remove_object(Traits::pointer_id(ext), false);
+		return classes::find<Traits>(isolate, type_id<T>()).remove_object(Traits::pointer_id(ext));
 	}
 
 	/// As reference_external but delete memory for C++ object
@@ -654,14 +653,14 @@ public:
 	static void destroy_object(v8::Isolate* isolate, object_pointer_type const& obj)
 	{
 		using namespace detail;
-		classes::find<Traits>(isolate, type_id<T>()).remove_object(Traits::pointer_id(obj), true);
+		classes::find<Traits>(isolate, type_id<T>()).remove_object(Traits::pointer_id(obj));
 	}
 
 	/// Destroy all wrapped C++ objects of this class
 	static void destroy_objects(v8::Isolate* isolate)
 	{
 		using namespace detail;
-		classes::find<Traits>(isolate, type_id<T>()).remove_objects(true);
+		classes::find<Traits>(isolate, type_id<T>()).remove_objects();
 	}
 
 	/// Destroy all wrapped C++ objects and this binding class_
