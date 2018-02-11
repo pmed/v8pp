@@ -88,15 +88,16 @@ public:
 	}
 
 	/// Set property in the module with specified name and get/set functions
-	template<typename GetFunction, typename SetFunction>
-	module& property(char const *name, GetFunction&& get, SetFunction&& set)
+	template<typename GetFunction, typename SetFunction = detail::none>
+	module& property(char const *name, GetFunction&& get, SetFunction&& set = {})
 	{
 		using Getter = typename std::decay<GetFunction>::type;
 		using Setter = typename std::decay<SetFunction>::type;
 		static_assert(detail::is_callable<Getter>::value, "GetFunction must be callable");
-		static_assert(detail::is_callable<Setter>::value, "SetFunction must be callable");
+		static_assert(detail::is_callable<Setter>::value
+			|| std::is_same<Setter, detail::none>::value, "SetFunction must be callable");
 
-		using property_type = property_<Getter, Setter>;
+		using property_type = v8pp::property<Getter, Setter>;
 
 		v8::HandleScope scope(isolate_);
 
@@ -104,24 +105,6 @@ public:
 			property_type::get, property_type::set,
 			detail::set_external_data(isolate_, property_type(get, set)),
 			v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
-		return *this;
-	}
-
-	/// Set read-only property in the module with specified name and get function
-	template<typename GetFunction>
-	module& property(char const *name, GetFunction&& get)
-	{
-		using Getter = typename std::decay<GetFunction>::type;
-		static_assert(detail::is_callable<Getter>::value, "GetFunction must be callable");
-
-		using property_type = property_<Getter, Getter>;
-
-		v8::HandleScope scope(isolate_);
-
-		obj_->SetAccessor(v8pp::to_v8(isolate_, name),
-			property_type::get, nullptr,
-			detail::set_external_data(isolate_, property_type(get)),
-			v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete | v8::ReadOnly));
 		return *this;
 	}
 

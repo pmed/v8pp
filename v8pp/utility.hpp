@@ -24,12 +24,21 @@ struct tuple_tail<std::tuple<Head, Tail...>>
 	using type = std::tuple<Tail...>;
 };
 
+struct none{};
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // Function traits
 //
 template<typename F>
 struct function_traits;
+
+template<>
+struct function_traits<none>
+{
+	template<typename D>
+	using pointer_type = void;
+};
 
 template<typename R, typename ...Args>
 struct function_traits<R (Args...)>

@@ -17,7 +17,7 @@
 namespace v8pp {
 
 template<typename Get, typename Set>
-struct property_;
+struct property;
 
 namespace detail {
 
@@ -85,16 +85,16 @@ using select_setter_tag = typename std::conditional<is_direct_setter<F>::value,
 		isolate_setter_tag, setter_tag>::type
 >::type;
 
-template<typename Get, typename Set, bool get_is_mem_fun>
+template<typename Get, bool get_is_mem_fun>
 struct r_property_impl;
 
 template<typename Get, typename Set, bool set_is_mem_fun>
 struct rw_property_impl;
 
-template<typename Get, typename Set>
-struct r_property_impl<Get, Set, true>
+template<typename Get>
+struct r_property_impl<Get, true>
 {
-	using property_type = property_<Get, Set>;
+	using property_type = property<Get, detail::none>;
 
 	using class_type = typename std::decay<typename std::tuple_element<0,
 		typename function_traits<Get>::arguments> ::type>::type;
@@ -158,10 +158,10 @@ struct r_property_impl<Get, Set, true>
 	}
 };
 
-template<typename Get, typename Set>
-struct r_property_impl<Get, Set, false>
+template<typename Get>
+struct r_property_impl<Get, false>
 {
-	using property_type = property_<Get, Set>;
+	using property_type = property<Get, detail::none>;
 
 	static void get_impl(Get get, v8::Local<v8::String>,
 		v8::PropertyCallbackInfo<v8::Value> const& info, getter_tag)
@@ -211,9 +211,9 @@ struct r_property_impl<Get, Set, false>
 
 template<typename Get, typename Set>
 struct rw_property_impl<Get, Set, true>
-	: r_property_impl<Get, Set, std::is_member_function_pointer<Get>::value>
+	: r_property_impl<Get, std::is_member_function_pointer<Get>::value>
 {
-	using property_type = property_<Get, Set>;
+	using property_type = property<Get, Set>;
 
 	using class_type = typename std::decay<typename std::tuple_element<0,
 		typename function_traits<Set>::arguments>::type>::type;
@@ -269,9 +269,9 @@ struct rw_property_impl<Get, Set, true>
 
 template<typename Get, typename Set>
 struct rw_property_impl<Get, Set, false>
-	: r_property_impl<Get, Set, std::is_member_function_pointer<Get>::value>
+	: r_property_impl<Get, std::is_member_function_pointer<Get>::value>
 {
-	using property_type = property_<Get, Set>;
+	using property_type = property<Get, Set>;
 
 	static void set_impl(Set set, v8::Local<v8::String>,
 		v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
@@ -322,7 +322,7 @@ struct rw_property_impl<Get, Set, false>
 
 /// Property with get and set functions
 template<typename Get, typename Set>
-struct property_
+struct property
 	: detail::rw_property_impl<Get, Set, std::is_member_function_pointer<Set>::value>
 {
 	static_assert(detail::is_getter<Get>::value
@@ -344,14 +344,14 @@ struct property_
 
 	enum { is_readonly = false };
 
-	property_(Get getter, Set setter)
+	property(Get getter, Set setter)
 		: getter(getter)
 		, setter(setter)
 	{
 	}
 
 	template<typename OtherGet, typename OtherSet>
-	property_(property_<OtherGet, OtherSet> const& other)
+	property(property<OtherGet, OtherSet> const& other)
 		: getter(other.getter)
 		, setter(other.setter)
 	{
@@ -360,8 +360,8 @@ struct property_
 
 /// Read-only property class specialization for get only method
 template<typename Get>
-struct property_<Get, Get>
-	: detail::r_property_impl<Get, Get, std::is_member_function_pointer<Get>::value>
+struct property<Get, detail::none>
+	: detail::r_property_impl<Get, std::is_member_function_pointer<Get>::value>
 {
 	static_assert(detail::is_getter<Get>::value
 		|| detail::is_direct_getter<Get>::value
@@ -374,13 +374,13 @@ struct property_<Get, Get>
 
 	enum { is_readonly = true };
 
-	explicit property_(Get getter)
+	property(Get getter, detail::none)
 		: getter(getter)
 	{
 	}
 
 	template<typename OtherGet>
-	explicit property_(property_<OtherGet, OtherGet> const& other)
+	explicit property(property<OtherGet, OtherGet> const& other)
 		: getter(other.getter)
 	{
 	}

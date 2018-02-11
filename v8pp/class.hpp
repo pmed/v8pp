@@ -554,8 +554,8 @@ public:
 	}
 
 	/// Set read/write class property with getter and setter
-	template<typename GetFunction, typename SetFunction>
-	class_& property(char const *name, GetFunction&& get, SetFunction&& set)
+	template<typename GetFunction, typename SetFunction = detail::none>
+	class_& property(char const *name, GetFunction&& get, SetFunction&& set = {})
 	{
 		using Getter = typename std::conditional<
 			std::is_member_function_pointer<GetFunction>::value,
@@ -572,42 +572,18 @@ public:
 		static_assert(std::is_member_function_pointer<GetFunction>::value
 			|| detail::is_callable<Getter>::value, "GetFunction must be callable");
 		static_assert(std::is_member_function_pointer<SetFunction>::value
-			|| detail::is_callable<Setter>::value, "SetFunction must be callable");
+			|| detail::is_callable<Setter>::value
+			|| std::is_same<Setter, detail::none>::value, "SetFunction must be callable");
 
-		using property_type = property_<Getter, Setter>;
-
-		v8::HandleScope scope(isolate());
-
-		class_info_.class_function_template()->PrototypeTemplate()
-			->SetAccessor(v8pp::to_v8(isolate(), name),
-				property_type::template get<Traits>, property_type::template set<Traits>,
-				detail::set_external_data(isolate(), property_type(get, set)),
-				v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
-		return *this;
-	}
-
-	/// Set read-only class property with getter
-	template<typename GetFunction>
-	class_& property(char const *name, GetFunction&& get)
-	{
-		using Getter = typename std::conditional<
-			std::is_member_function_pointer<GetFunction>::value,
-			typename detail::function_traits<GetFunction>::template pointer_type<T>,
-			typename std::decay<GetFunction>::type
-		>::type;
-
-		static_assert(std::is_member_function_pointer<GetFunction>::value
-			|| detail::is_callable<Getter>::value, "GetFunction must be callable");
-
-		using property_type = property_<Getter, Getter>;
+		using property_type = v8pp::property<Getter, Setter>;
 
 		v8::HandleScope scope(isolate());
 
+		v8::AccessorGetterCallback getter = property_type::template get<Traits>;
+		v8::AccessorSetterCallback setter = property_type::is_readonly? nullptr : property_type::template set<Traits>;
+		v8::Local<v8::Value> data = detail::set_external_data(isolate(), property_type(get, set));
 		class_info_.class_function_template()->PrototypeTemplate()
-			->SetAccessor(v8pp::to_v8(isolate(), name),
-				property_type::template get<Traits>, property_type::template set<Traits>,
-				detail::set_external_data(isolate(), property_type(get)),
-				v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete | v8::ReadOnly));
+			->SetAccessor(v8pp::to_v8(isolate(), name), getter, setter, data, v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
 		return *this;
 	}
 
