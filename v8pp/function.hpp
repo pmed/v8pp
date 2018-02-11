@@ -22,30 +22,15 @@ namespace v8pp {
 namespace detail {
 
 template<typename T>
-using is_pointer_cast_allowed = std::integral_constant<bool,
-	sizeof(T) <= sizeof(void*) && std::is_trivial<T>::value>;
-
-template<typename T>
-union pointer_cast
-{
-private:
-	void* ptr;
-	T value;
-
-public:
-	static_assert(is_pointer_cast_allowed<T>::value, "pointer_cast is not allowed");
-
-	explicit pointer_cast(void* ptr) : ptr(ptr) {}
-	explicit pointer_cast(T value) : value(value) {}
-
-	operator void*() const { return ptr; }
-	operator T() const { return value; }
-};
+using is_bitcast_allowed = std::integral_constant<bool,
+	sizeof(T) == sizeof(void*) && std::is_trivial<T>::value>;
 
 template<typename T>
 class external_data
 {
 public:
+	static_assert(!is_bitcast_allowed<T>::value, "use bitcast");
+
 	static v8::Local<v8::External> set(v8::Isolate* isolate, T&& data)
 	{
 		external_data* value = new external_data;
@@ -91,28 +76,33 @@ private:
 };
 
 template<typename T>
-typename std::enable_if<is_pointer_cast_allowed<T>::value, v8::Local<v8::Value>>::type
+typename std::enable_if<is_bitcast_allowed<T>::value, v8::Local<v8::Value>>::type
 set_external_data(v8::Isolate* isolate, T const& value)
 {
-	return v8::External::New(isolate, pointer_cast<T>(value));
+	void* ptr;
+	memcpy(&ptr, &value, sizeof value);
+	return v8::External::New(isolate, ptr);
 }
 
 template<typename T>
-typename std::enable_if<!is_pointer_cast_allowed<T>::value, v8::Local<v8::Value>>::type
-set_external_data(v8::Isolate* isolate, T&& value)
+typename std::enable_if<!is_bitcast_allowed<T>::value, v8::Local<v8::Value>>::type
+set_external_data(v8::Isolate* isolate, T value)
 {
-	return external_data<T>::set(isolate, std::forward<T>(value));
+	return external_data<T>::set(isolate, std::move(value));
 }
 
 template<typename T>
-typename std::enable_if<is_pointer_cast_allowed<T>::value, T>::type
+typename std::enable_if<is_bitcast_allowed<T>::value, T>::type
 get_external_data(v8::Local<v8::Value> value)
 {
-	return pointer_cast<T>(value.As<v8::External>()->Value());
+	void* ptr = value.As<v8::External>()->Value();
+	T data;
+	memcpy(&data, &ptr, sizeof data);
+	return data;
 }
 
 template<typename T>
-typename std::enable_if<!is_pointer_cast_allowed<T>::value, T&>::type
+typename std::enable_if<!is_bitcast_allowed<T>::value, T&>::type
 get_external_data(v8::Local<v8::Value> value)
 {
 	return external_data<T>::get(value.As<v8::External>());
