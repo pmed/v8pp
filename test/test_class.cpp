@@ -7,6 +7,7 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 #include "v8pp/class.hpp"
+#include "v8pp/module.hpp"
 #include "v8pp/property.hpp"
 
 #include "test.hpp"
@@ -296,6 +297,36 @@ void test_multiple_inheritance()
 		"c = new C(); c.F = 100; c.G = 200; c.H = 300; c.F + c.G + c.H"), 100 + 200 + 300);
 }
 
+template<typename Traits>
+void test_const_instance_in_module()
+{
+	struct X
+	{
+		int f(int x) { return x; }
+		static typename Traits::template object_pointer_type<X> xconst()
+		{
+			static auto const xconst_ = v8pp::factory<X, Traits>::create(v8::Isolate::GetCurrent());
+			return xconst_;
+		}
+	};
+
+	v8pp::context context;
+	v8::Isolate* isolate = context.isolate();
+	v8::HandleScope scope(isolate);
+
+	v8pp::class_<X, Traits> X_class(isolate);
+	X_class.set("f", &X::f);
+
+	v8pp::module api(isolate);
+	api.set("X", X_class);
+	api.set("xconst", v8pp::property(X::xconst));
+
+	X_class.reference_external(isolate, X::xconst());
+
+	context.set("api", api);
+	check_eq("xconst.f()", run_script<int>(context, "api.xconst.f(1)"), 1);
+}
+
 void test_class()
 {
 	test_class_<v8pp::raw_ptr_traits>();
@@ -303,4 +334,7 @@ void test_class()
 
 	test_multiple_inheritance<v8pp::raw_ptr_traits>();
 	test_multiple_inheritance<v8pp::shared_ptr_traits>();
+
+	test_const_instance_in_module<v8pp::raw_ptr_traits>();
+	test_const_instance_in_module<v8pp::shared_ptr_traits>();
 }
