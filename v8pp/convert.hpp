@@ -30,9 +30,9 @@ template<typename T, typename Traits>
 class class_;
 
 // Generic convertor
-template<typename T, typename Enable>
-struct convert;
 /*
+template<typename T, typename Enable = void>
+struct convert
 {
 	using from_type = T;
 	using to_type = v8::Local<v8::Value>;
@@ -96,11 +96,13 @@ struct convert<std::basic_string<Char, Traits, Alloc>>
 };
 
 template<typename Char>
-struct convert<Char const*>
+struct convert<Char const*, typename std::enable_if<
+	std::is_same<Char, char>::value ||
+	std::is_same<Char, char16_t>::value ||
+	std::is_same<Char, wchar_t>::value>::type>
 {
 	static_assert(sizeof(Char) <= sizeof(uint16_t),
 		"only UTF-8 and UTF-16 strings are supported");
-
 
 	// A string that converts to Char const *
 	struct convertible_string : std::basic_string<Char>
@@ -643,9 +645,20 @@ v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 	return convert<char const*>::to_v8(isolate, str, len);
 }
 
+inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str, size_t len)
+{
+	return convert<char16_t const*>::to_v8(isolate, str, len);
+}
+
+template<size_t N>
+v8::Handle<v8::String> to_v8(v8::Isolate* isolate,
+	char16_t const (&str)[N], size_t len = N - 1)
+{
+	return convert<char16_t const*>::to_v8(isolate, str, len);
+}
+
 #ifdef WIN32
-inline v8::Local<v8::String> to_v8(v8::Isolate* isolate,
-	wchar_t const* str, size_t len)
+inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, wchar_t const* str, size_t len)
 {
 	return convert<wchar_t const*>::to_v8(isolate, str, len);
 }
