@@ -9,6 +9,8 @@
 #ifndef V8PP_FUNCTION_HPP_INCLUDED
 #define V8PP_FUNCTION_HPP_INCLUDED
 
+#include <cstring> // for memcpy
+
 #include <tuple>
 #include <type_traits>
 
@@ -23,7 +25,9 @@ namespace detail {
 
 template<typename T>
 using is_bitcast_allowed = std::integral_constant<bool,
-	sizeof(T) == sizeof(void*) && std::is_trivial<T>::value>;
+	sizeof(T) == sizeof(void*) &&
+	std::is_default_constructible<T>::value &&
+	std::is_trivially_copyable<T>::value>;
 
 template<typename T>
 class external_data
