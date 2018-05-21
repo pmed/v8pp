@@ -115,7 +115,7 @@ T run_script(v8pp::context& context, std::string const& source)
 	v8::Isolate* isolate = context.isolate();
 
 	v8::HandleScope scope(isolate);
-	v8::TryCatch try_catch;
+	v8::TryCatch try_catch(isolate);
 	v8::Local<v8::Value> result = context.run_script(source);
 	if (try_catch.HasCaught())
 	{
