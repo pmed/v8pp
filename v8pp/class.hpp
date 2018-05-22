@@ -575,15 +575,25 @@ public:
 			|| detail::is_callable<Setter>::value
 			|| std::is_same<Setter, detail::none>::value, "SetFunction must be callable");
 
-		using property_type = v8pp::property<Getter, Setter>;
+		using property_type = typename v8pp::property<
+			Getter, 
+			Setter, 
+			detail::is_class_based_getter<T, Getter>::value, 
+			detail::is_class_based_setter<T, Setter>::value 
+		>;
 
 		v8::HandleScope scope(isolate());
 
 		v8::AccessorGetterCallback getter = property_type::template get<Traits>;
-		v8::AccessorSetterCallback setter = property_type::is_readonly? nullptr : property_type::template set<Traits>;
-		v8::Local<v8::Value> data = detail::set_external_data(isolate(), property_type(get, set));
+		v8::AccessorSetterCallback setter = property_type::is_readonly ? nullptr : &property_type::template set<Traits>;
+
+		v8::Local<v8::Value> data = detail::set_external_data(
+			isolate(), 
+			property_type(get, set)
+		);
 		class_info_.class_function_template()->PrototypeTemplate()
 			->SetAccessor(v8pp::to_v8(isolate(), name), getter, setter, data, v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
+
 		return *this;
 	}
 

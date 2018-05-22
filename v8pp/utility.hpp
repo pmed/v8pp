@@ -33,8 +33,19 @@ struct none{};
 template<typename F>
 struct function_traits;
 
+template<typename F>
+struct _function_traits_base;
+
+template<typename R, typename ...Args>
+struct _function_traits_base<R (Args...)>
+{
+	using return_type = R;
+	using arguments = std::tuple<Args...>;
+};
+
 template<>
 struct function_traits<none>
+: _function_traits_base<void ()>
 {
 	template<typename D>
 	using pointer_type = void;
@@ -42,23 +53,25 @@ struct function_traits<none>
 
 template<typename R, typename ...Args>
 struct function_traits<R (Args...)>
+	: _function_traits_base<R (Args...)>
 {
-	using return_type = R;
-	using arguments = std::tuple<Args...>;
+	template<typename D>
+	using pointer_type = R (*)(Args...);
 };
 
 // function pointer
 template<typename R, typename ...Args>
 struct function_traits<R (*)(Args...)>
-	: function_traits<R (Args...)>
+	: _function_traits_base<R (Args...)>
 {
+	template<typename D>
 	using pointer_type = R (*)(Args...);
 };
 
 // member function pointer
 template<typename C, typename R, typename ...Args>
 struct function_traits<R (C::*)(Args...)>
-	: function_traits<R (C&, Args...)>
+	: _function_traits_base<R (C&, Args...)>
 {
 	template<typename D = C>
 	using pointer_type = R (D::*)(Args...);
@@ -67,7 +80,7 @@ struct function_traits<R (C::*)(Args...)>
 // const member function pointer
 template<typename C, typename R, typename ...Args>
 struct function_traits<R (C::*)(Args...) const>
-	: function_traits<R (C const&, Args...)>
+	: _function_traits_base<R (C const&, Args...)>
 {
 	template<typename D = C>
 	using pointer_type = R (D::*)(Args...) const;
@@ -76,7 +89,7 @@ struct function_traits<R (C::*)(Args...) const>
 // volatile member function pointer
 template<typename C, typename R, typename ...Args>
 struct function_traits<R (C::*)(Args...) volatile>
-	: function_traits<R (C volatile&, Args...)>
+	: _function_traits_base<R (C volatile&, Args...)>
 {
 	template<typename D = C>
 	using pointer_type = R (D::*)(Args...) volatile;
@@ -85,7 +98,7 @@ struct function_traits<R (C::*)(Args...) volatile>
 // const volatile member function pointer
 template<typename C, typename R, typename ...Args>
 struct function_traits<R (C::*)(Args...) const volatile>
-	: function_traits<R (C const volatile&, Args...)>
+	: _function_traits_base<R (C const volatile&, Args...)>
 {
 	template<typename D = C>
 	using pointer_type = R (D::*)(Args...) const volatile;
@@ -94,7 +107,7 @@ struct function_traits<R (C::*)(Args...) const volatile>
 // member object pointer
 template<typename C, typename R>
 struct function_traits<R (C::*)>
-	: function_traits<R (C&)>
+	: _function_traits_base<R (C&)>
 {
 	template<typename D = C>
 	using pointer_type = R (D::*);
@@ -103,7 +116,7 @@ struct function_traits<R (C::*)>
 // const member object pointer
 template<typename C, typename R>
 struct function_traits<const R (C::*)>
-	: function_traits<R (C const&)>
+	: _function_traits_base<R (C const&)>
 {
 	template<typename D = C>
 	using pointer_type = const R (D::*);
@@ -112,7 +125,7 @@ struct function_traits<const R (C::*)>
 // volatile member object pointer
 template<typename C, typename R>
 struct function_traits<volatile R (C::*)>
-	: function_traits<R (C volatile&)>
+	: _function_traits_base<R (C volatile&)>
 {
 	template<typename D = C>
 	using pointer_type = volatile R (D::*);
@@ -121,7 +134,7 @@ struct function_traits<volatile R (C::*)>
 // const volatile member object pointer
 template<typename C, typename R>
 struct function_traits<const volatile R (C::*)>
-	: function_traits<R (C const volatile&)>
+	: _function_traits_base<R (C const volatile&)>
 {
 	template<typename D = C>
 	using pointer_type = const volatile R (D::*);

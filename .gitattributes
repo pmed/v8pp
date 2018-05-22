@@ -1,0 +1,7 @@
+# Automatically detect text files for all extensions not listed below
+*          text=auto
+
+# Text files
+*.cpp        text
+*.hpp        text
+*.ipp        text

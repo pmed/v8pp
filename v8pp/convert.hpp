@@ -174,7 +174,8 @@ struct convert<bool>
 		{
 			throw std::invalid_argument("expected Boolean");
 		}
-		return value->BooleanValue(isolate->GetCurrentContext()).ToChecked();
+		bool b=false;
+		return value->BooleanValue(isolate->GetCurrentContext()).FromMaybe(b);
 	}
 
 	static to_type to_v8(v8::Isolate* isolate, bool value)
@@ -202,21 +203,21 @@ struct convert<T, typename std::enable_if<std::is_integral<T>::value>::type>
 		{
 			throw std::invalid_argument("expected Number");
 		}
-
+		int i=99;
 		if (bits <= 32)
 		{
 			if (is_signed)
 			{
-				return static_cast<T>(value->Int32Value(isolate->GetCurrentContext()).ToChecked());
+				return static_cast<T>(value->Int32Value(isolate->GetCurrentContext()).FromMaybe(i));
 			}
 			else
 			{
-				return static_cast<T>(value->Uint32Value(isolate->GetCurrentContext()).ToChecked());
+				return static_cast<T>(value->Uint32Value(isolate->GetCurrentContext()).FromMaybe(i));
 			}
 		}
 		else
 		{
-			return static_cast<T>(value->IntegerValue(isolate->GetCurrentContext()).ToChecked());
+			return static_cast<T>(value->IntegerValue(isolate->GetCurrentContext()).FromMaybe(i));
 		}
 	}
 
@@ -281,12 +282,13 @@ struct convert<T, typename std::enable_if<std::is_floating_point<T>::value>::typ
 
 	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
+		double d=999;
 		if (!is_valid(isolate, value))
 		{
 			throw std::invalid_argument("expected Number");
 		}
 
-		return static_cast<T>(value->NumberValue(isolate->GetCurrentContext()).ToChecked());
+		return static_cast<T>(value->NumberValue(isolate->GetCurrentContext()).FromMaybe(d));
 	}
 
 	static to_type to_v8(v8::Isolate* isolate, T value)

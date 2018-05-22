@@ -19,7 +19,4 @@
   <ItemGroup>
     <ClInclude Include="test.hpp" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
 </Project>

@@ -80,12 +80,12 @@ int main(int argc, char const * argv[])
 		if (arg == "-h" || arg == "--help")
 		{
 			std::cout << "Usage: " << argv[0] << " [arguments] [script]\n"
-				<< "Arguments:\n"
-				<< "  --help,-h           Print this message and exit\n"
-				<< "  --version,-v        Print V8 version\n"
-				<< "  --lib-path <dir>    Set <dir> for plugins library path\n"
-				<< "  --run-tests         Run library tests\n"
-				;
+			  << "Arguments:\n"
+			  << "  --help,-h           Print this message and exit\n"
+			  << "  --version,-v        Print V8 version\n"
+			  << "  --lib-path <dir>    Set <dir> for plugins library path\n"
+			  << "  --run-tests         Run library tests\n"
+			  ;
 			return EXIT_SUCCESS;
 		}
 		else if (arg == "-v" || arg == "--version")

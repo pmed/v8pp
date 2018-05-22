@@ -25,7 +25,6 @@
     <ClInclude Include="persistent.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
     <None Include="class.ipp" />
     <None Include="json.ipp" />
     <None Include="throw_ex.ipp" />

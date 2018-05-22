@@ -4,6 +4,8 @@
 #include <windows.h>
 #endif
 
+#include <vector>
+
 namespace v8pp {
 
 V8PP_IMPL v8::Local<v8::Value> throw_ex(v8::Isolate* isolate, char const* str,

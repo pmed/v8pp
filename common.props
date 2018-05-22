@@ -14,4 +14,19 @@
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
   </ItemDefinitionGroup>
+  
+  <PropertyGroup>
+    <IncludePath>C:\projects\unipost\ThirdParty\v8_win_intel64_v140_static\4.10.0.0.1\inc\v8\include;C:\projects\unipost\ThirdParty\v8_win_intel64_v140_static\4.10.0.0.1\inc\v8;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\projects\unipost\ThirdParty\v8_win_intel64_v140_static\4.10.0.0.1\libs\Debug;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalDependencies>
+ws2_32.lib;
+advapi32.lib;
+Winmm.lib; icui18n.lib;icuuc.lib;v8_base_0.lib;v8_base_1.lib;v8_base_2.lib;v8_base_3.lib;v8_libbase.lib;v8_libplatform.lib;v8_nosnapshot.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  
 </Project>

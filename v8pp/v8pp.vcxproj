@@ -1,12 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\packages\v8-v140-x64.6.2.414.46\build\native\v8-v140-x64.props" Condition="Exists('..\packages\v8-v140-x64.6.2.414.46\build\native\v8-v140-x64.props')" />
-  <Import Project="..\packages\v8.redist-v140-x64.6.2.414.46\build\native\v8.redist-v140-x64.props" Condition="Exists('..\packages\v8.redist-v140-x64.6.2.414.46\build\native\v8.redist-v140-x64.props')" />
-  <Import Project="..\packages\v8-v141-x64.6.4.388.11\build\native\v8-v141-x64.props" Condition="Exists('..\packages\v8-v141-x64.6.4.388.11\build\native\v8-v141-x64.props')" />
-  <Import Project="..\packages\v8.redist-v141-x64.6.4.388.11\build\native\v8.redist-v141-x64.props" Condition="Exists('..\packages\v8.redist-v141-x64.6.4.388.11\build\native\v8.redist-v141-x64.props')" />
-  <Import Project="..\packages\v8.symbols-v120-x64.5.6.326.55\build\native\v8.symbols-v120-x64.props" Condition="Exists('..\packages\v8.symbols-v120-x64.5.6.326.55\build\native\v8.symbols-v120-x64.props')" />
-  <Import Project="..\packages\v8-v120-x64.5.6.326.55\build\native\v8-v120-x64.props" Condition="Exists('..\packages\v8-v120-x64.5.6.326.55\build\native\v8-v120-x64.props')" />
-  <Import Project="..\packages\v8.redist-v120-x64.5.6.326.55\build\native\v8.redist-v120-x64.props" Condition="Exists('..\packages\v8.redist-v120-x64.5.6.326.55\build\native\v8.redist-v120-x64.props')" />
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -52,39 +45,37 @@
   <ItemGroup>
     <None Include="class.ipp" />
     <None Include="json.ipp" />
-    <None Include="packages.config" />
     <None Include="throw_ex.ipp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{2E6CFC3D-5A08-4909-8D1A-3469063D169B}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>v8pp</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -108,7 +99,6 @@
     <Import Project="../common.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -167,16 +157,4 @@
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('..\packages\v8.redist-v120-x64.5.6.326.55\build\native\v8.redist-v120-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.redist-v120-x64.5.6.326.55\build\native\v8.redist-v120-x64.props'))" />
-    <Error Condition="!Exists('..\packages\v8-v120-x64.5.6.326.55\build\native\v8-v120-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8-v120-x64.5.6.326.55\build\native\v8-v120-x64.props'))" />
-    <Error Condition="!Exists('..\packages\v8.symbols-v120-x64.5.6.326.55\build\native\v8.symbols-v120-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.symbols-v120-x64.5.6.326.55\build\native\v8.symbols-v120-x64.props'))" />
-    <Error Condition="!Exists('..\packages\v8.redist-v141-x64.6.4.388.11\build\native\v8.redist-v141-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.redist-v141-x64.6.4.388.11\build\native\v8.redist-v141-x64.props'))" />
-    <Error Condition="!Exists('..\packages\v8-v141-x64.6.4.388.11\build\native\v8-v141-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8-v141-x64.6.4.388.11\build\native\v8-v141-x64.props'))" />
-    <Error Condition="!Exists('..\packages\v8.redist-v140-x64.6.2.414.46\build\native\v8.redist-v140-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.redist-v140-x64.6.2.414.46\build\native\v8.redist-v140-x64.props'))" />
-    <Error Condition="!Exists('..\packages\v8-v140-x64.6.2.414.46\build\native\v8-v140-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8-v140-x64.6.2.414.46\build\native\v8-v140-x64.props'))" />
-  </Target>
 </Project>

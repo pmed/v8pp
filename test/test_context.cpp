@@ -13,8 +13,8 @@
 void test_context()
 {
 	v8pp::context context;
-
+	int i=999;
 	v8::HandleScope scope(context.isolate());
-	int const r = context.run_script("42")->Int32Value(context.isolate()->GetCurrentContext()).ToChecked();
+	int const r = context.run_script("42")->Int32Value(context.isolate()->GetCurrentContext()).FromMaybe(i);
 	check_eq("run_script", r, 42);
 }

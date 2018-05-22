@@ -38,6 +38,25 @@ struct X
 		v8::PropertyCallbackInfo<void> const& info);
 };
 
+// external accessors
+int external_get1(const X&);
+void external_set1(X&, int);
+
+int external_get2(const X&, v8::Isolate*);
+void external_set2(X&, v8::Isolate*, int);
+
+void external_get3(
+	const X&, 
+	v8::Local<v8::String> name,
+	v8::PropertyCallbackInfo<v8::Value> const& info
+);
+void external_set3(
+	X&, 
+	v8::Local<v8::String> name, 
+	v8::Local<v8::Value> value,
+	v8::PropertyCallbackInfo<void> const& info
+);
+
 using namespace v8pp::detail;
 
 //property metafunctions
@@ -45,31 +64,43 @@ static_assert(is_getter<decltype(&get1)>::value,
 	"getter function");
 static_assert(is_getter<decltype(&X::get1)>::value,
 	"getter member function");
+static_assert(is_getter<decltype(&external_get1), 1>::value,
+	"external getter function");
 
 static_assert(is_setter<decltype(&set1)>::value,
 	"setter function");
 static_assert(is_setter<decltype(&X::set1)>::value,
 	"setter member function");
+static_assert(is_setter<decltype(&external_set1), 1>::value,
+	"external setter function");
 
 static_assert(is_isolate_getter<decltype(&get2)>::value,
 	"isolate getter function");
 static_assert(is_isolate_getter<decltype(&X::get2)>::value,
 	"isolate getter member function");
+static_assert(is_isolate_getter<decltype(&external_get2), 1>::value,
+	"external isolate getter function");
 
 static_assert(is_isolate_setter<decltype(&set2)>::value,
 	"isolate setter function");
 static_assert(is_isolate_setter<decltype(&X::set2)>::value,
 	"isolate setter member function");
+static_assert(is_isolate_setter<decltype(&external_set2), 1>::value,
+	"external isolate setter function");
 
 static_assert(is_direct_getter<decltype(&get3)>::value,
 	"direct getter function");
 static_assert(is_direct_getter<decltype(&X::get3)>::value,
 	"direct getter member function");
+static_assert(is_direct_getter<decltype(&external_get3), 1>::value,
+	"external getter function");
 
 static_assert(is_direct_setter<decltype(&set3)>::value,
 	"direct setter function");
 static_assert(is_direct_setter<decltype(&X::set3)>::value,
 	"direct setter member function");
+static_assert(is_direct_setter<decltype(&external_set3), 1>::value,
+	"external setter function");
 
 // tag selectors
 static_assert(std::is_same<select_getter_tag<decltype(&get1)>,
