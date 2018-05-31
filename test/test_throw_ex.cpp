@@ -18,7 +18,7 @@ void test(v8pp::context& context, std::string const& type,
 
 	v8::HandleScope scope(isolate);
 
-	v8::TryCatch try_catch;
+	v8::TryCatch try_catch(isolate);
 	v8::Local<v8::Value> ex = v8pp::throw_ex(isolate,
 		"exception message", exception_ctor);
 	check(" has caught", try_catch.HasCaught());
