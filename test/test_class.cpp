@@ -34,7 +34,7 @@ struct X : Xbase
 };
 
 template<typename Traits, typename X_ptr = typename v8pp::class_<X, Traits>::object_pointer_type>
-static X_ptr create_X(v8::FunctionCallbackInfo<v8::Value> const& args)
+static X_ptr create_X(v8::FunctionCallbackInfo<v8::Value> const&)
 {
 	return X_ptr(new X);
 }
@@ -126,7 +126,7 @@ void test_class_()
 	{
 		v8pp::class_<X, Traits> X_class(isolate);
 	});
-	check_ex<std::runtime_error>("already inherited class X", [isolate, &Y_class]()
+	check_ex<std::runtime_error>("already inherited class X", [&Y_class]()
 	{
 		Y_class.template inherit<X>();
 	});

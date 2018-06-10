@@ -44,7 +44,7 @@ void test_json()
 	check_eq("object parse", v8pp::json_str(isolate, v), str);
 
 	v8::Local<v8::Array> arr = v8::Array::New(isolate, 1);
-	arr->Set(isolate->GetCurrentContext(), 0, obj);
+	arr->Set(isolate->GetCurrentContext(), 0, obj).FromJust();
 
 	str = v8pp::json_str(isolate, arr);
 	v = v8pp::json_parse(isolate, str);

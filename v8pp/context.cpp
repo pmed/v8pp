@@ -227,7 +227,7 @@ context::~context()
 context& context::set(char const* name, v8::Local<v8::Value> value)
 {
 	v8::HandleScope scope(isolate_);
-	to_local(isolate_, impl_)->Global()->Set(isolate_->GetCurrentContext(), to_v8(isolate_, name), value);
+	to_local(isolate_, impl_)->Global()->Set(isolate_->GetCurrentContext(), to_v8(isolate_, name), value).FromJust();
 	return *this;
 }
 

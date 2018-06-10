@@ -11,8 +11,6 @@
 
 #include "test.hpp"
 
-namespace {
-
 int get1();
 void set1(int);
 
@@ -102,7 +100,6 @@ static_assert(std::is_same<select_setter_tag<decltype(&set3)>,
 static_assert(std::is_same<select_setter_tag<decltype(&X::set3)>,
 	direct_setter_tag>::value, "direct setter member function tag");
 
-} // unnamed namespace
 
 void test_property()
 {

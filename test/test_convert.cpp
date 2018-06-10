@@ -86,8 +86,8 @@ struct convert<person>
 	{
 		v8::EscapableHandleScope scope(isolate);
 		v8::Local<v8::Object> obj = v8::Object::New(isolate);
-		obj->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "name"), v8pp::to_v8(isolate, p.name));
-		obj->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "age"), v8pp::to_v8(isolate, p.age));
+		obj->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "name"), v8pp::to_v8(isolate, p.name)).FromJust();
+		obj->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "age"), v8pp::to_v8(isolate, p.age)).FromJust();
 		/* Simpler after #include <v8pp/object.hpp>
 		set_option(isolate, obj, "name", p.name);
 		set_option(isolate, obj, "age", p.age);
@@ -151,13 +151,12 @@ void test_convert()
 	std::map<char, int> map = { { 'a', 1 }, { 'b', 2 }, { 'c', 3 } };
 	test_conv(isolate, map);
 
-	std::array<int, 3> array = { 1, 2, 3 };
+	std::array<int, 3> array = { { 1, 2, 3 } };
 	test_conv(isolate, array);
 
-	check_ex<std::runtime_error>("wrong array length", [isolate, array]()
+	check_ex<std::runtime_error>("wrong array length", [isolate, &array]()
 	{
-		v8::Local<v8::Array> arr = v8pp::to_v8(isolate,
-			std::array<int, 3>{ 1, 2, 3 });
+		v8::Local<v8::Array> arr = v8pp::to_v8(isolate, array);
 		v8pp::from_v8<std::array<int, 2>>(isolate, arr);
 	});
 

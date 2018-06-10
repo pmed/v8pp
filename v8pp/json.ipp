@@ -47,7 +47,8 @@ V8PP_IMPL v8::Local<v8::Value> json_parse(v8::Isolate* isolate, std::string cons
 
 	v8::TryCatch try_catch(isolate);
 	v8::Local<v8::Value> result;
-	parse->Call(context, json, 1, &value).ToLocal(&result);
+	bool const is_empty_result = parse->Call(context, json, 1, &value).ToLocal(&result);
+	(void)is_empty_result;
 	if (try_catch.HasCaught())
 	{
 		result = try_catch.Exception();

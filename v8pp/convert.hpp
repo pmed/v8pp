@@ -340,7 +340,7 @@ struct convert<std::array<T, N>>
 		v8::Local<v8::Array> result = v8::Array::New(isolate, N);
 		for (uint32_t i = 0; i < N; ++i)
 		{
-			result->Set(context, i, convert<T>::to_v8(isolate, value[i]));
+			result->Set(context, i, convert<T>::to_v8(isolate, value[i])).FromJust();
 		}
 		return scope.Escape(result);
 	}
@@ -386,7 +386,7 @@ struct convert<std::vector<T, Alloc>>
 		v8::Local<v8::Array> result = v8::Array::New(isolate, size);
 		for (uint32_t i = 0; i < size; ++i)
 		{
-			result->Set(context, i, convert<T>::to_v8(isolate, value[i]));
+			result->Set(context, i, convert<T>::to_v8(isolate, value[i])).FromJust();
 		}
 		return scope.Escape(result);
 	}
@@ -436,7 +436,7 @@ struct convert<std::map<Key, Value, Less, Alloc>>
 		{
 			result->Set(context,
 				convert<Key>::to_v8(isolate, item.first),
-				convert<Value>::to_v8(isolate, item.second));
+				convert<Value>::to_v8(isolate, item.second)).FromJust();
 		}
 		return scope.Escape(result);
 	}
@@ -686,7 +686,7 @@ v8::Local<v8::Array> to_v8(v8::Isolate* isolate, Iterator begin, Iterator end)
 	v8::Local<v8::Array> result = v8::Array::New(isolate);
 	for (uint32_t idx = 0; begin != end; ++begin, ++idx)
 	{
-		result->Set(context, idx, to_v8(isolate, *begin));
+		result->Set(context, idx, to_v8(isolate, *begin)).FromJust();
 	}
 	return scope.Escape(result);
 }
