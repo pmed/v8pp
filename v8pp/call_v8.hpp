@@ -33,7 +33,9 @@ v8::Local<v8::Value> call_v8(v8::Isolate* isolate, v8::Local<v8::Function> func,
 		to_v8(isolate, std::forward<Args>(args))...
 	};
 
-	v8::Local<v8::Value> result = func->Call(isolate->GetCurrentContext(), recv, arg_count, v8_args).ToLocalChecked();
+	v8::Local<v8::Value> result;
+	bool const is_empty_result = func->Call(isolate->GetCurrentContext(), recv, arg_count, v8_args).ToLocal(&result);
+	(void)is_empty_result;
 
 	return scope.Escape(result);
 }

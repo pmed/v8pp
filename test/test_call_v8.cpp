@@ -32,4 +32,10 @@ void test_call_v8()
 		v8pp::call_v8(isolate, fun, fun, true, 2.2)->Int32Value(isolate->GetCurrentContext()).FromJust(), 2);
 	check_eq("3 args",
 		v8pp::call_v8(isolate, fun, fun, 1, true, "abc")->Int32Value(isolate->GetCurrentContext()).FromJust(), 3);
+
+	v8::TryCatch try_catch(isolate);
+	fun = context.run_script("var fun = function() { non_existing_fun(); }; fun").As<v8::Function>();
+	check("empty result",
+		v8pp::call_v8(isolate, fun, fun).IsEmpty());
+	check("has caught", try_catch.HasCaught());
 }
