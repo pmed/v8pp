@@ -25,11 +25,11 @@ void test_call_v8()
 	v8::Local<v8::Function> fun = v8::Function::New(isolate->GetCurrentContext(), v8_arg_count).ToLocalChecked();
 
 	check_eq("no args",
-		v8pp::call_v8(isolate, fun, fun)->Int32Value(isolate->GetCurrentContext()).ToChecked(), 0);
+		v8pp::call_v8(isolate, fun, fun)->Int32Value(isolate->GetCurrentContext()).FromJust(), 0);
 	check_eq("1 arg",
-		v8pp::call_v8(isolate, fun, fun, 1)->Int32Value(isolate->GetCurrentContext()).ToChecked(), 1);
+		v8pp::call_v8(isolate, fun, fun, 1)->Int32Value(isolate->GetCurrentContext()).FromJust(), 1);
 	check_eq("2 args",
-		v8pp::call_v8(isolate, fun, fun, true, 2.2)->Int32Value(isolate->GetCurrentContext()).ToChecked(), 2);
+		v8pp::call_v8(isolate, fun, fun, true, 2.2)->Int32Value(isolate->GetCurrentContext()).FromJust(), 2);
 	check_eq("3 args",
-		v8pp::call_v8(isolate, fun, fun, 1, true, "abc")->Int32Value(isolate->GetCurrentContext()).ToChecked(), 3);
+		v8pp::call_v8(isolate, fun, fun, 1, true, "abc")->Int32Value(isolate->GetCurrentContext()).FromJust(), 3);
 }

@@ -10,6 +10,8 @@
 
 #include "test.hpp"
 
+#include <cmath>
+
 void test_object()
 {
 	v8pp::context context;
@@ -39,7 +41,7 @@ void test_object()
 
 	double pi;
 	check("get obj.pi", v8pp::get_option(isolate, obj, "pi", pi));
-	check("obj.pi", abs(pi - 3.1415926) < 10e-6);
+	check("obj.pi", fabs(pi - 3.1415926) < 10e-6);
 
 	v8::Local<v8::Object> sub;
 	check("get obj.sub", v8pp::get_option(isolate, obj, "sub", sub)

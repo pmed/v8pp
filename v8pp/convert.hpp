@@ -174,7 +174,7 @@ struct convert<bool>
 		{
 			throw std::invalid_argument("expected Boolean");
 		}
-		return value->BooleanValue(isolate->GetCurrentContext()).ToChecked();
+		return value->BooleanValue(isolate->GetCurrentContext()).FromJust();
 	}
 
 	static to_type to_v8(v8::Isolate* isolate, bool value)
@@ -207,16 +207,16 @@ struct convert<T, typename std::enable_if<std::is_integral<T>::value>::type>
 		{
 			if (is_signed)
 			{
-				return static_cast<T>(value->Int32Value(isolate->GetCurrentContext()).ToChecked());
+				return static_cast<T>(value->Int32Value(isolate->GetCurrentContext()).FromJust());
 			}
 			else
 			{
-				return static_cast<T>(value->Uint32Value(isolate->GetCurrentContext()).ToChecked());
+				return static_cast<T>(value->Uint32Value(isolate->GetCurrentContext()).FromJust());
 			}
 		}
 		else
 		{
-			return static_cast<T>(value->IntegerValue(isolate->GetCurrentContext()).ToChecked());
+			return static_cast<T>(value->IntegerValue(isolate->GetCurrentContext()).FromJust());
 		}
 	}
 
@@ -286,7 +286,7 @@ struct convert<T, typename std::enable_if<std::is_floating_point<T>::value>::typ
 			throw std::invalid_argument("expected Number");
 		}
 
-		return static_cast<T>(value->NumberValue(isolate->GetCurrentContext()).ToChecked());
+		return static_cast<T>(value->NumberValue(isolate->GetCurrentContext()).FromJust());
 	}
 
 	static to_type to_v8(v8::Isolate* isolate, T value)

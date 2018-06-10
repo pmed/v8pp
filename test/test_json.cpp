@@ -31,7 +31,7 @@ void test_json()
 	str = v8pp::json_str(isolate, v);
 	v = v8pp::json_parse(isolate, "42");
 	check_eq("int string", str, "42");
-	check_eq("int parse", v->Int32Value(isolate->GetCurrentContext()).ToChecked(), 42);
+	check_eq("int parse", v->Int32Value(isolate->GetCurrentContext()).FromJust(), 42);
 
 	v8::Local<v8::Object> obj = v8::Object::New(isolate);
 	v8pp::set_option(isolate, obj, "x", 1);

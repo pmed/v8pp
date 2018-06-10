@@ -77,7 +77,7 @@ struct factory<Y, v8pp::shared_ptr_traits>
 template<typename Traits>
 static int extern_fun(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	int x = args[0]->Int32Value(args.GetIsolate()->GetCurrentContext()).ToChecked();
+	int x = args[0]->Int32Value(args.GetIsolate()->GetCurrentContext()).FromJust();
 	auto self = v8pp::class_<X, Traits>::unwrap_object(args.GetIsolate(), args.This());
 	if (self) x += self->var;
 	return x;
