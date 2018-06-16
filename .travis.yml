@@ -10,11 +10,16 @@ compiler:
 env: 
   - V8_VERSION=5.9
   - V8_VERSION=6.0
-#  - V8_VERSION=6.4
+  - V8_VERSION=6.1
+  - V8_VERSION=6.2
+  - V8_VERSION=6.3
+  - V8_VERSION=6.4
+  - V8_VERSION=6.5
+  - V8_VERSION=6.6
 
 before_install:
   - sudo add-apt-repository ppa:pinepain/libv8-archived -y
-#  - sudo add-apt-repository ppa:pinepain/libv8 -y
+  - sudo add-apt-repository ppa:pinepain/libv8 -y
   - sudo apt-get update -q
   - sudo apt-get install libv8-"$V8_VERSION"-dev -y
 
