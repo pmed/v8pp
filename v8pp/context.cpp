@@ -259,8 +259,9 @@ v8::Local<v8::Value> context::run_script(std::string const& source,
 	v8::Local<v8::Context> context = isolate_->GetCurrentContext();
 
 	v8::ScriptOrigin origin(to_v8(isolate_, filename));
-	v8::Local<v8::Script> script = v8::Script::Compile(context,
-		to_v8(isolate_, source), &origin).ToLocalChecked();
+	v8::Local<v8::Script> script;
+	bool const is_valid = v8::Script::Compile(context,
+		to_v8(isolate_, source), &origin).ToLocal(&script);
 
 	v8::Local<v8::Value> result;
 	if (!script.IsEmpty())

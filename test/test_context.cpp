@@ -17,8 +17,14 @@ void test_context()
 		v8pp::context context;
 
 		v8::HandleScope scope(context.isolate());
-		int const r = context.run_script("42")->Int32Value(context.isolate()->GetCurrentContext()).FromJust();
+		v8::Local<v8::Value> result = context.run_script("42");
+		int const r = result->Int32Value(context.isolate()->GetCurrentContext()).FromJust();
 		check_eq("run_script", r, 42);
+
+		v8::TryCatch try_catch(context.isolate());
+		result = context.run_script("syntax error");
+		check("script with syntax error", result.IsEmpty());
+		check(" has caught", try_catch.HasCaught());
 	}
 
 	{
