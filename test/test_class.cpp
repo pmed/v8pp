@@ -95,9 +95,21 @@ void test_class_()
 	using x_prop_get = int (X::*)() const;
 	using x_prop_set = void (X::*)(int);
 
-	v8pp::class_<X, Traits> X_class(isolate);
+	int extra_ctor_context = 1;
+	auto const X_ctor = [extra_ctor_context](v8::FunctionCallbackInfo<v8::Value> const& args)
+	{
+		return create_X<Traits>(args);
+	};
+	Z extra_dtor_context;
+	auto const X_dtor = [extra_dtor_context](v8::Isolate* isolate, typename Traits::template object_pointer_type<X> const& obj)
+	{
+		Traits::destroy(obj);
+	};
+
+	v8pp::class_<X, Traits> X_class(isolate, X_dtor);
 	X_class
 		.ctor(&create_X<Traits>)
+		.template ctor<v8::FunctionCallbackInfo<v8::Value> const&>(X_ctor)
 		.set_const("konst", 99)
 		.set("var", &X::var)
 		.set("rprop", v8pp::property(&X::get))

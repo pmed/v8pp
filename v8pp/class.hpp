@@ -48,15 +48,15 @@ public:
 	using const_pointer_type = typename Traits::const_pointer_type;
 	using object_id = typename Traits::object_id;
 
-	using ctor_function = pointer_type (*)(v8::FunctionCallbackInfo<v8::Value> const& args);
-	using dtor_function = void         (*)(v8::Isolate*, pointer_type const&);
+	using ctor_function = std::function<pointer_type (v8::FunctionCallbackInfo<v8::Value> const& args)>;
+	using dtor_function = std::function<void (v8::Isolate*, pointer_type const&)>;
 	using cast_function = pointer_type (*)(pointer_type const&);
 
-	object_registry(v8::Isolate* isolate, type_info const& type, dtor_function dtor)
+	object_registry(v8::Isolate* isolate, type_info const& type, dtor_function&& dtor)
 		: class_info(type, type_id<Traits>())
 		, isolate_(isolate)
-		, ctor_(nullptr) // no wrapped class constructor available by default
-		, dtor_(dtor)
+		, ctor_() // no wrapped class constructor available by default
+		, dtor_(std::move(dtor))
 	{
 		v8::HandleScope scope(isolate_);
 
@@ -121,7 +121,7 @@ public:
 		return to_local(isolate_, js_func_);
 	}
 
-	void set_ctor(ctor_function ctor) { ctor_ = ctor; }
+	void set_ctor(ctor_function&& ctor) { ctor_ = std::move(ctor); }
 
 	void add_base(object_registry& info, cast_function cast)
 	{
@@ -344,7 +344,7 @@ class classes
 public:
 	template<typename Traits>
 	static object_registry<Traits>& add(v8::Isolate* isolate, type_info const& type,
-		typename object_registry<Traits>::dtor_function dtor)
+		typename object_registry<Traits>::dtor_function&& dtor)
 	{
 		classes* info = instance(operation::add, isolate);
 		auto it = info->find(type);
@@ -354,7 +354,7 @@ public:
 			throw std::runtime_error((*it)->class_name()
 				+ " is already exist in isolate " + pointer_str(isolate));
 		}
-		info->classes_.emplace_back(new object_registry<Traits>(isolate, type, dtor));
+		info->classes_.emplace_back(new object_registry<Traits>(isolate, type, std::move(dtor)));
 		return *static_cast<object_registry<Traits>*>(info->classes_.back().get());
 	}
 
@@ -450,25 +450,27 @@ public:
 		}
 	};
 
-	static void factory_destroy(v8::Isolate* isolate, pointer_type const& obj)
-	{
-		factory<T, Traits>::destroy(isolate, Traits::template static_pointer_cast<T>(obj));
-	}
-
-	using ctor_function = object_pointer_type (*)(v8::FunctionCallbackInfo<v8::Value> const& args);
-	using dtor_function = void (*)(v8::Isolate* isolate, pointer_type const& obj);
+	using ctor_function = std::function<object_pointer_type (v8::FunctionCallbackInfo<v8::Value> const& args)>;
+	using dtor_function = std::function<void (v8::Isolate* isolate, object_pointer_type const& obj)>;
 
 public:
-	explicit class_(v8::Isolate* isolate, dtor_function destroy = factory_destroy)
-		: class_info_(detail::classes::add<Traits>(isolate, detail::type_id<T>(), destroy))
+	explicit class_(v8::Isolate* isolate, dtor_function destroy = &factory<T, Traits>::destroy)
+		: class_info_(detail::classes::add<Traits>(isolate, detail::type_id<T>(), 
+			[destroy = std::move(destroy)](v8::Isolate* isolate, pointer_type const& obj)
+			{
+				destroy(isolate, Traits::template static_pointer_cast<T>(obj));
+			}))
 	{
 	}
 
 	/// Set class constructor signature
 	template<typename ...Args, typename Create = factory_create<Args...>>
-	class_& ctor(ctor_function create = Create::call)
+	class_& ctor(ctor_function create = &Create::call)
 	{
-		class_info_.set_ctor(reinterpret_cast<typename object_registry::ctor_function>(create));
+		class_info_.set_ctor([create = std::move(create)](v8::FunctionCallbackInfo<v8::Value> const& args)
+		{
+			return create(args);
+		});
 		return *this;
 	}
 
