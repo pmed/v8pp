@@ -140,6 +140,8 @@ void test_class_()
 		.set("static_lambda", [](int x) { return x + 3; })
 		.set("extern_fun", extern_fun<Traits>)
 		.set("toJSON", &X::to_json)
+		.set_static("my_static_const_var", 42, true)
+		.set_static("my_static_var", 1)
 		;
 
 	v8pp::class_<Y, Traits> Y_class(isolate);
@@ -180,6 +182,10 @@ void test_class_()
 	check_eq("X::static_lambda(1)", run_script<int>(context, "X.static_lambda(1)"), 4);
 	check_eq("X::extern_fun(5)", run_script<int>(context, "x = new X(); x.extern_fun(5)"), 6);
 	check_eq("X::extern_fun(6)", run_script<int>(context, "X.extern_fun(6)"), 6);
+	check_eq("X::my_static_const_var", run_script<int>(context, "X.my_static_const_var"), 42);
+	check_eq("X::my_static_const_var", run_script<int>(context, "X.my_static_const_var = 123"), 42);
+	check_eq("X::my_static_var", run_script<int>(context, "X.my_static_var"), 1);
+	check_eq("X::my_static_var", run_script<int>(context, "X.my_static_var = 123"), 123);
 
 	check_eq("JSON.stringify(X)",
 		run_script<std::string>(context, "JSON.stringify({'obj': new X(10), 'arr': [new X(11), new X(12)] })"),
