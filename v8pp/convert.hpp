@@ -73,12 +73,12 @@ struct convert<std::basic_string<Char, Traits, Alloc>>
 
 		if (sizeof(Char) == 1)
 		{
-			v8::String::Utf8Value const str(value);
+			v8::String::Utf8Value const str(isolate, value);
 			return from_type(reinterpret_cast<Char const*>(*str), str.length());
 		}
 		else
 		{
-			v8::String::Value const str(value);
+			v8::String::Value const str(isolate, value);
 			return from_type(reinterpret_cast<Char const*>(*str), str.length());
 		}
 	}
