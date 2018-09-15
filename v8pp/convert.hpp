@@ -44,6 +44,11 @@ struct convert
 };
 */
 
+struct invalid_argument : std::invalid_argument
+{
+	invalid_argument(v8::Isolate* isolate, v8::Local<v8::Value> value, char const* expected_type);
+};
+
 // converter specializations for string types
 template<typename Char, typename Traits, typename Alloc>
 struct convert<std::basic_string<Char, Traits, Alloc>>
@@ -63,7 +68,7 @@ struct convert<std::basic_string<Char, Traits, Alloc>>
 	{
 		if (!is_valid(isolate, value))
 		{
-			throw std::invalid_argument("expected String");
+			throw invalid_argument(isolate, value, "String");
 		}
 
 		if (sizeof(Char) == 1)
@@ -124,7 +129,7 @@ struct convert<Char const*, typename std::enable_if<
 	{
 		if (!is_valid(isolate, value))
 		{
-			throw std::invalid_argument("expected String");
+			throw invalid_argument(isolate, value, "String");
 		}
 
 		if (sizeof(Char) == 1)
@@ -172,7 +177,7 @@ struct convert<bool>
 	{
 		if (!is_valid(isolate, value))
 		{
-			throw std::invalid_argument("expected Boolean");
+			throw invalid_argument(isolate, value, "Boolean");
 		}
 		return value->BooleanValue(isolate->GetCurrentContext()).FromJust();
 	}
@@ -200,7 +205,7 @@ struct convert<T, typename std::enable_if<std::is_integral<T>::value>::type>
 	{
 		if (!is_valid(isolate, value))
 		{
-			throw std::invalid_argument("expected Number");
+			throw invalid_argument(isolate, value, "Number");
 		}
 
 		if (bits <= 32)
@@ -283,7 +288,7 @@ struct convert<T, typename std::enable_if<std::is_floating_point<T>::value>::typ
 	{
 		if (!is_valid(isolate, value))
 		{
-			throw std::invalid_argument("expected Number");
+			throw invalid_argument(isolate, value, "Number");
 		}
 
 		return static_cast<T>(value->NumberValue(isolate->GetCurrentContext()).FromJust());
@@ -311,7 +316,7 @@ struct convert<std::array<T, N>>
 	{
 		if (!is_valid(isolate, value))
 		{
-			throw std::invalid_argument("expected Array");
+			throw invalid_argument(isolate, value, "Array");
 		}
 
 		v8::HandleScope scope(isolate);
@@ -362,7 +367,7 @@ struct convert<std::vector<T, Alloc>>
 	{
 		if (!is_valid(isolate, value))
 		{
-			throw std::invalid_argument("expected Array");
+			throw invalid_argument(isolate, value, "Array");
 		}
 
 		v8::HandleScope scope(isolate);
@@ -408,7 +413,7 @@ struct convert<std::map<Key, Value, Less, Alloc>>
 	{
 		if (!is_valid(isolate, value))
 		{
-			throw std::invalid_argument("expected Object");
+			throw invalid_argument(isolate, value, "Object");
 		}
 
 		v8::HandleScope scope(isolate);
@@ -535,7 +540,7 @@ struct convert<T, typename std::enable_if<is_wrapped_class<T>::value>::type>
 	{
 		if (!is_valid(isolate, value))
 		{
-			throw std::invalid_argument("expected Object");
+			throw invalid_argument(isolate, value, "Object");
 		}
 		if (T* object = convert<T*>::from_v8(isolate, value))
 		{
@@ -594,7 +599,7 @@ struct convert<T, ref_from_shared_ptr>
 	{
 		if (!is_valid(isolate, value))
 		{
-			throw std::invalid_argument("expected Object");
+			throw invalid_argument(isolate, value, "Object");
 		}
 		if (std::shared_ptr<T> object = convert<std::shared_ptr<T>>::from_v8(isolate, value))
 		{
@@ -709,6 +714,14 @@ v8::Local<T> to_local(v8::Isolate* isolate, v8::PersistentBase<T> const& handle)
 		return *reinterpret_cast<v8::Local<T>*>(
 			const_cast<v8::PersistentBase<T>*>(&handle));
 	}
+}
+
+inline invalid_argument::invalid_argument(v8::Isolate* isolate, v8::Local<v8::Value> value, char const* expected_type)
+	: std::invalid_argument(std::string("expected ")
+		+ expected_type
+		+ ", typeof="
+		+ (value.IsEmpty() ? std::string("<empty>") : v8pp::from_v8<std::string>(isolate, value->TypeOf(isolate))))
+{
 }
 
 } // namespace v8pp
