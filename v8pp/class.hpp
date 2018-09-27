@@ -496,15 +496,15 @@ public:
 	template<typename Method>
 	typename std::enable_if<
 		std::is_member_function_pointer<Method>::value, class_&>::type
-	set(char const *name, Method mem_func)
+	set(char const *name, Method mem_func, v8::PropertyAttribute attr = v8::None)
 	{
 		using mem_func_type =
 			typename detail::function_traits<Method>::template pointer_type<T>;
 		mem_func_type mf(mem_func);
 		class_info_.class_function_template()->PrototypeTemplate()->Set(
-			isolate(), name, v8::FunctionTemplate::New(isolate(),
+			v8pp::to_v8(isolate(), name), v8::FunctionTemplate::New(isolate(),
 				&detail::forward_function<Traits, mem_func_type>,
-				detail::set_external_data(isolate(), std::forward<mem_func_type>(mf))));
+				detail::set_external_data(isolate(), std::forward<mem_func_type>(mf))), attr);
 		return *this;
 	}
 
@@ -512,13 +512,13 @@ public:
 	template<typename Function,
 		typename Func = typename std::decay<Function>::type>
 	typename std::enable_if<detail::is_callable<Func>::value, class_&>::type
-	set(char const *name, Function&& func)
+	set(char const *name, Function&& func, v8::PropertyAttribute attr = v8::None)
 	{
 		v8::Local<v8::Data> wrapped_fun =
 			wrap_function_template(isolate(), std::forward<Func>(func));
 		class_info_.class_function_template()
-			->PrototypeTemplate()->Set(isolate(), name, wrapped_fun);
-		class_info_.js_function_template()->Set(isolate(), name, wrapped_fun);
+			->PrototypeTemplate()->Set(v8pp::to_v8(isolate(), name), wrapped_fun, attr);
+		class_info_.js_function_template()->Set(v8pp::to_v8(isolate(), name), wrapped_fun, attr);
 		return *this;
 	}
 
