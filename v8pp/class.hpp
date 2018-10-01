@@ -588,6 +588,53 @@ public:
 		return *this;
 	}
 
+	/// Set the toJSON function which will be called by the JSON.stringify function
+	class_& set_json(bool serializeFunctions = false, bool showSelf = false)
+	{
+		return set("toJSON", [serializeFunctions, showSelf](const v8::FunctionCallbackInfo<v8::Value>& args){
+			auto isolate = args.GetIsolate();
+			v8::EscapableHandleScope scope(isolate);
+			auto result = v8::Object::New(isolate);
+			auto self = args.Holder();
+			auto funcName = to_v8(isolate, "toJSON");
+			auto propertyNames = self->GetPropertyNames();
+			for (uint32_t b = 0, max = propertyNames->Length(); b < max; ++b)
+			{
+				auto propertyName = propertyNames->Get(b);
+				if (propertyName.IsEmpty())
+					continue;
+				if (!showSelf && propertyName->Equals(funcName))
+					continue;
+				auto propValue = self->Get(propertyName);
+				if (propValue.IsEmpty())
+					continue;
+				if (propValue->IsFunction())
+				{
+					if (serializeFunctions)
+					{
+						auto func = propValue.As<v8::Function>();
+						result->Set(propertyName, func->ToString());
+					}
+					else
+						result->Set(propertyName, v8::Null(isolate));
+				}
+				else if (propValue->IsObject() || propValue->IsArray())
+				{
+					auto maybeStr = v8::JSON::Stringify(isolate->GetCurrentContext(), propValue);
+					v8::Local<v8::String> str;
+					if (maybeStr.IsEmpty() || !maybeStr.ToLocal(&str))
+						result->Set(propertyName, v8::String::Empty(isolate));
+					else
+						result->Set(propertyName,  str);
+				}
+				else
+					result->Set(propertyName, propValue);
+			}
+
+			return scope.Escape(result);
+		});
+	}
+
 	/// v8::Isolate where the class bindings belongs
 	v8::Isolate* isolate() { return class_info_.isolate(); }
 

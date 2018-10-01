@@ -28,15 +28,6 @@ struct Xbase
 	int fun3(int x) volatile { return var + x; }
 	int fun4(int x) const volatile { return var + x; }
 	static int static_fun(int x) { return x; }
-
-	v8::Local<v8::Value> to_json(v8::Isolate* isolate, v8::Local<v8::Value> key) const
-	{
-		v8::EscapableHandleScope scope(isolate);
-		v8::Local<v8::Object> result = v8::Object::New(isolate);
-		v8pp::set_const(isolate, result, "key", key);
-		v8pp::set_const(isolate, result, "var", var);
-		return scope.Escape(result);
-	}
 };
 
 struct X : Xbase
@@ -145,7 +136,7 @@ void test_class_()
 		.set("static_fun", &X::static_fun)
 		.set("static_lambda", [](int x) { return x + 3; })
 		.set("extern_fun", extern_fun<Traits>)
-		.set("toJSON", &X::to_json)
+		.set_json()
 		;
 
 	v8pp::class_<Y, Traits> Y_class(isolate);
@@ -154,6 +145,7 @@ void test_class_()
 		.template ctor<int>()
 		.set("useX", &Y::useX)
 		.set("useX_ptr", &Y::useX_ptr<Traits>)
+		.set_json(true, true)
 		;
 
 	check_ex<std::runtime_error>("already wrapped class X", [isolate]()
@@ -196,7 +188,12 @@ void test_class_()
 
 	check_eq("JSON.stringify(X)",
 		run_script<std::string>(context, "JSON.stringify({'obj': new X(10), 'arr': [new X(11), new X(12)] })"),
-		R"({"obj":{"key":"obj","var":10},"arr":[{"key":"0","var":11},{"key":"1","var":12}]})"
+		R"({"obj":{"wprop2":10,"wprop":10,"rprop":10,"var":10,"konst":99,"fun1":null,"fun2":null,"fun3":null,"fun4":null,"static_fun":null,"static_lambda":null,"extern_fun":null},"arr":[{"wprop2":11,"wprop":11,"rprop":11,"var":11,"konst":99,"fun1":null,"fun2":null,"fun3":null,"fun4":null,"static_fun":null,"static_lambda":null,"extern_fun":null},{"wprop2":12,"wprop":12,"rprop":12,"var":12,"konst":99,"fun1":null,"fun2":null,"fun3":null,"fun4":null,"static_fun":null,"static_lambda":null,"extern_fun":null}]})"
+	);
+
+	check_eq("JSON.stringify(Y)",
+		run_script<std::string>(context, "JSON.stringify({'obj': new Y(10), 'arr': [new Y(11), new Y(12)] })"),
+		R"({"obj":{"useX":"function useX() { [native code] }","useX_ptr":"function useX_ptr() { [native code] }","toJSON":"function toJSON() { [native code] }","wprop2":10,"wprop":10,"rprop":10,"var":10,"konst":99,"fun1":"function fun1() { [native code] }","fun2":"function fun2() { [native code] }","fun3":"function fun3() { [native code] }","fun4":"function fun4() { [native code] }","static_fun":"function static_fun() { [native code] }","static_lambda":"function static_lambda() { [native code] }","extern_fun":"function extern_fun() { [native code] }"},"arr":[{"useX":"function useX() { [native code] }","useX_ptr":"function useX_ptr() { [native code] }","toJSON":"function toJSON() { [native code] }","wprop2":11,"wprop":11,"rprop":11,"var":11,"konst":99,"fun1":"function fun1() { [native code] }","fun2":"function fun2() { [native code] }","fun3":"function fun3() { [native code] }","fun4":"function fun4() { [native code] }","static_fun":"function static_fun() { [native code] }","static_lambda":"function static_lambda() { [native code] }","extern_fun":"function extern_fun() { [native code] }"},{"useX":"function useX() { [native code] }","useX_ptr":"function useX_ptr() { [native code] }","toJSON":"function toJSON() { [native code] }","wprop2":12,"wprop":12,"rprop":12,"var":12,"konst":99,"fun1":"function fun1() { [native code] }","fun2":"function fun2() { [native code] }","fun3":"function fun3() { [native code] }","fun4":"function fun4() { [native code] }","static_fun":"function static_fun() { [native code] }","static_lambda":"function static_lambda() { [native code] }","extern_fun":"function extern_fun() { [native code] }"}]})"
 	);
 
 	check_eq("Y object", run_script<int>(context, "y = new Y(-100); y.konst + y.var"), -1);
@@ -222,7 +219,7 @@ void test_class_()
 	check_eq("y3.var", y3->var, -3);
 
 	run_script<int>(context, "x = new X; for (i = 0; i < 10; ++i) { y = new Y(i); y.useX(x); y.useX_ptr(x); }");
-	check_eq("Y count", Y::instance_count, 10 + 4); // 10 + y + y1 + y2 + y3
+	check_eq("Y count", Y::instance_count, 13 + 4); // 13 + y + y1 + y2 + y3
 	run_script<int>(context, "y = null; 0");
 
 	v8pp::class_<Y, Traits>::unreference_external(isolate, y1);
