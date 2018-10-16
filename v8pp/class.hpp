@@ -259,7 +259,18 @@ public:
 			//assert(false && "create not allowed");
 			throw std::runtime_error(class_name() + " has no constructor");
 		}
-		return wrap_object(ctor_(args), true);
+    
+    v8::EscapableHandleScope scope(args.GetIsolate());
+    v8::TryCatch try_catch(args.GetIsolate());
+    v8::Local<v8::Object> result;
+    
+    auto ctorRes = ctor_(args);
+    if (try_catch.HasCaught())
+      try_catch.ReThrow();
+    else
+      result = wrap_object(ctorRes, true);
+
+    return scope.Escape(result);
 	}
 
 	pointer_type unwrap_object(v8::Local<v8::Value> value)
