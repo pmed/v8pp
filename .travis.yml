@@ -8,10 +8,6 @@ compiler:
   - clang
 
 env: 
-  - V8_VERSION=5.9
-  - V8_VERSION=6.0
-  - V8_VERSION=6.1
-  - V8_VERSION=6.2
   - V8_VERSION=6.3
   - V8_VERSION=6.4
   - V8_VERSION=6.5
