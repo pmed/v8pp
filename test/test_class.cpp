@@ -47,9 +47,15 @@ template<typename Traits, typename X_ptr = typename v8pp::class_<X, Traits>::obj
 static X_ptr create_X(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	X_ptr x(new X);
-	if (args.Length() > 0)
+	switch (args.Length())
 	{
+	case 1:
 		x->var = v8pp::from_v8<int>(args.GetIsolate(), args[0]);
+		break;
+	case 2:
+		throw std::runtime_error("C++ exception");
+	case 3:
+		v8pp::throw_ex(args.GetIsolate(), "JS exception");
 	}
 	return x;
 }
@@ -167,6 +173,13 @@ void test_class_()
 		.set("X", X_class)
 		.set("Y", Y_class)
 		;
+
+	check_eq("C++ exception from X ctor",
+		run_script<std::string>(context, "ret = ''; try { new X(1, 2); } catch(err) { ret = err; } ret"),
+		"C++ exception");
+	check_eq("V8 exception from X ctor",
+		run_script<std::string>(context, "ret = ''; try { new X(1, 2, 3); } catch(err) { ret = err; } ret"),
+		"JS exception");
 
 	check_eq("X object", run_script<int>(context, "x = new X(); x.var += x.konst"), 100);
 	check_eq("X::rprop", run_script<int>(context, "x = new X(); x.rprop"), 1);
