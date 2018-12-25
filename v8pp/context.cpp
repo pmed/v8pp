@@ -266,7 +266,7 @@ v8::Local<v8::Value> context::run_script(std::string const& source,
 	v8::Local<v8::Value> result;
 	if (!script.IsEmpty())
 	{
-		result = script->Run(context).ToLocalChecked();
+		bool const is_successful = script->Run(context).ToLocal(&result);
 	}
 	return scope.Escape(result);
 }
