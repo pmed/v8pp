@@ -7,13 +7,13 @@
 
 Header-only library to expose C++ classes and functions into [V8](https://developers.google.com/v8/) to use them in JavaScript code. v8pp uses heavy template metaprogramming and variadic template parameters which requires modern compiler with C++11 support. The library has been tested on:
 
-  * Microsoft Visual C++ 2013 (Windows 7/8)
-  * GCC 4.8.1 (Ubuntu 13.10 with Linux kernel 3.11.0)
-  * Clang 3.5 (Mac OS X 10.2)
+  * Microsoft Visual C++ 2015/2017 (Windows 10)
+  * GCC 5.4.0 (Ubuntu 16.04)
+  * Clang 5.0.0 (Ubuntu 16.04)
 
 ## Binding example
 
-v8pp supports V8 versions after 3.21 with `v8::Isolate` usage in API. There are 2 targets for binding:
+v8pp supports V8 versions after 6.3 with `v8::Isolate` usage in API. There are 2 targets for binding:
  
   * `v8pp::module`, a wrapper class around `v8::ObjectTemplate`
   * `v8pp::class_`, a template class wrapper around `v8::FunctionTemplate`

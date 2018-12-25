@@ -24,7 +24,7 @@ void test(v8pp::context& context, std::string const& type,
 	check(" has caught", try_catch.HasCaught());
 	check("the same stack trace", try_catch.Message()
 		->GetStackTrace() == v8::Exception::GetStackTrace(ex));
-	v8::String::Utf8Value err_msg(try_catch.Message()->Get());
+	v8::String::Utf8Value const err_msg(isolate, try_catch.Message()->Get());
 	check_eq("message", *err_msg, "Uncaught " + type + ": exception message");
 }
 

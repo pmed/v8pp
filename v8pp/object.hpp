@@ -58,8 +58,7 @@ bool set_option(v8::Isolate* isolate, v8::Local<v8::Object> options,
 		return get_option(isolate, options, subname.c_str(), suboptions)
 			&& set_option(isolate, suboptions, dot + 1, value);
 	}
-	options->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, name), to_v8(isolate, value));
-	return true;
+	return options->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, name), to_v8(isolate, value)).FromJust();
 }
 
 /// Set named constant in V8 object
@@ -70,7 +69,7 @@ void set_const(v8::Isolate* isolate, v8::Local<v8::Object> options,
 {
 	options->DefineOwnProperty(isolate->GetCurrentContext(),
 		v8pp::to_v8(isolate, name), to_v8(isolate, value),
-		v8::PropertyAttribute(v8::ReadOnly | v8::DontDelete));
+		v8::PropertyAttribute(v8::ReadOnly | v8::DontDelete)).FromJust();
 }
 
 } // namespace v8pp

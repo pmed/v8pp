@@ -29,9 +29,11 @@ class context
 {
 public:
 	/// Create context with optional existing v8::Isolate
-	/// and v8::ArrayBuffer::Allocator
+	/// and v8::ArrayBuffer::Allocator,
+	//  and add default global methods (`require()`, `run()`)
 	explicit context(v8::Isolate* isolate = nullptr,
-		v8::ArrayBuffer::Allocator* allocator = nullptr);
+		v8::ArrayBuffer::Allocator* allocator = nullptr,
+		bool add_default_global_methods = true);
 	~context();
 
 	/// V8 isolate associated with this context

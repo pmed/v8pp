@@ -8,6 +8,7 @@
 //
 #include "v8pp/class.hpp"
 #include "v8pp/module.hpp"
+#include "v8pp/object.hpp"
 #include "v8pp/property.hpp"
 
 #include "test.hpp"
@@ -27,6 +28,15 @@ struct Xbase
 	int fun3(int x) volatile { return var + x; }
 	int fun4(int x) const volatile { return var + x; }
 	static int static_fun(int x) { return x; }
+
+	v8::Local<v8::Value> to_json(v8::Isolate* isolate, v8::Local<v8::Value> key) const
+	{
+		v8::EscapableHandleScope scope(isolate);
+		v8::Local<v8::Object> result = v8::Object::New(isolate);
+		v8pp::set_const(isolate, result, "key", key);
+		v8pp::set_const(isolate, result, "var", var);
+		return scope.Escape(result);
+	}
 };
 
 struct X : Xbase
@@ -36,7 +46,18 @@ struct X : Xbase
 template<typename Traits, typename X_ptr = typename v8pp::class_<X, Traits>::object_pointer_type>
 static X_ptr create_X(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	return X_ptr(new X);
+	X_ptr x(new X);
+	switch (args.Length())
+	{
+	case 1:
+		x->var = v8pp::from_v8<int>(args.GetIsolate(), args[0]);
+		break;
+	case 2:
+		throw std::runtime_error("C++ exception");
+	case 3:
+		v8pp::throw_ex(args.GetIsolate(), "JS exception");
+	}
+	return x;
 }
 
 struct Y : X
@@ -59,7 +80,7 @@ struct Z {};
 template<typename Traits>
 static int extern_fun(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	int x = args[0]->Int32Value(args.GetIsolate()->GetCurrentContext()).ToChecked();
+	int x = args[0]->Int32Value(args.GetIsolate()->GetCurrentContext()).FromJust();
 	auto self = v8pp::class_<X, Traits>::unwrap_object(args.GetIsolate(), args.This());
 	if (self) x += self->var;
 	return x;
@@ -77,9 +98,21 @@ void test_class_()
 	using x_prop_get = int (X::*)() const;
 	using x_prop_set = void (X::*)(int);
 
-	v8pp::class_<X, Traits> X_class(isolate);
+	int extra_ctor_context = 1;
+	auto const X_ctor = [extra_ctor_context](v8::FunctionCallbackInfo<v8::Value> const& args)
+	{
+		return create_X<Traits>(args);
+	};
+	Z extra_dtor_context;
+	auto const X_dtor = [extra_dtor_context](v8::Isolate* isolate, typename Traits::template object_pointer_type<X> const& obj)
+	{
+		Traits::destroy(obj);
+	};
+
+	v8pp::class_<X, Traits> X_class(isolate, X_dtor);
 	X_class
 		.ctor(&create_X<Traits>)
+		.template ctor<v8::FunctionCallbackInfo<v8::Value> const&>(X_ctor)
 		.const_("konst", 99)
 		.var("var", &X::var)
 		.property("rprop", &X::get)
@@ -93,6 +126,7 @@ void test_class_()
 		.function("static_fun", &X::static_fun)
 		.function("static_lambda", [](int x) { return x + 3; })
 		.function("extern_fun", extern_fun<Traits>)
+		.function("toJSON", &X::to_json)
 		;
 
 	v8pp::class_<Y, Traits> Y_class(isolate);
@@ -107,7 +141,7 @@ void test_class_()
 	{
 		v8pp::class_<X, Traits> X_class(isolate);
 	});
-	check_ex<std::runtime_error>("already inherited class X", [isolate, &Y_class]()
+	check_ex<std::runtime_error>("already inherited class X", [&Y_class]()
 	{
 		Y_class.template inherit<X>();
 	});
@@ -121,6 +155,13 @@ void test_class_()
 		.class_("Y", Y_class)
 		;
 
+	check_eq("C++ exception from X ctor",
+		run_script<std::string>(context, "ret = ''; try { new X(1, 2); } catch(err) { ret = err; } ret"),
+		"C++ exception");
+	check_eq("V8 exception from X ctor",
+		run_script<std::string>(context, "ret = ''; try { new X(1, 2, 3); } catch(err) { ret = err; } ret"),
+		"JS exception");
+
 	check_eq("X object", run_script<int>(context, "x = new X(); x.var += x.konst"), 100);
 	check_eq("X::rprop", run_script<int>(context, "x = new X(); x.rprop"), 1);
 	check_eq("X::wprop", run_script<int>(context, "x = new X(); ++x.wprop"), 2);
@@ -133,6 +174,11 @@ void test_class_()
 	check_eq("X::static_lambda(1)", run_script<int>(context, "X.static_lambda(1)"), 4);
 	check_eq("X::extern_fun(5)", run_script<int>(context, "x = new X(); x.extern_fun(5)"), 6);
 	check_eq("X::extern_fun(6)", run_script<int>(context, "X.extern_fun(6)"), 6);
+
+	check_eq("JSON.stringify(X)",
+		run_script<std::string>(context, "JSON.stringify({'obj': new X(10), 'arr': [new X(11), new X(12)] })"),
+		R"({"obj":{"key":"obj","var":10},"arr":[{"key":"0","var":11},{"key":"1","var":12}]})"
+	);
 
 	check_eq("Y object", run_script<int>(context, "y = new Y(-100); y.konst + y.var"), -1);
 

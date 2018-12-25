@@ -11,8 +11,6 @@
 #include "v8pp/utility.hpp"
 #include "test.hpp"
 
-namespace {
-
 template<typename Ret, typename F>
 void test_ret(F&&)
 {
@@ -179,13 +177,13 @@ void test_is_callable()
 	static_assert(!is_callable<Y>::value, "Y is not callable");
 }
 
-} // unnamed namespace
-
 struct some_struct {};
 namespace test { class some_class {}; }
 
 void test_utility()
 {
+	test_function_traits();
+	test_tuple_tail();
 	test_is_callable();
 
 	using v8pp::detail::type_id;

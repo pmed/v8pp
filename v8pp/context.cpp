@@ -164,7 +164,8 @@ struct array_buffer_allocator : v8::ArrayBuffer::Allocator
 };
 static array_buffer_allocator array_buffer_allocator_;
 
-context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator)
+context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
+	bool add_default_global_methods)
 {
 	own_isolate_ = (isolate == nullptr);
 	if (own_isolate_)
@@ -180,13 +181,16 @@ context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator)
 
 	v8::HandleScope scope(isolate_);
 
-	v8::Local<v8::Value> data = detail::set_external_data(isolate_, this);
 	v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate_);
 
-	global->Set(isolate_, "require",
-		v8::FunctionTemplate::New(isolate_, context::load_module, data));
-	global->Set(isolate_, "run",
-		v8::FunctionTemplate::New(isolate_, context::run_file, data));
+	if (add_default_global_methods)
+	{
+		v8::Local<v8::Value> data = detail::set_external_data(isolate_, this);
+		global->Set(isolate_, "require",
+			v8::FunctionTemplate::New(isolate_, context::load_module, data));
+		global->Set(isolate_, "run",
+			v8::FunctionTemplate::New(isolate_, context::run_file, data));
+	}
 
 	v8::Local<v8::Context> impl = v8::Context::New(isolate_, nullptr, global);
 	impl->Enter();
@@ -255,13 +259,14 @@ v8::Local<v8::Value> context::run_script(std::string const& source,
 	v8::Local<v8::Context> context = isolate_->GetCurrentContext();
 
 	v8::ScriptOrigin origin(to_v8(isolate_, filename));
-	v8::Local<v8::Script> script = v8::Script::Compile(context,
-		to_v8(isolate_, source), &origin).ToLocalChecked();
+	v8::Local<v8::Script> script;
+	bool const is_valid = v8::Script::Compile(context,
+		to_v8(isolate_, source), &origin).ToLocal(&script);
 
 	v8::Local<v8::Value> result;
 	if (!script.IsEmpty())
 	{
-		result = script->Run(context).ToLocalChecked();
+		bool const is_successful = script->Run(context).ToLocal(&result);
 	}
 	return scope.Escape(result);
 }

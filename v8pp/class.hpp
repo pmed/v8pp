@@ -47,15 +47,15 @@ public:
 	using const_pointer_type = typename Traits::const_pointer_type;
 	using object_id = typename Traits::object_id;
 
-	using ctor_function = pointer_type (*)(v8::FunctionCallbackInfo<v8::Value> const& args);
-	using dtor_function = void         (*)(v8::Isolate*, pointer_type const&);
+	using ctor_function = std::function<pointer_type (v8::FunctionCallbackInfo<v8::Value> const& args)>;
+	using dtor_function = std::function<void (v8::Isolate*, pointer_type const&)>;
 	using cast_function = pointer_type (*)(pointer_type const&);
 
-	object_registry(v8::Isolate* isolate, type_info const& type, dtor_function dtor)
+	object_registry(v8::Isolate* isolate, type_info const& type, dtor_function&& dtor)
 		: class_info(type, type_id<Traits>())
 		, isolate_(isolate)
-		, ctor_(nullptr) // no wrapped class constructor available by default
-		, dtor_(dtor)
+		, ctor_() // no wrapped class constructor available by default
+		, dtor_(std::move(dtor))
 	{
 		v8::HandleScope scope(isolate_);
 
@@ -120,7 +120,7 @@ public:
 		return to_local(isolate_, js_func_);
 	}
 
-	void set_ctor(ctor_function ctor) { ctor_ = ctor; }
+	void set_ctor(ctor_function&& ctor) { ctor_ = std::move(ctor); }
 
 	void add_base(object_registry& info, cast_function cast)
 	{
@@ -343,7 +343,7 @@ class classes
 public:
 	template<typename Traits>
 	static object_registry<Traits>& add(v8::Isolate* isolate, type_info const& type,
-		typename object_registry<Traits>::dtor_function dtor)
+		typename object_registry<Traits>::dtor_function&& dtor)
 	{
 		classes* info = instance(operation::add, isolate);
 		auto it = info->find(type);
@@ -353,7 +353,7 @@ public:
 			throw std::runtime_error((*it)->class_name()
 				+ " is already exist in isolate " + pointer_str(isolate));
 		}
-		info->classes_.emplace_back(new object_registry<Traits>(isolate, type, dtor));
+		info->classes_.emplace_back(new object_registry<Traits>(isolate, type, std::move(dtor)));
 		return *static_cast<object_registry<Traits>*>(info->classes_.back().get());
 	}
 
@@ -439,9 +439,10 @@ public:
 	using object_pointer_type = typename Traits::template object_pointer_type<T>;
 	using object_const_pointer_type = typename Traits::template object_const_pointer_type<T>;
 
-	using ctor_function = object_pointer_type(*)(v8::FunctionCallbackInfo<v8::Value> const& args);
-	using dtor_function = void(*)(v8::Isolate* isolate, pointer_type const& obj);
+	using ctor_function = std::function<object_pointer_type(v8::FunctionCallbackInfo<v8::Value> const& args)>;
+	using dtor_function = std::function<void(v8::Isolate* isolate, object_pointer_type const& obj)>;
 
+private:
 	template<typename ...Args>
 	static object_pointer_type object_create(v8::Isolate* isolate, Args&&...args)
 	{
@@ -472,16 +473,23 @@ public:
 	}
 
 public:
-	explicit class_(v8::Isolate* isolate, dtor_function destroy = object_destroy)
-		: class_info_(detail::classes::add<Traits>(isolate, detail::type_id<T>(), destroy))
+	explicit class_(v8::Isolate* isolate, dtor_function destroy = &object_destroy)
+		: class_info_(detail::classes::add<Traits>(isolate, detail::type_id<T>(),
+			[destroy = std::move(destroy)](v8::Isolate* isolate, pointer_type const& obj)
+			{
+				destroy(isolate, Traits::template static_pointer_cast<T>(obj));
+			}))
 	{
 	}
 
 	/// Set class constructor signature
 	template<typename ...Args, typename Create = object_create_from_v8<Args...>>
-	class_& ctor(ctor_function create = Create::call)
+	class_& ctor(ctor_function create = &Create::call)
 	{
-		class_info_.set_ctor(reinterpret_cast<typename object_registry::ctor_function>(create));
+		class_info_.set_ctor([create = std::move(create)](v8::FunctionCallbackInfo<v8::Value> const& args)
+		{
+			return create(args);
+		});
 		return *this;
 	}
 
@@ -506,30 +514,32 @@ public:
 	/// Set C++ class member function
 	template<typename Method>
 	typename std::enable_if<std::is_member_function_pointer<Method>::value, class_&>::type
-	function(char const *name, Method mem_func)
+	function(char const *name, Method mem_func, v8::PropertyAttribute attr = v8::None)
 	{
+		v8::HandleScope scope(isolate());
+
 		using mem_func_type =
 			typename detail::function_traits<Method>::template pointer_type<T>;
 
-		v8::HandleScope scope(isolate());
+		v8::Local<v8::Name> v8_name = v8pp::to_v8(isolate(), name);
+		v8::Local<v8::Data> wrapped_fun = wrap_function_template<Traits>(isolate(), mem_func_type(mem_func));
 
-		class_info_.class_function_template()->PrototypeTemplate()->Set(
-			isolate(), name, wrap_function_template<Traits>(isolate(), mem_func_type(mem_func)));
+		class_info_.class_function_template()->PrototypeTemplate()->Set(v8_name, wrapped_fun, attr);
 		return *this;
 	}
 
 	/// Set static class function
 	template<typename Function, typename Func = typename std::decay<Function>::type>
 	typename std::enable_if<detail::is_callable<Func>::value, class_&>::type
-	function(char const *name, Function&& func)
+	function(char const *name, Function&& func, v8::PropertyAttribute attr = v8::None)
 	{
 		v8::HandleScope scope(isolate());
 
-		v8::Local<v8::Data> wrapped_fun =
-			wrap_function_template<Traits>(isolate(), std::forward<Function>(func));
-		class_info_.class_function_template()
-			->PrototypeTemplate()->Set(isolate(), name, wrapped_fun);
-		class_info_.js_function_template()->Set(isolate(), name, wrapped_fun);
+		v8::Local<v8::Name> v8_name = v8pp::to_v8(isolate(), name);
+		v8::Local<v8::Data> wrapped_fun = wrap_function_template<Traits>(isolate(), std::forward<Function>(func));
+
+		class_info_.class_function_template()->PrototypeTemplate()->Set(v8_name, wrapped_fun, attr);
+		class_info_.js_function_template()->Set(v8_name, wrapped_fun, attr);
 		return *this;
 	}
 
@@ -545,10 +555,13 @@ public:
 		using attribute_type = typename
 			detail::function_traits<Attribute>::template pointer_type<T>;
 		attribute_type attr = attribute;
+
+		v8::Local<v8::Name> v8_name = v8pp::to_v8(isolate(), name);
+		v8::Local<v8::Value> data = detail::set_external_data(isolate(), std::forward<attribute_type>(attr));
 		class_info_.class_function_template()->PrototypeTemplate()
-			->SetAccessor(v8pp::to_v8(isolate(), name),
+			->SetAccessor(v8_name,
 				&member_get<attribute_type>, &member_set<attribute_type>,
-				detail::set_external_data(isolate(), std::forward<attribute_type>(attr)),
+				data,
 				v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
 		return *this;
 	}
@@ -684,7 +697,7 @@ public:
 
 private:
 	template<typename Attribute>
-	static void member_get(v8::Local<v8::String>,
+	static void member_get(v8::Local<v8::Name>,
 		v8::PropertyCallbackInfo<v8::Value> const& info)
 	{
 		v8::Isolate* isolate = info.GetIsolate();
@@ -702,7 +715,7 @@ private:
 	}
 
 	template<typename Attribute>
-	static void member_set(v8::Local<v8::String>, v8::Local<v8::Value> value,
+	static void member_set(v8::Local<v8::Name>, v8::Local<v8::Value> value,
 		v8::PropertyCallbackInfo<void> const& info)
 	{
 		v8::Isolate* isolate = info.GetIsolate();

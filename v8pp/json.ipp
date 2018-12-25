@@ -20,7 +20,7 @@ V8PP_IMPL std::string json_str(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	v8::Local<v8::Function> stringify = json->Get(context, key).ToLocalChecked().As<v8::Function>();
 
 	v8::Local<v8::Value> result = stringify->Call(context, json, 1, &value).ToLocalChecked();
-	v8::String::Utf8Value const str(result);
+	v8::String::Utf8Value const str(isolate, result);
 
 	return std::string(*str, str.length());
 }
@@ -47,7 +47,8 @@ V8PP_IMPL v8::Local<v8::Value> json_parse(v8::Isolate* isolate, std::string cons
 
 	v8::TryCatch try_catch(isolate);
 	v8::Local<v8::Value> result;
-	parse->Call(context, json, 1, &value).ToLocal(&result);
+	bool const is_empty_result = parse->Call(context, json, 1, &value).ToLocal(&result);
+	(void)is_empty_result;
 	if (try_catch.HasCaught())
 	{
 		result = try_catch.Exception();
