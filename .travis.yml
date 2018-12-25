@@ -14,12 +14,10 @@ env:
   - V8_VERSION=6.6
 
 before_install:
-    sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
   - sudo add-apt-repository ppa:pinepain/libv8-archived -y
   - sudo add-apt-repository ppa:pinepain/libv8 -y
-  - sudo apt-get update -qq
+  - sudo apt-get update
   - sudo apt-get install libv8-"$V8_VERSION"-dev -y
-  - sudo apt-get install g++-5 -y
 
 install:
   - if [ "$CXX" == "clang++" ]; then export CXXFLAGS="-stdlib=libstdc++"; fi
