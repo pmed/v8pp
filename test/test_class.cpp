@@ -60,34 +60,34 @@ static X_ptr create_X(v8::FunctionCallbackInfo<v8::Value> const& args)
 	return x;
 }
 
-int external_get1(X& a)
+int external_get1(X const volatile& x)
 {
-	return a.var;
+	return x.var;
 }
 
-int external_get2(X& a, v8::Isolate*)
+int external_get2(X const& x, v8::Isolate*)
 {
-	return a.var;
+	return x.var;
 }
 
-void external_get3(X& a, v8::Local<v8::String> name, const v8::PropertyCallbackInfo<v8::Value>& info)
+void external_get3(X const& x, v8::Local<v8::String> name, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
-	info.GetReturnValue().Set(v8pp::to_v8(info.GetIsolate(), a.var));
+	info.GetReturnValue().Set(v8pp::to_v8(info.GetIsolate(), x.var));
 }
 
-void external_set1(X& a, int value)
+void external_set1(X volatile& x, int value)
 {
-	a.var = value;
+	x.var = value;
 }
 
-void external_set2(X& a, v8::Isolate*, int value)
+void external_set2(X& x, v8::Isolate*, int value)
 {
-	a.var = value;
+	x.var = value;
 }
 
-void external_set3(X& a, v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info)
+void external_set3(X& x, v8::Local<v8::String> name, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info)
 {
-	a.var = v8pp::from_v8<int>(info.GetIsolate(), value);
+	x.var = v8pp::from_v8<int>(info.GetIsolate(), value);
 }
 
 struct Y : X
@@ -155,7 +155,8 @@ void test_class_()
 		.property("rprop", &X::get)
 		.property("wprop", &X::get, &X::set)
 		.property("wprop2", static_cast<x_prop_get>(&X::prop), static_cast<x_prop_set>(&X::prop))
-//TODO:		.property("lprop", [](X const& x) { return x.var; }, [](X& x, int n) { x.var = n; })
+		.property("prop", [](X const& x) mutable { return x.var; }, [](X& x, int n) { x.var = n; })
+		.property("prop2", [](X const& x) { return x.var; }, [](X& x, int n) mutable { x.var = n; })
 		.property("rprop_direct", &get_rprop_direct<Traits>)
 		.property("rprop_external1", &external_get1)
 		.property("rprop_external2", &external_get2)
@@ -169,7 +170,7 @@ void test_class_()
 		.function("fun4", &X::fun4)
 		.function("static_fun", &X::static_fun)
 		.function("static_lambda", [](int x) { return x + 3; })
-		.function("extern_fun", extern_fun<Traits>)
+		.function("extern_fun", &extern_fun<Traits>)
 		.function("toJSON", &X::to_json)
 		;
 
@@ -210,11 +211,12 @@ void test_class_()
 	check_eq("X::rprop", run_script<int>(context, "x = new X(); x.rprop"), 1);
 	check_eq("X::wprop", run_script<int>(context, "x = new X(); ++x.wprop"), 2);
 	check_eq("X::wprop2", run_script<int>(context, "x = new X(); ++x.wprop2"), 2);
+	check_eq("X::prop", run_script<int>(context, "x = new X(); x.prop += 2"), 3);
+	check_eq("X::prop2", run_script<int>(context, "x = new X(); x.prop2 += 3"), 4);
 	check_eq("X::rprop_direct", run_script<int>(context, "x = new X(); x.rprop_direct"), 1);
 	check_eq("X::rprop_external1", run_script<int>(context, "x = new X(); x.rprop_external1"), 1);
 	check_eq("X::rprop_external2", run_script<int>(context, "x = new X(); x.rprop_external2"), 1);
 	check_eq("X::rprop_external3", run_script<int>(context, "x = new X(); x.rprop_external3"), 1);
-
 	check_eq("X::wprop_external1", run_script<int>(context, "x = new X(); ++x.wprop_external1; x.wprop_external1"), 2);
 	check_eq("X::wprop_external2", run_script<int>(context, "x = new X(); ++x.wprop_external2; x.wprop_external2"), 2);
 	check_eq("X::wprop_external3", run_script<int>(context, "x = new X(); ++x.wprop_external3; x.wprop_external3"), 2);
