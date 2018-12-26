@@ -37,6 +37,8 @@ struct function_traits;
 template<>
 struct function_traits<none>
 {
+	using return_type = void;
+	using arguments = std::tuple<>;
 	template<typename D>
 	using pointer_type = void;
 };
@@ -46,6 +48,8 @@ struct function_traits<R (Args...)>
 {
 	using return_type = R;
 	using arguments = std::tuple<Args...>;
+	template<typename D>
+	using pointer_type = R (*)(Args...);
 };
 
 // function pointer
@@ -53,7 +57,6 @@ template<typename R, typename ...Args>
 struct function_traits<R (*)(Args...)>
 	: function_traits<R (Args...)>
 {
-	using pointer_type = R (*)(Args...);
 };
 
 // member function pointer

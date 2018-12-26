@@ -73,8 +73,8 @@ struct call_from_v8_traits
 	}
 };
 
-template<typename F>
-using isolate_arg_call_traits = call_from_v8_traits<F, 1>;
+template<typename F, size_t Offset = 0>
+using isolate_arg_call_traits = call_from_v8_traits<F, (1 + Offset)>;
 
 template<typename F, size_t Offset = 0>
 struct v8_args_call_traits : call_from_v8_traits<F, Offset>
@@ -91,8 +91,8 @@ struct v8_args_call_traits : call_from_v8_traits<F, Offset>
 	}
 };
 
-template<typename F>
-using isolate_v8_args_call_traits = v8_args_call_traits<F, 1>;
+template<typename F, size_t Offset=0>
+using isolate_v8_args_call_traits = v8_args_call_traits<F, (1 + Offset)>;
 
 template<typename F, size_t Offset>
 using is_direct_args = std::integral_constant<bool,
@@ -100,20 +100,20 @@ using is_direct_args = std::integral_constant<bool,
 	std::is_same<typename call_from_v8_traits<F>::template arg_type<Offset>,
 		v8::FunctionCallbackInfo<v8::Value> const&>::value>;
 
-template<typename F>
+template<typename F, size_t Offset=0>
 using is_first_arg_isolate = std::integral_constant<bool,
-	call_from_v8_traits<F>::arg_count != 0 &&
-	std::is_same<typename call_from_v8_traits<F>::template arg_type<0>,
+	call_from_v8_traits<F>::arg_count != Offset &&
+	std::is_same<typename call_from_v8_traits<F>::template arg_type<Offset>,
 		v8::Isolate*>::value>;
 
-template<typename F>
-using select_call_traits = typename std::conditional<is_first_arg_isolate<F>::value,
-	typename std::conditional<is_direct_args<F, 1>::value,
-		isolate_v8_args_call_traits<F>,
-		isolate_arg_call_traits<F>>::type,
-	typename std::conditional<is_direct_args<F, 0>::value,
-		v8_args_call_traits<F>,
-		call_from_v8_traits<F>>::type
+template<typename F, size_t Offset=0>
+using select_call_traits = typename std::conditional<is_first_arg_isolate<F, Offset>::value,
+	typename std::conditional<is_direct_args<F, 1 + Offset>::value,
+		isolate_v8_args_call_traits<F, Offset>,
+		isolate_arg_call_traits<F, Offset>>::type,
+	typename std::conditional<is_direct_args<F, Offset>::value,
+		v8_args_call_traits<F, Offset>,
+		call_from_v8_traits<F, Offset>>::type
 >::type;
 
 template<typename Traits, typename F, typename CallTraits, size_t ...Indices>

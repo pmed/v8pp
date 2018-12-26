@@ -102,7 +102,7 @@ public:
 		v8::HandleScope scope(isolate_);
 
 		obj_->SetAccessor(v8pp::to_v8(isolate_, name),
-			property_type::get, property_type::set,
+			property_type::get<void>, property_type::set<void>,
 			detail::set_external_data(isolate_, property_type(get, set)),
 			v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
 		return *this;

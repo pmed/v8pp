@@ -588,7 +588,7 @@ public:
 			|| detail::is_callable<Setter>::value
 			|| std::is_same<Setter, detail::none>::value, "SetFunction must be callable");
 
-		using property_type = v8pp::property<Getter, Setter>;
+		using property_type = v8pp::property<Getter, Setter, detail::is_class_based_getter<T, Getter>::value, detail::is_class_based_setter<T, Setter>::value>;
 
 		v8::HandleScope scope(isolate());
 
