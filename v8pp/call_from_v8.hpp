@@ -100,10 +100,10 @@ using is_direct_args = std::integral_constant<bool,
 	std::is_same<typename call_from_v8_traits<F>::template arg_type<Offset>,
 		v8::FunctionCallbackInfo<v8::Value> const&>::value>;
 
-template<typename F>
+template<typename F, size_t Offset = 0>
 using is_first_arg_isolate = std::integral_constant<bool,
-	call_from_v8_traits<F>::arg_count != 0 &&
-	std::is_same<typename call_from_v8_traits<F>::template arg_type<0>,
+	call_from_v8_traits<F>::arg_count != (Offset + 0) &&
+	std::is_same<typename call_from_v8_traits<F>::template arg_type<Offset +0>,
 		v8::Isolate*>::value>;
 
 template<typename F>

@@ -97,14 +97,16 @@ public:
 		static_assert(detail::is_callable<Setter>::value
 			|| std::is_same<Setter, detail::none>::value, "SetFunction must be callable");
 
-		using property_type = v8pp::property<Getter, Setter>;
+		using property_type = v8pp::property<Getter, Setter, false, false>;
 
 		v8::HandleScope scope(isolate_);
 
-		obj_->SetAccessor(v8pp::to_v8(isolate_, name),
-			property_type::get, property_type::set,
-			detail::set_external_data(isolate_, property_type(get, set)),
-			v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
+		using Traits = detail::none;
+		v8::AccessorGetterCallback getter = property_type::template get<Traits>;
+		v8::AccessorSetterCallback setter = property_type::is_readonly ? nullptr : property_type::template set<Traits>;
+		v8::Local<v8::String> v8_name = v8pp::to_v8(isolate_, name);
+		v8::Local<v8::Value> data = detail::set_external_data(isolate_, property_type(std::move(get), std::move(set)));
+		obj_->SetAccessor(v8_name, getter, setter, data, v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
 		return *this;
 	}
 
