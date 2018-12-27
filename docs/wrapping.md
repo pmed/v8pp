@@ -47,7 +47,7 @@ is a thin wrapper that constructs a `v8::ObjectTemplate`. This class also has
 a constructor to re-use an existing `v8::ObjectTemplate` instance.
 
 The `v8pp::module` class contains functions that allows binding to V8 for other
-`v8pp::modules`, C++ functions, global variables, and classes wrapped
+`v8pp::modules`, C++ functions, lambdas, global variables, and classes wrapped
 with `v8pp::class_` template.
 
 These binding functions return reference to the `v8pp::module` instance to allow
@@ -65,6 +65,7 @@ v8pp::module module(isolate), submodule(isolate);
 submodule
 	.var("x", x)            // bind C++ variable x
 	.function("f", &fun)    // bind C++ function
+	.function("g", [&x](int y) { return x + y; })
 	;
 
 module
@@ -79,7 +80,8 @@ isolate->GetCurrentContext()-> Global()->Set(v8pp::to_v8(isolate, "module"), mod
 // JavaScript after bindings above
 
 module.sub.x += 2; // x becomes 3 in C++
-var z = module.sub(module.sub.x, module.PI); // call C++ function fun(3, 3.1415926)
+var y = module.sub.f(module.sub.x, module.PI); // call C++ function fun(3, 3.1415926)
+var z = module.sub.g(1); // call C++ anonymous lambda, returns x+1
 ```
 
 
@@ -88,9 +90,12 @@ var z = module.sub(module.sub.x, module.PI); // call C++ function fun(3, 3.14159
 A class template in [`v8pp/class.hpp`](../v8pp/class.hpp) is used to register
 a wrapped C++ class in `v8pp` and to bind the class members into V8.
 
-Function `v8pp::property()` declared in a file
-[`v8pp/property.hpp`](../v8pp/property.hpp) allows to bind a read-only or
-read-write property to `v8pp::class_`:
+Allowed `class_` bindings:
+  * literla constanst with `const_(name, const_value)`
+  * class data members with `var(name, &Class::data_member)`
+  * functions with `function(name, &Class::function_member)`
+  * static class functions, free functions, lambdas with `function(name, function_or_lambda_ref)`
+  * properties with get, and optional set functions or lambdas with `property(name, getter [, setter])`
 
 
 ```c++
