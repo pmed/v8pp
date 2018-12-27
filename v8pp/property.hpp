@@ -163,8 +163,10 @@ struct r_property_impl<Get, true>
 	{
 		auto obj = v8pp::class_<class_type, Traits>::unwrap_object(info.GetIsolate(), info.This());
 		property_type& prop = detail::get_external_data<property_type>(info.Data());
-		const std::is_member_function_pointer<Get> is_mem_fun;
-		get_impl(*obj, prop.getter, name, info, select_getter_tag<Get, is_mem_fun? 0 : 1>(), is_mem_fun);
+
+		using is_mem_fun = std::is_member_function_pointer<Get>;
+		using offset = std::integral_constant<size_t, is_mem_fun::value? 0 : 1>;
+		get_impl(*obj, prop.getter, name, info, select_getter_tag<Get, offset::value>(), is_mem_fun());
 	}
 	catch (std::exception const& ex)
 	{
@@ -300,8 +302,9 @@ struct rw_property_impl<Get, Set, get_with_object, true>
 		auto obj = v8pp::class_<class_type, Traits>::unwrap_object(info.GetIsolate(), info.This());
 		property_type& prop = detail::get_external_data<property_type>(info.Data());
 
-		const std::is_member_function_pointer<Set> is_mem_fun;
-		set_impl(*obj, prop.setter, name, value, info, select_setter_tag<Set, is_mem_fun? 0 : 1>(), is_mem_fun);
+		using is_mem_fun = std::is_member_function_pointer<Set>;
+		using offset = std::integral_constant<size_t, is_mem_fun::value? 0 : 1>;
+		set_impl(*obj, prop.setter, name, value, info, select_setter_tag<Set, offset::value>(), is_mem_fun());
 	}
 	catch (std::exception const& ex)
 	{
