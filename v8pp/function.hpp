@@ -25,7 +25,7 @@ namespace detail {
 
 template<typename T>
 using is_bitcast_allowed = std::integral_constant<bool,
-	sizeof(T) == sizeof(void*) &&
+	sizeof(T) <= sizeof(void*) &&
 	std::is_default_constructible<T>::value &&
 	std::is_trivially_copyable<T>::value>;
 
