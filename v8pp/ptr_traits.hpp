@@ -13,7 +13,7 @@
 
 namespace v8pp {
 
-template<typename T, typename Enable = void>
+template<typename T, typename Enable>
 struct convert;
 
 struct raw_ptr_traits
