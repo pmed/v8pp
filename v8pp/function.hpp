@@ -220,13 +220,13 @@ v8::Local<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&&
 /// to make the function anonymous
 template<typename F, typename Traits = raw_ptr_traits>
 v8::Local<v8::Function> wrap_function(v8::Isolate* isolate,
-	char const* name, F && func)
+	string_view const& name, F&& func)
 {
 	using F_type = typename std::decay<F>::type;
 	v8::Local<v8::Function> fn = v8::Function::New(isolate->GetCurrentContext(),
 		&detail::forward_function<Traits, F_type>,
 		detail::external_data::set(isolate, std::forward<F_type>(func))).ToLocalChecked();
-	if (name && *name)
+	if (!name.empty())
 	{
 		fn->SetName(to_v8(isolate, name));
 	}
