@@ -14,7 +14,91 @@
 #include <tuple>
 #include <type_traits>
 
-namespace v8pp { namespace detail {
+namespace v8pp {
+
+// polyfill for std::string_view from C++17
+template<typename Char, typename Traits = std::char_traits<Char>>
+class basic_string_view
+{
+public:
+	using value_type = Char;
+	using size_type = size_t;
+	using const_iterator = Char const*;
+
+	static const size_type npos = ~0;
+
+	basic_string_view(Char const* data, size_t size)
+		: data_(data)
+		, size_(size)
+	{
+	}
+
+	template<typename Alloc>
+	basic_string_view(std::basic_string<Char, Traits, Alloc> const& str)
+		: basic_string_view(str.data(), str.size())
+	{
+	}
+
+	basic_string_view(Char const* data)
+		: basic_string_view(data, data? Traits::length(data) : 0)
+	{
+	}
+
+	template<size_t N>
+	basic_string_view(Char const (&str)[N])
+		: basic_string_view(str, N - 1)
+	{
+	}
+
+	const_iterator begin() const { return data_; }
+	const_iterator end() const { return data_ + size_; }
+
+	const_iterator cbegin() const { return data_; }
+	const_iterator cend() const { return data_ + size_; }
+
+	Char const* data() const { return data_; }
+	size_t size() const { return size_; }
+	bool empty() const { return size_ == 0; }
+
+	size_t find(Char ch) const
+	{
+		Char const* const ptr = Traits::find(data_, size_, ch);
+		return ptr ? ptr - data_ : npos;
+	}
+
+	basic_string_view substr(size_t pos = 0, size_t count = npos) const
+	{
+		if (pos > size_) throw std::out_of_range("pos > size");
+		return basic_string_view(data_ + pos, std::min(count, size_ - pos));
+	}
+
+	std::basic_string<Char> str() const { return std::basic_string<Char>(data_, size_); }
+
+	friend bool operator==(basic_string_view const& lhs, basic_string_view const& rhs)
+	{
+		return lhs.size_ == rhs.size_
+			&& (lhs.data_ == rhs.data_ || Traits::compare(lhs.data_, rhs.data_, lhs.size_) == 0);
+	}
+
+	friend bool operator!=(basic_string_view const& lhs, basic_string_view const& rhs)
+	{
+		return !(lhs == rhs);
+	}
+
+	friend std::basic_ostream<Char>& operator<<(std::basic_ostream<Char>& os, basic_string_view const& sv)
+	{
+		return os.write(sv.data_, sv.size_);
+	}
+private:
+	Char const* data_;
+	size_t size_;
+};
+
+using string_view = basic_string_view<char>;
+using u16string_view = basic_string_view<char16_t>;
+using wstring_view = basic_string_view<wchar_t>;
+
+namespace detail {
 
 template<typename T>
 struct tuple_tail;
@@ -198,7 +282,7 @@ using is_callable = std::integral_constant<bool,
 class type_info
 {
 public:
-	std::string const& name() const { return name_; }
+	string_view const& name() const { return name_; }
 	bool operator==(type_info const& other) const { return name_ == other.name_; }
 	bool operator!=(type_info const& other) const { return name_ != other.name_; }
 private:
@@ -207,7 +291,7 @@ private:
 		: name_(name, size)
 	{
 	}
-	std::string name_;
+	string_view name_;
 };
 
 /// Get type information for type T

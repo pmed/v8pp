@@ -27,7 +27,7 @@ V8PP_IMPL class_info::class_info(type_info const& type, type_info const& traits)
 
 V8PP_IMPL std::string class_info::class_name() const
 {
-	return "v8pp::class_<" + type.name() + ", " + traits.name() + ">";
+	return "v8pp::class_<" + type.name().str() + ", " + traits.name().str() + ">";
 }
 
 V8PP_IMPL void classes::remove_all(v8::Isolate* isolate)

@@ -25,7 +25,7 @@ V8PP_IMPL std::string json_str(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	return std::string(*str, str.length());
 }
 
-V8PP_IMPL v8::Local<v8::Value> json_parse(v8::Isolate* isolate, std::string const& str)
+V8PP_IMPL v8::Local<v8::Value> json_parse(v8::Isolate* isolate, string_view const& str)
 {
 	if (str.empty())
 	{
