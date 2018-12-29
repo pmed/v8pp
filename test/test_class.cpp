@@ -153,6 +153,9 @@ void test_class_()
 		.template ctor<v8::FunctionCallbackInfo<v8::Value> const&>(X_ctor)
 		.const_("konst", 99)
 		.var("var", &X::var)
+//TODO: static property definition works only at the end of class_ declarion!
+//		.static_("my_static_var", 1)
+//		.static_("my_static_const_var", 42, true)
 		.property("rprop", &X::get)
 		.property("wprop", &X::get, &X::set)
 		.property("wprop2", static_cast<x_prop_get>(&X::prop), static_cast<x_prop_set>(&X::prop))
@@ -173,6 +176,8 @@ void test_class_()
 		.function("static_lambda", [](int x) { return x + 3; })
 		.function("extern_fun", &extern_fun<Traits>)
 		.function("toJSON", &X::to_json)
+		.static_("my_static_var", 1)
+		.static_("my_static_const_var", 42, true)
 		;
 
 	v8pp::class_<Y, Traits> Y_class(isolate);
@@ -234,6 +239,10 @@ void test_class_()
 	check_eq("X::static_lambda(1)", run_script<int>(context, "X.static_lambda(1)"), 4);
 	check_eq("X::extern_fun(5)", run_script<int>(context, "x = new X(); x.extern_fun(5)"), 6);
 	check_eq("X::extern_fun(6)", run_script<int>(context, "X.extern_fun(6)"), 6);
+	check_eq("X::my_static_const_var", run_script<int>(context, "X.my_static_const_var"), 42);
+	check_eq("X::my_static_const_var after assign", run_script<int>(context, "X.my_static_const_var = 123; X.my_static_const_var"), 42);
+	check_eq("X::my_static_var", run_script<int>(context, "X.my_static_var"), 1);
+	check_eq("X::my_static_var after assign", run_script<int>(context, "X.my_static_var = 123; X.my_static_var"), 123);
 
 	check_eq("JSON.stringify(X)",
 		run_script<std::string>(context, "JSON.stringify({'obj': new X(10), 'arr': [new X(11), new X(12)] })"),

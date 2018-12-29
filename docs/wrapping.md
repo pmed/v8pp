@@ -130,6 +130,10 @@ X_class
 	.var("b", &X::b)
 	// set const property
 	.const_("str", "abc")
+	// set static property
+	.set_static("A", 1)
+	// set static const property
+	.set_static("B", 42, true)
 	;
 
 // Bind class Y
@@ -160,6 +164,16 @@ module.class_("Y", Y_class);
 var x = new module.X(true);
 assert(x.b == true);
 assert(x.str == "abc");
+// static property
+assert(x.A === undefined);
+assert(module.X.A === 1);
+module.X.A = 2;
+assert(module.X.A === 2);
+// static const property
+assert(x.B === undefined);
+assert(module.X.B === 42);
+module.X.B = 123;
+assert(module.X.B === 42);
 
 var y = new module.Y(10, false);
 assert(y.b == false);

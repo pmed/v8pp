@@ -615,6 +615,19 @@ public:
 		return *this;
 	}
 
+	/// Set value as a class static property
+	template<typename Value>
+	class_& static_(string_view const& name, Value const& value, bool readonly = false)
+	{
+		v8::HandleScope scope(isolate());
+
+		class_info_.js_function_template()->GetFunction(isolate()->GetCurrentContext()).ToLocalChecked()
+			->DefineOwnProperty(isolate()->GetCurrentContext(),
+				v8pp::to_v8(isolate(), name), to_v8(isolate(), value),
+				v8::PropertyAttribute(v8::DontDelete | (readonly ? v8::ReadOnly : 0))).FromJust();
+		return *this;
+	}
+
 	/// v8::Isolate where the class bindings belongs
 	v8::Isolate* isolate() { return class_info_.isolate(); }
 
