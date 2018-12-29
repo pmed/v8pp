@@ -7,6 +7,7 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 #include "v8pp/class.hpp"
+#include "v8pp/json.hpp"
 #include "v8pp/module.hpp"
 #include "v8pp/object.hpp"
 #include "v8pp/property.hpp"
@@ -180,6 +181,11 @@ void test_class_()
 		.template ctor<int>()
 		.function("useX", &Y::useX)
 		.function("useX_ptr", &Y::useX_ptr<Traits>)
+		.function("toJSON", [](const v8::FunctionCallbackInfo<v8::Value>& args)
+			{
+				bool const with_functions = true;
+				args.GetReturnValue().Set(v8pp::json_object(args.GetIsolate(), args.This(), with_functions));
+			})
 		;
 
 	check_ex<std::runtime_error>("already wrapped class X", [isolate]()
@@ -234,6 +240,11 @@ void test_class_()
 		R"({"obj":{"key":"obj","var":10},"arr":[{"key":"0","var":11},{"key":"1","var":12}]})"
 	);
 
+	check_eq("JSON.stringify(Y)",
+		run_script<std::string>(context, "JSON.stringify({'obj': new Y(10), 'arr': [new Y(11), new Y(12)] })"),
+		R"({"obj":{"useX":"function useX() { [native code] }","useX_ptr":"function useX_ptr() { [native code] }","toJSON":"function toJSON() { [native code] }","wprop_external3":10,"wprop_external2":10,"wprop_external1":10,"rprop_external3":10,"rprop_external2":10,"rprop_external1":10,"rprop_direct":10,"prop2":10,"prop":10,"wprop2":10,"wprop":10,"rprop":10,"var":10,"konst":99,"fun1":"function fun1() { [native code] }","fun2":"function fun2() { [native code] }","fun3":"function fun3() { [native code] }","fun4":"function fun4() { [native code] }","static_fun":"function static_fun() { [native code] }","static_lambda":"function static_lambda() { [native code] }","extern_fun":"function extern_fun() { [native code] }"},"arr":[{"useX":"function useX() { [native code] }","useX_ptr":"function useX_ptr() { [native code] }","toJSON":"function toJSON() { [native code] }","wprop_external3":11,"wprop_external2":11,"wprop_external1":11,"rprop_external3":11,"rprop_external2":11,"rprop_external1":11,"rprop_direct":11,"prop2":11,"prop":11,"wprop2":11,"wprop":11,"rprop":11,"var":11,"konst":99,"fun1":"function fun1() { [native code] }","fun2":"function fun2() { [native code] }","fun3":"function fun3() { [native code] }","fun4":"function fun4() { [native code] }","static_fun":"function static_fun() { [native code] }","static_lambda":"function static_lambda() { [native code] }","extern_fun":"function extern_fun() { [native code] }"},{"useX":"function useX() { [native code] }","useX_ptr":"function useX_ptr() { [native code] }","toJSON":"function toJSON() { [native code] }","wprop_external3":12,"wprop_external2":12,"wprop_external1":12,"rprop_external3":12,"rprop_external2":12,"rprop_external1":12,"rprop_direct":12,"prop2":12,"prop":12,"wprop2":12,"wprop":12,"rprop":12,"var":12,"konst":99,"fun1":"function fun1() { [native code] }","fun2":"function fun2() { [native code] }","fun3":"function fun3() { [native code] }","fun4":"function fun4() { [native code] }","static_fun":"function static_fun() { [native code] }","static_lambda":"function static_lambda() { [native code] }","extern_fun":"function extern_fun() { [native code] }"}]})"
+	);
+
 	check_eq("Y object", run_script<int>(context, "y = new Y(-100); y.konst + y.var"), -1);
 
 	auto y1 = Traits::template create<Y>(-1);
@@ -257,7 +268,7 @@ void test_class_()
 	check_eq("y3.var", y3->var, -3);
 
 	run_script<int>(context, "x = new X; for (i = 0; i < 10; ++i) { y = new Y(i); y.useX(x); y.useX_ptr(x); }");
-	check_eq("Y count", Y::instance_count, 10 + 4); // 10 + y + y1 + y2 + y3
+	check_eq("Y count", Y::instance_count, 13 + 4); // 13 + y + y1 + y2 + y3
 	run_script<int>(context, "y = null; 0");
 
 	v8pp::class_<Y, Traits>::unreference_external(isolate, y1);
