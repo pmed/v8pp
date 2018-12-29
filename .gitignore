@@ -1,8 +1,9 @@
-/bin
-/docs/html
-/docs/xml
-/node_modules
-/packages
+/bin/
+/docs/html/
+/docs/xml/
+/node_modules/
+/packages/
+/examples/*/build/
 /.vs
 /*.*sdf
 /*.suo
