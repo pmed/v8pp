@@ -14,6 +14,7 @@
 #include <v8.h>
 
 #include "v8pp/config.hpp"
+#include "v8pp/utility.hpp"
 
 namespace v8pp {
 
@@ -24,7 +25,7 @@ std::string json_str(v8::Isolate* isolate, v8::Local<v8::Value> value);
 /// Parse JSON string into V8 value
 /// return empty value for empty string
 /// return Error value on parse error
-v8::Local<v8::Value> json_parse(v8::Isolate* isolate, std::string const& str);
+v8::Local<v8::Value> json_parse(v8::Isolate* isolate, string_view const& str);
 
 } // namespace v8pp
 

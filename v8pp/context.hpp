@@ -54,18 +54,18 @@ public:
 	v8::Local<v8::Value> run_file(std::string const& filename);
 
 	/// The same as run_file but uses string as the script source
-	v8::Local<v8::Value> run_script(std::string const& source,
-		std::string const& filename = "");
+	v8::Local<v8::Value> run_script(string_view const& source,
+		string_view const& filename = "");
 
 	/// Set a V8 value in the context global object with specified name
-	context& value(char const* name, v8::Local<v8::Value> value);
+	context& value(string_view const& name, v8::Local<v8::Value> value);
 
 	/// Set module to the context global object
-	context& module(char const *name, v8pp::module& m);
+	context& module(string_view const& name, v8pp::module& m);
 
 	/// Set functions to the context global object
 	template<typename Function, typename Traits = raw_ptr_traits>
-	context& function(char const* name, Function&& func)
+	context& function(string_view const& name, Function&& func)
 	{
 		using Fun = typename std::decay<Function>::type;
 		static_assert(detail::is_callable<Fun>::value, "Function must be callable");
@@ -74,7 +74,7 @@ public:
 
 	/// Set class to the context global object
 	template<typename T, typename Traits>
-	context& class_(char const* name, v8pp::class_<T, Traits>& cl)
+	context& class_(string_view const& name, v8pp::class_<T, Traits>& cl)
 	{
 		v8::HandleScope scope(isolate_);
 		cl.class_function_template()->SetClassName(v8pp::to_v8(isolate_, name));

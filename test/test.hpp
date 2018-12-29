@@ -16,6 +16,8 @@
 #include "v8pp/convert.hpp"
 #include "v8pp/utility.hpp"
 
+using v8pp::string_view;
+
 template<typename Char, typename Traits,
 	typename T, typename Alloc, typename ...Other,
 	template<typename, typename, typename ...> class Sequence>
@@ -75,7 +77,7 @@ std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& o
 	return os << static_cast<typename std::underlying_type<Enum>::type>(value);
 }
 
-inline void check(std::string msg, bool condition)
+inline void check(string_view const& msg, bool condition)
 {
 	if (!condition)
 	{
@@ -86,7 +88,7 @@ inline void check(std::string msg, bool condition)
 }
 
 template<typename T, typename U>
-void check_eq(std::string msg, T actual, U expected)
+void check_eq(string_view const& msg, T actual, U expected)
 {
 	if (actual != expected)
 	{
@@ -97,12 +99,14 @@ void check_eq(std::string msg, T actual, U expected)
 }
 
 template<typename Ex, typename F>
-void check_ex(std::string msg, F&& f)
+void check_ex(string_view const& msg, F&& f)
 {
 	try
 	{
 		f();
-		check(msg + " expected " + v8pp::detail::type_id<Ex>().name() + " exception", false);
+		std::stringstream ss;
+		ss << msg << " expected " << v8pp::detail::type_id<Ex>().name() << " exception";
+		check(ss.str(), false);
 	}
 	catch (Ex const&)
 	{
@@ -110,7 +114,7 @@ void check_ex(std::string msg, F&& f)
 }
 
 template<typename T>
-T run_script(v8pp::context& context, std::string const& source)
+T run_script(v8pp::context& context, v8pp::string_view const& source)
 {
 	v8::Isolate* isolate = context.isolate();
 
