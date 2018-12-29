@@ -455,7 +455,7 @@ public:
 
 public:
 	explicit class_(v8::Isolate* isolate, dtor_function destroy = &factory<T, Traits>::destroy)
-		: class_info_(detail::classes::add<Traits>(isolate, detail::type_id<T>(), 
+		: class_info_(detail::classes::add<Traits>(isolate, detail::type_id<T>(),
 			[destroy = std::move(destroy)](v8::Isolate* isolate, pointer_type const& obj)
 			{
 				destroy(isolate, Traits::template static_pointer_cast<T>(obj));
@@ -585,6 +585,19 @@ public:
 		class_info_.class_function_template()->PrototypeTemplate()
 			->Set(v8pp::to_v8(isolate(), name), to_v8(isolate(), value),
 				v8::PropertyAttribute(v8::ReadOnly | v8::DontDelete));
+		return *this;
+	}
+
+	/// Set a static value
+	template<typename Value>
+	class_& set_static(char const* name, Value const& value, bool readonly = false)
+	{
+		v8::HandleScope scope(isolate());
+
+		class_info_.js_function_template()->GetFunction(isolate()->GetCurrentContext()).ToLocalChecked()
+			->DefineOwnProperty(isolate()->GetCurrentContext(),
+				v8pp::to_v8(isolate(), name), to_v8(isolate(), value),
+				v8::PropertyAttribute(v8::DontDelete | (readonly ? v8::ReadOnly : 0))).FromJust();
 		return *this;
 	}
 
