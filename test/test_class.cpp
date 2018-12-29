@@ -183,9 +183,9 @@ void test_class_()
 	check_eq("X::extern_fun(5)", run_script<int>(context, "x = new X(); x.extern_fun(5)"), 6);
 	check_eq("X::extern_fun(6)", run_script<int>(context, "X.extern_fun(6)"), 6);
 	check_eq("X::my_static_const_var", run_script<int>(context, "X.my_static_const_var"), 42);
-	check_eq("X::my_static_const_var", run_script<int>(context, "X.my_static_const_var = 123"), 42);
+	check_eq("X::my_static_const_var after assign", run_script<int>(context, "X.my_static_const_var = 123; X.my_static_const_var"), 42);
 	check_eq("X::my_static_var", run_script<int>(context, "X.my_static_var"), 1);
-	check_eq("X::my_static_var", run_script<int>(context, "X.my_static_var = 123"), 123);
+	check_eq("X::my_static_var after assign", run_script<int>(context, "X.my_static_var = 123; X.my_static_var"), 123);
 
 	check_eq("JSON.stringify(X)",
 		run_script<std::string>(context, "JSON.stringify({'obj': new X(10), 'arr': [new X(11), new X(12)] })"),
