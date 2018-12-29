@@ -264,11 +264,13 @@ v8::Local<v8::Value> context::run_script(string_view const& source,
 	v8::Local<v8::Script> script;
 	bool const is_valid = v8::Script::Compile(context,
 		to_v8(isolate_, source), &origin).ToLocal(&script);
+	(void)is_valid;
 
 	v8::Local<v8::Value> result;
 	if (!script.IsEmpty())
 	{
 		bool const is_successful = script->Run(context).ToLocal(&result);
+		(void)is_successful;
 	}
 	return scope.Escape(result);
 }
