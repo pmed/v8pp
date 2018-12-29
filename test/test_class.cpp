@@ -7,6 +7,7 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 #include "v8pp/class.hpp"
+#include "v8pp/json.hpp"
 #include "v8pp/module.hpp"
 #include "v8pp/object.hpp"
 #include "v8pp/property.hpp"
@@ -154,7 +155,11 @@ void test_class_()
 		.template ctor<int>()
 		.set("useX", &Y::useX)
 		.set("useX_ptr", &Y::useX_ptr<Traits>)
-		.set_json(true, true)
+		.set("toJSON", [](const v8::FunctionCallbackInfo<v8::Value>& args)
+			{
+				bool const with_functions = true;
+				args.GetReturnValue().Set(v8pp::json_object(args.GetIsolate(), args.This(), with_functions));
+			})
 		;
 
 	check_ex<std::runtime_error>("already wrapped class X", [isolate]()
