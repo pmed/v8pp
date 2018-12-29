@@ -122,7 +122,7 @@ void test_class_()
 		return create_X<Traits>(args);
 	};
 	Z extra_dtor_context;
-	auto const X_dtor = [extra_dtor_context](v8::Isolate* isolate, typename Traits::template object_pointer_type<X> const& obj)
+	auto const X_dtor = [extra_dtor_context](v8::Isolate*, typename Traits::template object_pointer_type<X> const& obj)
 	{
 		Traits::destroy(obj);
 	};
