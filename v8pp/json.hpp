@@ -26,6 +26,11 @@ std::string json_str(v8::Isolate* isolate, v8::Local<v8::Value> value);
 /// return Error value on parse error
 v8::Local<v8::Value> json_parse(v8::Isolate* isolate, std::string const& str);
 
+/// Convert wrapped C++ object to JavaScript object with properties
+/// and optionally functions set from the C++ object
+v8::Local<v8::Object> json_object(v8::Isolate* isolate, v8::Local<v8::Object> object,
+	bool with_functions = false);
+
 } // namespace v8pp
 
 #if V8PP_HEADER_ONLY
