@@ -28,6 +28,15 @@ struct Xbase
 	int fun3(int x) volatile { return var + x; }
 	int fun4(int x) const volatile { return var + x; }
 	static int static_fun(int x) { return x; }
+
+	v8::Local<v8::Value> to_json(v8::Isolate* isolate, v8::Local<v8::Value> key) const
+	{
+		v8::EscapableHandleScope scope(isolate);
+		v8::Local<v8::Object> result = v8::Object::New(isolate);
+		v8pp::set_const(isolate, result, "key", key);
+		v8pp::set_const(isolate, result, "var", var);
+		return scope.Escape(result);
+	}
 };
 
 struct X : Xbase
@@ -136,7 +145,7 @@ void test_class_()
 		.set("static_fun", &X::static_fun)
 		.set("static_lambda", [](int x) { return x + 3; })
 		.set("extern_fun", extern_fun<Traits>)
-		.set_json()
+		.set("toJSON", &X::to_json)
 		;
 
 	v8pp::class_<Y, Traits> Y_class(isolate);
@@ -188,7 +197,7 @@ void test_class_()
 
 	check_eq("JSON.stringify(X)",
 		run_script<std::string>(context, "JSON.stringify({'obj': new X(10), 'arr': [new X(11), new X(12)] })"),
-		R"({"obj":{"wprop2":10,"wprop":10,"rprop":10,"var":10,"konst":99,"fun1":null,"fun2":null,"fun3":null,"fun4":null,"static_fun":null,"static_lambda":null,"extern_fun":null},"arr":[{"wprop2":11,"wprop":11,"rprop":11,"var":11,"konst":99,"fun1":null,"fun2":null,"fun3":null,"fun4":null,"static_fun":null,"static_lambda":null,"extern_fun":null},{"wprop2":12,"wprop":12,"rprop":12,"var":12,"konst":99,"fun1":null,"fun2":null,"fun3":null,"fun4":null,"static_fun":null,"static_lambda":null,"extern_fun":null}]})"
+		R"({"obj":{"key":"obj","var":10},"arr":[{"key":"0","var":11},{"key":"1","var":12}]})"
 	);
 
 	check_eq("JSON.stringify(Y)",
