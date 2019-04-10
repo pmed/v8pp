@@ -608,6 +608,11 @@ auto from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value,U const& default_v
 		convert<T>::from_v8(isolate, value) : default_value;
 }
 
+inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, char const* str)
+{
+	return convert<string_view>::to_v8(isolate, string_view(str));
+}
+
 inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, char const* str, size_t len)
 {
 	return convert<string_view>::to_v8(isolate, string_view(str, len));
@@ -618,6 +623,11 @@ v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 	char const (&str)[N], size_t len = N - 1)
 {
 	return convert<string_view>::to_v8(isolate, string_view(str, len));
+}
+
+inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str)
+{
+	return convert<u16string_view>::to_v8(isolate, u16string_view(str));
 }
 
 inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str, size_t len)
@@ -633,6 +643,11 @@ v8::Handle<v8::String> to_v8(v8::Isolate* isolate,
 }
 
 #ifdef WIN32
+inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, wchar_t const* str)
+{
+	return convert<wstring_view>::to_v8(isolate, wstring_view(str));
+}
+
 inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, wchar_t const* str, size_t len)
 {
 	return convert<wstring_view>::to_v8(isolate, wstring_view(str, len));
