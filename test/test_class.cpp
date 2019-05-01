@@ -218,6 +218,10 @@ void test_class_()
 	check_eq("X::my_static_var", run_script<int>(context, "X.my_static_var"), 1);
 	check_eq("X::my_static_var after assign", run_script<int>(context, "X.my_static_var = 123; X.my_static_var"), 123);
 
+	check_ex<std::runtime_error>("call method with invalid instance", [&context]() {
+		run_script<int>(context, "x = new X(); f = x.fun1; f(1)");
+	});
+
 	check_eq("JSON.stringify(X)",
 		run_script<std::string>(context, "JSON.stringify({'obj': new X(10), 'arr': [new X(11), new X(12)] })"),
 		R"({"obj":{"key":"obj","var":10},"arr":[{"key":"0","var":11},{"key":"1","var":12}]})"
