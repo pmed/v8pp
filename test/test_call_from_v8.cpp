@@ -75,6 +75,49 @@ static_assert(std::is_same<select_call_traits<decltype(&class_ptr)>::arg_convert
 static_assert(std::is_same<select_call_traits<decltype(&class_ref)>::arg_convert<0, shared_ptr_traits>::from_type, X&>::value, "class ref");
 static_assert(std::is_same<select_call_traits<decltype(&class_sptr)>::arg_convert<0, shared_ptr_traits>::from_type, std::shared_ptr<X>>::value, "class shared_ptr");
 
+// fundamental type converters
+static_assert(std::is_same<call_from_v8_traits<decltype(y)>::arg_convert<0, raw_ptr_traits>, v8pp::convert<int>>::value, "y(int)");
+static_assert(std::is_same<call_from_v8_traits<decltype(y)>::arg_convert<0, shared_ptr_traits>, v8pp::convert<int>>::value, "y(int)");
+
+static_assert(std::is_same<call_from_v8_traits<decltype(z)>::arg_convert<1, raw_ptr_traits>, v8pp::convert<int>>::value, "y(int)");
+static_assert(std::is_same<call_from_v8_traits<decltype(z)>::arg_convert<1, shared_ptr_traits>, v8pp::convert<int>>::value, "y(int)");
+
+// cv arg converters
+static void s(std::string, std::vector<int>&, std::shared_ptr<int> const&, std::string*, std::string const*) {}
+
+static_assert(std::is_same<call_from_v8_traits<decltype(s)>::arg_convert<0, raw_ptr_traits>, v8pp::convert<std::string>>::value, "s(string)");
+static_assert(std::is_same<call_from_v8_traits<decltype(s)>::arg_convert<0, shared_ptr_traits>, v8pp::convert<std::string>>::value, "s(string)");
+
+static_assert(std::is_same<call_from_v8_traits<decltype(s)>::arg_convert<1, raw_ptr_traits>, v8pp::convert<std::vector<int>>>::value, "s(vector<int>&)");
+static_assert(std::is_same<call_from_v8_traits<decltype(s)>::arg_convert<1, shared_ptr_traits>, v8pp::convert<std::vector<int>>>::value, "s(vector<int>&)");
+
+static_assert(std::is_same<call_from_v8_traits<decltype(s)>::arg_convert<2, raw_ptr_traits>, v8pp::convert<std::shared_ptr<int>>>::value, "s(std::shared_ptr<int> const&)");
+static_assert(std::is_same<call_from_v8_traits<decltype(s)>::arg_convert<2, shared_ptr_traits>, v8pp::convert<std::shared_ptr<int>>>::value, "s(std::shared_ptr<int> const&)");
+
+static_assert(std::is_same<call_from_v8_traits<decltype(s)>::arg_convert<3, raw_ptr_traits>, v8pp::convert<std::string*>>::value, "s(std::string*)");
+static_assert(std::is_same<call_from_v8_traits<decltype(s)>::arg_convert<3, shared_ptr_traits>, v8pp::convert<std::string*>>::value, "s(std::string*)");
+
+static_assert(std::is_same<call_from_v8_traits<decltype(s)>::arg_convert<4, raw_ptr_traits>, v8pp::convert<std::string const*>>::value, "s(std::string const*)");
+static_assert(std::is_same<call_from_v8_traits<decltype(s)>::arg_convert<4, shared_ptr_traits>, v8pp::convert<std::string const*>>::value, "s(std::string const*)");
+
+// fundamental types cv arg converters
+static void t(int, char&, bool const&, float*, char const*) {}
+
+static_assert(std::is_same<call_from_v8_traits<decltype(t)>::arg_convert<0, raw_ptr_traits>, v8pp::convert<int>>::value, "t(int)");
+static_assert(std::is_same<call_from_v8_traits<decltype(t)>::arg_convert<0, shared_ptr_traits>, v8pp::convert<int>>::value, "t(int)");
+
+static_assert(std::is_same<call_from_v8_traits<decltype(t)>::arg_convert<1, raw_ptr_traits>, v8pp::convert<char>>::value, "t(char&)");
+static_assert(std::is_same<call_from_v8_traits<decltype(t)>::arg_convert<1, shared_ptr_traits>, v8pp::convert<char>>::value, "t(char&)");
+
+static_assert(std::is_same<call_from_v8_traits<decltype(t)>::arg_convert<2, raw_ptr_traits>, v8pp::convert<bool>>::value, "t(bool const&)");
+static_assert(std::is_same<call_from_v8_traits<decltype(t)>::arg_convert<2, shared_ptr_traits>, v8pp::convert<bool>>::value, "t(bool const&)");
+
+static_assert(std::is_same<call_from_v8_traits<decltype(t)>::arg_convert<3, raw_ptr_traits>, v8pp::convert<float*>>::value, "t(float*)");
+static_assert(std::is_same<call_from_v8_traits<decltype(t)>::arg_convert<3, shared_ptr_traits>, v8pp::convert<float*>>::value, "t(float*)");
+
+static_assert(std::is_same<call_from_v8_traits<decltype(t)>::arg_convert<4, raw_ptr_traits>, v8pp::convert<char const*>>::value, "t(char const*)");
+static_assert(std::is_same<call_from_v8_traits<decltype(t)>::arg_convert<4, shared_ptr_traits>, v8pp::convert<char const*>>::value, "t(char const*)");
+
 void test_call_from_v8()
 {
 	v8pp::context context;

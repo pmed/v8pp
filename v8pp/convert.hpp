@@ -470,13 +470,10 @@ struct convert<v8::Local<T>>
 };
 
 
-template<typename T, typename Enable = void>
-struct is_wrapped_class;
+template<typename T>
+struct is_wrapped_class : std::is_class<T> {};
 
 // convert specialization for wrapped user classes
-template<typename T>
-struct is_wrapped_class<T> : std::is_class<T> {};
-
 template<typename T>
 struct is_wrapped_class<v8::Local<T>> : std::false_type {};
 
