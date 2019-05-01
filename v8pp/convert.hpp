@@ -114,10 +114,15 @@ struct convert<std::basic_string<Char, Traits, Alloc>> : convert<basic_string_vi
 {
 };
 
-template<typename Char>
-struct convert<Char const*> : convert<basic_string_view<Char>>
-{
-};
+// converter specializations for null-terminated strings
+template<>
+struct convert<char const*> : convert<basic_string_view<char>> {};
+template<>
+struct convert<char16_t const*> : convert<basic_string_view<char16_t>> {};
+#ifdef WIN32
+template<>
+struct convert<wchar_t const*> : convert<basic_string_view<wchar_t>> {};
+#endif
 
 // converter specializations for primitive types
 template<>
@@ -446,15 +451,6 @@ struct is_wrapped_class<std::basic_string<Char, Traits, Alloc>> : std::false_typ
 
 template<typename Char, typename Traits>
 struct is_wrapped_class<basic_string_view<Char, Traits>> : std::false_type {};
-
-template<>
-struct is_wrapped_class<char const*> : std::false_type {};
-
-template<>
-struct is_wrapped_class<char16_t const*> : std::false_type {};
-
-template<>
-struct is_wrapped_class<wchar_t const*> : std::false_type {};
 
 template<typename T, size_t N>
 struct is_wrapped_class<std::array<T, N>> : std::false_type{};
