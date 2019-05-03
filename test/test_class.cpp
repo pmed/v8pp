@@ -25,9 +25,19 @@ struct Xbase
 	void prop(int v) { var = v; }
 
 	int fun1(int x) { return var + x; }
-	int fun2(int x) const { return var + x; }
-	int fun3(int x) volatile { return var + x; }
-	int fun4(int x) const volatile { return var + x; }
+	float fun2(float x) const { return var + x; }
+
+	std::string fun3(std::string const& x) volatile
+	{
+		return x + std::to_string(var);
+	}
+
+	std::vector<std::string> fun4(std::vector<std::string> x) const volatile
+	{
+		x.push_back(std::to_string(var));
+		return x;
+	}
+
 	static int static_fun(int x) { return x; }
 
 	v8::Local<v8::Value> to_json(v8::Isolate* isolate, v8::Local<v8::Value> key) const
@@ -232,9 +242,11 @@ void test_class_()
 	check_eq("X::wprop_external2", run_script<int>(context, "x = new X(); ++x.wprop_external2; x.wprop_external2"), 2);
 	check_eq("X::wprop_external3", run_script<int>(context, "x = new X(); ++x.wprop_external3; x.wprop_external3"), 2);
 	check_eq("X::fun1(1)", run_script<int>(context, "x = new X(); x.fun1(1)"), 2);
-	check_eq("X::fun2(2)", run_script<int>(context, "x = new X(); x.fun2(2)"), 3);
-	check_eq("X::fun3(3)", run_script<int>(context, "x = new X(); x.fun3(3)"), 4);
-	check_eq("X::fun4(4)", run_script<int>(context, "x = new X(); x.fun4(4)"), 5);
+	check_eq("X::fun2(2)", run_script<float>(context, "x = new X(); x.fun2(2)"), 3);
+	check_eq("X::fun3(str)", run_script<std::string>(context, "x = new X(); x.fun3('str')"), "str1");
+	check_eq("X::fun4([foo, bar])",
+		run_script<std::vector<std::string>>(context, "x = new X(); x.fun4(['foo', 'bar'])"),
+		std::vector<std::string>{ "foo", "bar", "1" });
 	check_eq("X::static_fun(1)", run_script<int>(context, "X.static_fun(1)"), 1);
 	check_eq("X::static_lambda(1)", run_script<int>(context, "X.static_lambda(1)"), 4);
 	check_eq("X::extern_fun(5)", run_script<int>(context, "x = new X(); x.extern_fun(5)"), 6);

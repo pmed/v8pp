@@ -49,13 +49,13 @@ struct call_from_v8_traits
 		typename U = typename std::remove_pointer<T>::type
 	>
 	using arg_convert = typename std::conditional<
-		is_wrapped_class<U>::value,
+		is_wrapped_class<typename std::remove_cv<U>::type>::value,
 		typename std::conditional<
 			std::is_pointer<T>::value,
 			typename Traits::template convert_ptr<U>,
 			typename Traits::template convert_ref<U>
 		>::type,
-		convert<T>
+		convert<typename std::remove_cv<T>::type>
 	>::type;
 
 	template<size_t Index, typename Traits>
