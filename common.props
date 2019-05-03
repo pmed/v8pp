@@ -12,6 +12,7 @@
       <DisableSpecificWarnings>4190;4800</DisableSpecificWarnings>
       <PreprocessorDefinitions>V8PP_ISOLATE_DATA_SLOT=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
   </ItemDefinitionGroup>
 </Project>
