@@ -136,9 +136,12 @@ invoke(v8::FunctionCallbackInfo<v8::Value> const& args, std::true_type /*is_memb
 
 	v8::Isolate* isolate = args.GetIsolate();
 	v8::Local<v8::Object> obj = args.This();
-	return call_from_v8<Traits, class_type, F>(
-		*class_<class_type, Traits>::unwrap_object(isolate, obj),
-		std::forward<F>(get_external_data<F>(args.Data())), args);
+	auto ptr = class_<class_type, Traits>::unwrap_object(isolate, obj);
+	if (!ptr)
+	{
+		throw std::runtime_error("method called on null instance");
+	}
+	return call_from_v8<Traits, class_type, F>(*ptr, std::forward<F>(get_external_data<F>(args.Data())), args);
 }
 
 template<typename Traits, typename F>
