@@ -114,10 +114,15 @@ struct convert<std::basic_string<Char, Traits, Alloc>> : convert<basic_string_vi
 {
 };
 
-template<typename Char>
-struct convert<Char const*> : convert<basic_string_view<Char>>
-{
-};
+// converter specializations for null-terminated strings
+template<>
+struct convert<char const*> : convert<basic_string_view<char>> {};
+template<>
+struct convert<char16_t const*> : convert<basic_string_view<char16_t>> {};
+#ifdef WIN32
+template<>
+struct convert<wchar_t const*> : convert<basic_string_view<wchar_t>> {};
+#endif
 
 // converter specializations for primitive types
 template<>
@@ -447,15 +452,6 @@ struct is_wrapped_class<std::basic_string<Char, Traits, Alloc>> : std::false_typ
 template<typename Char, typename Traits>
 struct is_wrapped_class<basic_string_view<Char, Traits>> : std::false_type {};
 
-template<>
-struct is_wrapped_class<char const*> : std::false_type {};
-
-template<>
-struct is_wrapped_class<char16_t const*> : std::false_type {};
-
-template<>
-struct is_wrapped_class<wchar_t const*> : std::false_type {};
-
 template<typename T, size_t N>
 struct is_wrapped_class<std::array<T, N>> : std::false_type{};
 
@@ -608,6 +604,11 @@ auto from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value,U const& default_v
 		convert<T>::from_v8(isolate, value) : default_value;
 }
 
+inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, char const* str)
+{
+	return convert<string_view>::to_v8(isolate, string_view(str));
+}
+
 inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, char const* str, size_t len)
 {
 	return convert<string_view>::to_v8(isolate, string_view(str, len));
@@ -618,6 +619,11 @@ v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 	char const (&str)[N], size_t len = N - 1)
 {
 	return convert<string_view>::to_v8(isolate, string_view(str, len));
+}
+
+inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str)
+{
+	return convert<u16string_view>::to_v8(isolate, u16string_view(str));
 }
 
 inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str, size_t len)
@@ -633,6 +639,11 @@ v8::Handle<v8::String> to_v8(v8::Isolate* isolate,
 }
 
 #ifdef WIN32
+inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, wchar_t const* str)
+{
+	return convert<wstring_view>::to_v8(isolate, wstring_view(str));
+}
+
 inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, wchar_t const* str, size_t len)
 {
 	return convert<wstring_view>::to_v8(isolate, wstring_view(str, len));
