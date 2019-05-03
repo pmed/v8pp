@@ -218,7 +218,8 @@ void test_class_()
 	check_eq("X::my_static_var", run_script<int>(context, "X.my_static_var"), 1);
 	check_eq("X::my_static_var after assign", run_script<int>(context, "X.my_static_var = 123; X.my_static_var"), 123);
 
-	check_ex<std::runtime_error>("call method with invalid instance", [&context]() {
+	check_ex<std::runtime_error>("call method with invalid instance", [&context]()
+	{
 		run_script<int>(context, "x = new X(); f = x.fun1; f(1)");
 	});
 
