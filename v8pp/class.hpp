@@ -14,7 +14,6 @@
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
-#include <list>
 
 #include "v8pp/config.hpp"
 #include "v8pp/function.hpp"
