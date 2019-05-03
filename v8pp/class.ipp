@@ -31,7 +31,7 @@ V8PP_IMPL class_info::class_info(type_info const& type, type_info const& traits)
 
 V8PP_IMPL std::string class_info::class_name() const
 {
-	return "v8pp::class_<" + type.name().str() + ", " + traits.name().str() + ">";
+	return "v8pp::class_<" + std::string(type.name()) + ", " + std::string(traits.name()) + ">";
 }
 
 /////////////////////////////////////////////////////////////////////////////
