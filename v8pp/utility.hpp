@@ -14,6 +14,16 @@
 #include <tuple>
 #include <type_traits>
 
+#if __has_include(<string_view>)
+#include <string_view>
+namespace v8pp {
+	template<typename Char, typename Traits = std::char_traits<Char>>
+	using basic_string_view = std::basic_string_view<Char, Traits>;
+	using string_view = std::string_view;
+	using u16string_view = std::u16string_view;
+	using wstring_view = std::wstring_view;
+} // namespace v8pp
+#else
 namespace v8pp {
 
 // polyfill for std::string_view from C++17
@@ -72,7 +82,10 @@ public:
 		return basic_string_view(data_ + pos, std::min(count, size_ - pos));
 	}
 
-	std::basic_string<Char> str() const { return std::basic_string<Char>(data_, size_); }
+	operator std::basic_string<Char, Traits>() const
+	{
+		return std::basic_string<Char, Traits>(data_, size_);
+	}
 
 	friend bool operator==(basic_string_view const& lhs, basic_string_view const& rhs)
 	{
@@ -97,8 +110,10 @@ private:
 using string_view = basic_string_view<char>;
 using u16string_view = basic_string_view<char16_t>;
 using wstring_view = basic_string_view<wchar_t>;
+} // namespace v8pp {
+#endif
 
-namespace detail {
+namespace v8pp { namespace detail {
 
 template<typename T>
 struct tuple_tail;
