@@ -123,10 +123,7 @@ template<typename Traits, typename F>
 typename function_traits<F>::return_type
 invoke(v8::FunctionCallbackInfo<v8::Value> const& args, std::true_type /*is_member_function_pointer*/)
 {
-	using arguments = typename function_traits<F>::arguments;
-	static_assert(std::tuple_size<arguments>::value > 0, "");
-	using class_type = typename std::decay<
-		typename std::tuple_element<0, arguments>::type>::type;
+	using class_type = typename std::decay<typename function_traits<F>::class_type>::type;
 
 	v8::Isolate* isolate = args.GetIsolate();
 	v8::Local<v8::Object> obj = args.This();
