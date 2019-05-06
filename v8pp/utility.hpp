@@ -14,7 +14,7 @@
 #include <tuple>
 #include <type_traits>
 
-#if __has_include(<string_view>)
+#ifdef __cpp_lib_string_view
 #include <string_view>
 namespace v8pp {
 	template<typename Char, typename Traits = std::char_traits<Char>>
