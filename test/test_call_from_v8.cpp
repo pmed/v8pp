@@ -124,6 +124,8 @@ void test_call_from_v8()
 	v8::Isolate* isolate = context.isolate();
 	v8::HandleScope scope(isolate);
 
+	(void)&s; //context.function("s", s);
+	(void)&t; //context.function("t", t);
 	context.function("x", x);
 	context.function("y", y);
 	context.function("z", z);
