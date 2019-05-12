@@ -233,7 +233,7 @@ context::~context()
 context& context::value(string_view const& name, v8::Local<v8::Value> value)
 {
 	v8::HandleScope scope(isolate_);
-	global()->Set(isolate_->GetCurrentContext(), to_v8(isolate_, name), value);
+	global()->Set(isolate_->GetCurrentContext(), to_v8(isolate_, name), value).Check();
 	return *this;
 }
 
