@@ -132,8 +132,23 @@ static_assert(std::is_same<select_setter_tag<decltype(&X::set3), 0>,
 static_assert(std::is_same<select_setter_tag<decltype(&external_set3), 1>,
 	direct_setter_tag>::value, "direct setter external function tag");
 
+template<typename Get, typename Set>
+void test_property(Get&& get, Set&& set)
+{
+	v8pp::property<Get, Set, false, false> prop(get, set);
+	check_eq("prop is_readonly", prop.is_readonly, false);
+	check_eq("prop getter", prop.getter, get);
+	check_eq("prop setter", prop.setter, set);
+}
+
 } // namespace {
 
 void test_property()
 {
+	test_property(get1, set1);
+	test_property(get2, set2);
+	test_property(get3, set3);
+	test_property(external_get1, external_set1);
+	test_property(external_get2, external_set2);
+	test_property(external_get3, external_set3);
 }
