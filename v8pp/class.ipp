@@ -66,7 +66,6 @@ V8PP_IMPL classes* classes::instance(operation op, v8::Isolate* isolate)
 			delete info;
 			isolate->SetData(V8PP_ISOLATE_DATA_SLOT, nullptr);
 		}
-	default:
 		return nullptr;
 	}
 #else
@@ -82,10 +81,10 @@ V8PP_IMPL classes* classes::instance(operation op, v8::Isolate* isolate)
 		return &instances[isolate];
 	case operation::remove:
 		instances.erase(isolate);
-	default:
 		return nullptr;
 	}
 #endif
+	return nullptr; // should never reach this line
 }
 
 } // namespace detail
