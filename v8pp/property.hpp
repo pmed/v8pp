@@ -369,7 +369,7 @@ struct property
 	Get getter;
 	Set setter;
 
-	enum { is_readonly = false };
+	static constexpr bool is_readonly = false;
 
 	property(Get&& getter, Set&& setter)
 		: getter(std::move(getter))
@@ -385,7 +385,7 @@ struct property<Get, detail::none, get_with_object, false>
 {
 	Get getter;
 
-	enum { is_readonly = true };
+	static constexpr bool is_readonly = true;
 
 	property(Get&& getter, detail::none)
 		: getter(std::move(getter))

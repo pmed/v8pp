@@ -35,7 +35,7 @@ public:
 	using size_type = size_t;
 	using const_iterator = Char const*;
 
-	static const size_type npos = ~0;
+	static constexpr size_type npos = ~0;
 
 	basic_string_view(Char const* data, size_t size)
 		: data_(data)
@@ -286,7 +286,7 @@ private:
 
 	using type = decltype(test<derived>(0));
 public:
-	static const bool value = type::value;
+	static constexpr bool value = type::value;
 };
 
 template<typename F>
