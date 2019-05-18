@@ -37,45 +37,36 @@ public:
 
 	static v8::Local<v8::External> set(v8::Isolate* isolate, T&& data)
 	{
-		external_data* value = new external_data;
-		try
-		{
-			new (value->storage()) T(std::forward<T>(data));
-		}
-		catch (...)
-		{
-			delete value;
-			throw;
-		}
+		std::unique_ptr<external_data> value(new external_data);
+		new (value->data()) T(std::forward<T>(data));
 
-		v8::Local<v8::External> ext = v8::External::New(isolate, value);
+		v8::Local<v8::External> ext = v8::External::New(isolate, value.get());
 		value->pext_.Reset(isolate, ext);
-		value->pext_.SetWeak(value,
+		value->pext_.SetWeak(value.get(),
 			[](v8::WeakCallbackInfo<external_data> const& data)
 		{
-			delete data.GetParameter();
+			std::unique_ptr<external_data> value(data.GetParameter());
+			if (!value->pext_.IsEmpty())
+			{
+				value->data()->~T();
+				value->pext_.Reset();
+			}
 		}, v8::WeakCallbackType::kParameter);
+
+		value.release();
 		return ext;
 	}
 
 	static T& get(v8::Local<v8::External> ext)
 	{
 		external_data* value = static_cast<external_data*>(ext->Value());
-		return *static_cast<T*>(value->storage());
+		return *value->data();
 	}
 
 private:
-	void* storage() { return &storage_; }
-	~external_data()
-	{
-		if (!pext_.IsEmpty())
-		{
-			static_cast<T*>(storage())->~T();
-			pext_.Reset();
-		}
-	}
-	using data_storage = typename std::aligned_storage<sizeof(T)>::type;
-	data_storage storage_;
+	T* data() { return static_cast<T*>(static_cast<void*>(&storage_)); }
+
+	std::aligned_storage_t<sizeof(T), alignof(T)> storage_;
 	v8::Global<v8::External> pext_;
 };
 
