@@ -242,7 +242,7 @@ public:
 	template<typename Method>
 	typename std::enable_if<
 		std::is_member_function_pointer<Method>::value, class_&>::type
-	set(string_view const& name, Method mem_func, v8::PropertyAttribute attr = v8::None)
+	set(string_view name, Method mem_func, v8::PropertyAttribute attr = v8::None)
 	{
 		using mem_func_type =
 			typename detail::function_traits<Method>::template pointer_type<T>;
@@ -258,7 +258,7 @@ public:
 	template<typename Function,
 		typename Func = typename std::decay<Function>::type>
 	typename std::enable_if<detail::is_callable<Func>::value, class_&>::type
-	set(string_view const& name, Function&& func, v8::PropertyAttribute attr = v8::None)
+	set(string_view name, Function&& func, v8::PropertyAttribute attr = v8::None)
 	{
 		v8::Local<v8::Data> wrapped_fun =
 			wrap_function_template(isolate(), std::forward<Func>(func));
@@ -272,7 +272,7 @@ public:
 	template<typename Attribute>
 	typename std::enable_if<
 		std::is_member_object_pointer<Attribute>::value, class_&>::type
-	set(string_view const& name, Attribute attribute, bool readonly = false)
+	set(string_view name, Attribute attribute, bool readonly = false)
 	{
 		v8::HandleScope scope(isolate());
 
@@ -298,7 +298,7 @@ public:
 	template<typename GetMethod, typename SetMethod>
 	typename std::enable_if<std::is_member_function_pointer<GetMethod>::value
 		&& std::is_member_function_pointer<SetMethod>::value, class_&>::type
-	set(string_view const& name, property_<GetMethod, SetMethod>&& property)
+	set(string_view name, property_<GetMethod, SetMethod>&& property)
 	{
 		v8::HandleScope scope(isolate());
 
@@ -324,7 +324,7 @@ public:
 
 	/// Set value as a read-only property
 	template<typename Value>
-	class_& set_const(string_view const& name, Value const& value)
+	class_& set_const(string_view name, Value const& value)
 	{
 		v8::HandleScope scope(isolate());
 
@@ -336,7 +336,7 @@ public:
 
 	/// Set a static value
 	template<typename Value>
-	class_& set_static(string_view const& name, Value const& value, bool readonly = false)
+	class_& set_static(string_view name, Value const& value, bool readonly = false)
 	{
 		v8::HandleScope scope(isolate());
 

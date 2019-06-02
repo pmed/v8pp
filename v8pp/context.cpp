@@ -234,14 +234,14 @@ context::~context()
 	}
 }
 
-context& context::set(string_view const& name, v8::Local<v8::Value> value)
+context& context::set(string_view name, v8::Local<v8::Value> value)
 {
 	v8::HandleScope scope(isolate_);
 	to_local(isolate_, impl_)->Global()->Set(isolate_->GetCurrentContext(), to_v8(isolate_, name), value).FromJust();
 	return *this;
 }
 
-context& context::set(string_view const& name, v8pp::module& m)
+context& context::set(string_view name, v8pp::module& m)
 {
 	return set(name, m.new_instance());
 }
@@ -258,8 +258,7 @@ v8::Local<v8::Value> context::run_file(std::string const& filename)
 	return run_script(std::string(begin, end), filename);
 }
 
-v8::Local<v8::Value> context::run_script(string_view const& source,
-	string_view const& filename)
+v8::Local<v8::Value> context::run_script(string_view source, string_view filename)
 {
 	v8::EscapableHandleScope scope(isolate_);
 	v8::Local<v8::Context> context = isolate_->GetCurrentContext();

@@ -42,21 +42,21 @@ public:
 
 	/// Set a V8 value in the module with specified name
 	template<typename Data>
-	module& set(string_view const& name, v8::Local<Data> value)
+	module& set(string_view name, v8::Local<Data> value)
 	{
 		obj_->Set(v8pp::to_v8(isolate_, name), value);
 		return *this;
 	}
 
 	/// Set submodule in the module with specified name
-	module& set(string_view const& name, v8pp::module& m)
+	module& set(string_view name, v8pp::module& m)
 	{
 		return set(name, m.obj_);
 	}
 
 	/// Set wrapped C++ class in the module with specified name
 	template<typename T, typename Traits>
-	module& set(string_view const& name, v8pp::class_<T, Traits>& cl)
+	module& set(string_view name, v8pp::class_<T, Traits>& cl)
 	{
 		v8::HandleScope scope(isolate_);
 
@@ -67,7 +67,7 @@ public:
 	/// Set a C++ function in the module with specified name
 	template<typename Function, typename Fun = typename std::decay<Function>::type>
 	typename std::enable_if<detail::is_callable<Fun>::value, module&>::type
-	set(string_view const& name, Function&& func)
+	set(string_view name, Function&& func)
 	{
 		return set(name, wrap_function_template(isolate_, std::forward<Fun>(func)));
 	}
@@ -75,7 +75,7 @@ public:
 	/// Set a C++ variable in the module with specified name
 	template<typename Variable>
 	typename std::enable_if<!detail::is_callable<Variable>::value, module&>::type
-	set(string_view const& name, Variable& var, bool readonly = false)
+	set(string_view name, Variable& var, bool readonly = false)
 	{
 		v8::HandleScope scope(isolate_);
 
@@ -95,7 +95,7 @@ public:
 
 	/// Set v8pp::property in the module with specified name
 	template<typename GetFunction, typename SetFunction>
-	module& set(string_view const& name, property_<GetFunction, SetFunction>&& property)
+	module& set(string_view name, property_<GetFunction, SetFunction>&& property)
 	{
 		using property_type = property_<GetFunction, SetFunction>;
 
@@ -116,7 +116,7 @@ public:
 	}
 
 	/// Set another module as a read-only property
-	module& set_const(string_view const& name, module& m)
+	module& set_const(string_view name, module& m)
 	{
 		v8::HandleScope scope(isolate_);
 
@@ -127,7 +127,7 @@ public:
 
 	/// Set a value convertible to JavaScript as a read-only property
 	template<typename Value>
-	module& set_const(string_view const& name, Value const& value)
+	module& set_const(string_view name, Value const& value)
 	{
 		v8::HandleScope scope(isolate_);
 

@@ -160,7 +160,7 @@ std::ostream& print_sequence(std::ostream& os, Sequence const& sequence, char co
 	return os;
 }
 
-inline void check(v8pp::string_view const& msg, bool condition)
+inline void check(v8pp::string_view msg, bool condition)
 {
 	if (!condition)
 	{
@@ -171,7 +171,7 @@ inline void check(v8pp::string_view const& msg, bool condition)
 }
 
 template<typename T, typename U>
-void check_eq(v8pp::string_view const& msg, T actual, U expected)
+void check_eq(v8pp::string_view msg, T actual, U expected)
 {
 	if (actual != expected)
 	{
@@ -182,7 +182,7 @@ void check_eq(v8pp::string_view const& msg, T actual, U expected)
 }
 
 template<typename Ex, typename F>
-void check_ex(v8pp::string_view const& msg, F&& f)
+void check_ex(v8pp::string_view msg, F&& f)
 {
 	try
 	{
@@ -197,7 +197,7 @@ void check_ex(v8pp::string_view const& msg, F&& f)
 }
 
 template<typename T>
-T run_script(v8pp::context& context, v8pp::string_view const& source)
+T run_script(v8pp::context& context, v8pp::string_view source)
 {
 	v8::Isolate* isolate = context.isolate();
 
