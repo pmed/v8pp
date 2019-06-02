@@ -87,18 +87,18 @@ public:
 		return std::basic_string<Char, Traits>(data_, size_);
 	}
 
-	friend bool operator==(basic_string_view const& lhs, basic_string_view const& rhs)
+	friend bool operator==(basic_string_view lhs, basic_string_view rhs)
 	{
 		return lhs.size_ == rhs.size_
 			&& (lhs.data_ == rhs.data_ || Traits::compare(lhs.data_, rhs.data_, lhs.size_) == 0);
 	}
 
-	friend bool operator!=(basic_string_view const& lhs, basic_string_view const& rhs)
+	friend bool operator!=(basic_string_view lhs, basic_string_view rhs)
 	{
 		return !(lhs == rhs);
 	}
 
-	friend std::basic_ostream<Char>& operator<<(std::basic_ostream<Char>& os, basic_string_view const& sv)
+	friend std::basic_ostream<Char>& operator<<(std::basic_ostream<Char>& os, basic_string_view sv)
 	{
 		return os.write(sv.data_, sv.size_);
 	}
@@ -297,7 +297,7 @@ using is_callable = std::integral_constant<bool,
 class type_info
 {
 public:
-	string_view const& name() const { return name_; }
+	string_view name() const { return name_; }
 	bool operator==(type_info const& other) const { return name_ == other.name_; }
 	bool operator!=(type_info const& other) const { return name_ != other.name_; }
 private:

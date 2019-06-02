@@ -25,7 +25,7 @@ std::string json_str(v8::Isolate* isolate, v8::Local<v8::Value> value);
 /// Parse JSON string into V8 value
 /// return empty value for empty string
 /// return Error value on parse error
-v8::Local<v8::Value> json_parse(v8::Isolate* isolate, string_view const& str);
+v8::Local<v8::Value> json_parse(v8::Isolate* isolate, string_view str);
 
 } // namespace v8pp
 
