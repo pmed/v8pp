@@ -63,7 +63,7 @@ public:
 			[](v8::FunctionCallbackInfo<v8::Value> const& args)
 		{
 			v8::Isolate* isolate = args.GetIsolate();
-			object_registry* this_ = get_external_data<object_registry*>(args.Data());
+			object_registry* this_ = external_data::get<object_registry*>(args.Data());
 			try
 			{
 				return args.GetReturnValue().Set(this_->wrap_object(args));
@@ -72,7 +72,7 @@ public:
 			{
 				args.GetReturnValue().Set(throw_ex(isolate, ex.what()));
 			}
-		}, set_external_data(isolate, this));
+		}, external_data::set(isolate, this));
 
 		func_.Reset(isolate, func);
 		js_func_.Reset(isolate, js_func);
@@ -556,7 +556,7 @@ public:
 		attribute_type attr = attribute;
 
 		v8::Local<v8::Name> v8_name = v8pp::to_v8(isolate(), name);
-		v8::Local<v8::Value> data = detail::set_external_data(isolate(), std::forward<attribute_type>(attr));
+		v8::Local<v8::Value> data = detail::external_data::set(isolate(), std::forward<attribute_type>(attr));
 		class_info_.class_function_template()->PrototypeTemplate()
 			->SetAccessor(v8_name,
 				&member_get<attribute_type>, &member_set<attribute_type>,
@@ -596,7 +596,7 @@ public:
 		v8::AccessorGetterCallback getter = property_type::template get<Traits>;
 		v8::AccessorSetterCallback setter = property_type::is_readonly? nullptr : property_type::template set<Traits>;
 		v8::Local<v8::String> v8_name = v8pp::to_v8(isolate(), name);
-		v8::Local<v8::Value> data = detail::set_external_data(isolate(), property_type(std::move(get), std::move(set)));
+		v8::Local<v8::Value> data = detail::external_data::set(isolate(), property_type(std::move(get), std::move(set)));
 		class_info_.class_function_template()->PrototypeTemplate()
 			->SetAccessor(v8_name, getter, setter, data, v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
 		return *this;
@@ -720,7 +720,7 @@ private:
 		try
 		{
 			auto self = unwrap_object(isolate, info.This());
-			Attribute attr = detail::get_external_data<Attribute>(info.Data());
+			Attribute attr = detail::external_data::get<Attribute>(info.Data());
 			info.GetReturnValue().Set(to_v8(isolate, (*self).*attr));
 		}
 		catch (std::exception const& ex)
@@ -738,7 +738,7 @@ private:
 		try
 		{
 			auto self = unwrap_object(isolate, info.This());
-			Attribute ptr = detail::get_external_data<Attribute>(info.Data());
+			Attribute ptr = detail::external_data::get<Attribute>(info.Data());
 			using attr_type = typename detail::function_traits<Attribute>::return_type;
 			(*self).*ptr = v8pp::from_v8<attr_type>(isolate, value);
 		}
