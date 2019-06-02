@@ -97,7 +97,7 @@ public:
 		static_assert(detail::is_callable<Setter>::value
 			|| std::is_same<Setter, detail::none>::value, "SetFunction must be callable");
 
-		using property_type = v8pp::property<Getter, Setter, false, false>;
+		using property_type = v8pp::property<Getter, Setter, detail::none, detail::none>;
 
 		v8::HandleScope scope(isolate_);
 

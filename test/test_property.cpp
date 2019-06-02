@@ -135,7 +135,7 @@ static_assert(std::is_same<select_setter_tag<decltype(&external_set3), 1>,
 template<typename Get, typename Set>
 void test_property(Get&& get, Set&& set)
 {
-	v8pp::property<Get, Set, false, false> prop(get, set);
+	v8pp::property<Get, Set, v8pp::detail::none, v8pp::detail::none> prop(get, set);
 	check_eq("prop is_readonly", prop.is_readonly, false);
 	check_eq("prop getter", prop.getter, get);
 	check_eq("prop setter", prop.setter, set);

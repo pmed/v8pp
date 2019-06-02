@@ -587,9 +587,16 @@ public:
 			|| detail::is_callable<Setter>::value
 			|| std::is_same<Setter, detail::none>::value, "SetFunction must be callable");
 
-		using get_with_object = detail::function_with_object<Getter, T>;
-		using set_with_object = detail::function_with_object<Setter, T>;
-		using property_type = v8pp::property<Getter, Setter, get_with_object::value, set_with_object::value>;
+		using GetClass = typename std::conditional<
+			detail::function_with_object<Getter, T>::value,
+			T, detail::none
+		>::type;
+		using SetClass = typename std::conditional<
+			detail::function_with_object<Setter, T>::value,
+			T, detail::none
+		>::type;
+
+		using property_type = v8pp::property<Getter, Setter, GetClass, SetClass>;
 
 		v8::HandleScope scope(isolate());
 
