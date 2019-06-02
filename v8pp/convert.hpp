@@ -92,7 +92,7 @@ struct convert<basic_string_view<Char, Traits>>
 		}
 	}
 
-	static to_type to_v8(v8::Isolate* isolate, basic_string_view<Char, Traits> const& value)
+	static to_type to_v8(v8::Isolate* isolate, basic_string_view<Char, Traits> value)
 	{
 		if (sizeof(Char) == 1)
 		{

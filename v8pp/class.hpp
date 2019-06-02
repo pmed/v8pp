@@ -513,7 +513,7 @@ public:
 	/// Set C++ class member function
 	template<typename Method>
 	typename std::enable_if<std::is_member_function_pointer<Method>::value, class_&>::type
-	function(string_view const& name, Method mem_func, v8::PropertyAttribute attr = v8::None)
+	function(string_view name, Method mem_func, v8::PropertyAttribute attr = v8::None)
 	{
 		v8::HandleScope scope(isolate());
 
@@ -530,7 +530,7 @@ public:
 	/// Set static class function
 	template<typename Function, typename Func = typename std::decay<Function>::type>
 	typename std::enable_if<detail::is_callable<Func>::value, class_&>::type
-	function(string_view const& name, Function&& func, v8::PropertyAttribute attr = v8::None)
+	function(string_view name, Function&& func, v8::PropertyAttribute attr = v8::None)
 	{
 		v8::HandleScope scope(isolate());
 
@@ -544,7 +544,7 @@ public:
 
 	/// Set class member variable
 	template<typename Attribute>
-	class_& var(string_view const& name, Attribute attribute)
+	class_& var(string_view name, Attribute attribute)
 	{
 		static_assert(std::is_member_object_pointer<Attribute>::value,
 			"Attribute must be pointer to member data");
@@ -567,7 +567,7 @@ public:
 
 	/// Set read/write class property with getter and setter
 	template<typename GetFunction, typename SetFunction = detail::none>
-	class_& property(string_view const& name, GetFunction&& get, SetFunction&& set = {})
+	class_& property(string_view name, GetFunction&& get, SetFunction&& set = {})
 	{
 		using Getter = typename std::conditional<
 			std::is_member_function_pointer<GetFunction>::value,
@@ -611,7 +611,7 @@ public:
 
 	/// Set value as a read-only constant
 	template<typename Value>
-	class_& const_(string_view const& name, Value const& value)
+	class_& const_(string_view name, Value const& value)
 	{
 		v8::HandleScope scope(isolate());
 

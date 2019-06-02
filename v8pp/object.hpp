@@ -22,7 +22,7 @@ namespace v8pp {
 /// return false if the value doesn't exist in the options object
 template<typename T>
 bool get_option(v8::Isolate* isolate, v8::Local<v8::Object> options,
-	string_view const& name, T& value)
+	string_view name, T& value)
 {
 	string_view::size_type const dot_pos = name.find('.');
 	if (dot_pos != name.npos)
@@ -46,7 +46,7 @@ bool get_option(v8::Isolate* isolate, v8::Local<v8::Object> options,
 /// return false if the value doesn't exists in the options subobject
 template<typename T>
 bool set_option(v8::Isolate* isolate, v8::Local<v8::Object> options,
-	string_view const& name, T const& value)
+	string_view name, T const& value)
 {
 	string_view::size_type const dot_pos = name.find('.');
 	if (dot_pos != name.npos)
@@ -62,7 +62,7 @@ bool set_option(v8::Isolate* isolate, v8::Local<v8::Object> options,
 /// Subobject names are not supported
 template<typename T>
 void set_const(v8::Isolate* isolate, v8::Local<v8::Object> options,
-	string_view const& name, T const& value)
+	string_view name, T const& value)
 {
 	options->DefineOwnProperty(isolate->GetCurrentContext(),
 		v8pp::to_v8(isolate, name), to_v8(isolate, value),
