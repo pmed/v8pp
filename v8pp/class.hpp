@@ -13,6 +13,7 @@
 #include <memory>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <list>
 
@@ -82,8 +83,7 @@ public:
 		// each JavaScript instance has 3 internal fields:
 		//  0 - pointer to a wrapped C++ object
 		//  1 - pointer to this object_registry
-		//  2 - pointer to the object destructor
-		func->InstanceTemplate()->SetInternalFieldCount(3);
+		func->InstanceTemplate()->SetInternalFieldCount(2);
 		func->Inherit(js_func);
 	}
 
@@ -93,6 +93,7 @@ public:
 		, bases_(std::move(src.bases_))
 		, derivatives_(std::move(src.derivatives_))
 		, objects_(std::move(src.objects_))
+		, unowned_objects_(std::move(src.unowned_objects_))
 		, isolate_(std::move(src.isolate_))
 		, func_(std::move(src.func_))
 		, js_func_(std::move(src.js_func_))
@@ -167,14 +168,14 @@ public:
 		return false;
 	}
 
-	void remove_object(object_id const& obj)
+	void remove_object(object_id const& obj, bool call_dtor = true)
 	{
 		auto it = objects_.find(Traits::key(obj));
 		assert(it != objects_.end() && "no object");
 		if (it != objects_.end())
 		{
 			v8::HandleScope scope(isolate_);
-			reset_object(*it);
+			reset_object(*it, call_dtor);
 			objects_.erase(it);
 		}
 	}
@@ -238,14 +239,17 @@ public:
 
 		obj->SetAlignedPointerInInternalField(0, Traits::pointer_id(object));
 		obj->SetAlignedPointerInInternalField(1, this);
-		obj->SetAlignedPointerInInternalField(2, call_dtor? /*dtor_*/this : nullptr);
+		if (!call_dtor) {
+			unowned_objects_.emplace(object);
+		}
 
 		v8::Global<v8::Object> pobj(isolate_, obj);
 		pobj.SetWeak(this, [](v8::WeakCallbackInfo<object_registry> const& data)
 		{
 			object_id object = data.GetInternalField(0);
 			object_registry* this_ = static_cast<object_registry*>(data.GetInternalField(1));
-			this_->remove_object(object);
+			bool call_dtor = this_ == static_cast<object_registry*>(data.GetInternalField(2));
+			this_->remove_object(object, call_dtor);
 		}, v8::WeakCallbackType::kInternalFields);
 		objects_.emplace(object, std::move(pobj));
 
@@ -269,7 +273,7 @@ public:
 		while (value->IsObject())
 		{
 			v8::Local<v8::Object> obj = value.As<v8::Object>();
-			if (obj->InternalFieldCount() == 3)
+			if (obj->InternalFieldCount() == 2)
 			{
 				object_id id = obj->GetAlignedPointerFromInternalField(0);
 				if (id)
@@ -292,23 +296,19 @@ public:
 	}
 
 private:
-	void reset_object(std::pair<pointer_type const, v8::Global<v8::Object>>& object)
+	void reset_object(std::pair<pointer_type const, v8::Global<v8::Object>>& object, bool call_dtor = true)
 	{
-		bool call_dtor = true;
 		if (!object.second.IsNearDeath())
 		{
 			v8::Local<v8::Object> obj = to_local(isolate_, object.second);
-			assert(obj->InternalFieldCount() == 3);
+			assert(obj->InternalFieldCount() == 2);
 			assert(obj->GetAlignedPointerFromInternalField(0) == Traits::pointer_id(object.first));
 			assert(obj->GetAlignedPointerFromInternalField(1) == this);
-			call_dtor = (obj->GetAlignedPointerFromInternalField(2) != nullptr);
 			// remove internal fields to disable unwrapping for this V8 Object
 			obj->SetAlignedPointerInInternalField(0, nullptr);
 			obj->SetAlignedPointerInInternalField(1, nullptr);
-			obj->SetAlignedPointerInInternalField(2, nullptr);
 		}
-		if (call_dtor)
-		{
+		if (unowned_objects_.find(object.first) == unowned_objects_.end()) {
 			dtor_(isolate_, object.first);
 		}
 		object.second.Reset();
@@ -330,6 +330,7 @@ private:
 	std::vector<object_registry*> derivatives_;
 
 	std::unordered_map<pointer_type, v8::Global<v8::Object>> objects_;
+	std::unordered_set<pointer_type> unowned_objects_;
 
 	v8::Isolate* isolate_;
 	v8::Global<v8::FunctionTemplate> func_;
