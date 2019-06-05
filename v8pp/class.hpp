@@ -307,8 +307,14 @@ private:
 			obj->SetAlignedPointerInInternalField(0, nullptr);
 			obj->SetAlignedPointerInInternalField(1, nullptr);
 		}
-		if (unowned_objects_.find(object.first) == unowned_objects_.end()) {
+		auto it = unowned_objects_.find(object.first);
+		if (it == unowned_objects_.end()) 
+		{
 			dtor_(isolate_, object.first);
+		} 
+		else 
+		{
+			unowned_objects_.erase(it);
 		}
 		object.second.Reset();
 	}
