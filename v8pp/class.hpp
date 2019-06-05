@@ -168,14 +168,14 @@ public:
 		return false;
 	}
 
-	void remove_object(object_id const& obj)
+	void remove_object(object_id const& obj, bool call_dtor = true)
 	{
 		auto it = objects_.find(Traits::key(obj));
 		assert(it != objects_.end() && "no object");
 		if (it != objects_.end())
 		{
 			v8::HandleScope scope(isolate_);
-			reset_object(*it);
+			reset_object(*it, call_dtor);
 			objects_.erase(it);
 		}
 	}
@@ -248,7 +248,8 @@ public:
 		{
 			object_id object = data.GetInternalField(0);
 			object_registry* this_ = static_cast<object_registry*>(data.GetInternalField(1));
-			this_->remove_object(object);
+			bool call_dtor = this_ == static_cast<object_registry*>(data.GetInternalField(2));
+			this_->remove_object(object, call_dtor);
 		}, v8::WeakCallbackType::kInternalFields);
 		objects_.emplace(object, std::move(pobj));
 
@@ -295,7 +296,7 @@ public:
 	}
 
 private:
-	void reset_object(std::pair<pointer_type const, v8::Global<v8::Object>>& object)
+	void reset_object(std::pair<pointer_type const, v8::Global<v8::Object>>& object, bool call_dtor = true)
 	{
 		if (!object.second.IsNearDeath())
 		{
