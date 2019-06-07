@@ -32,7 +32,7 @@ struct X
     X(int v, bool u) : var(v) {}
     int var;
     int get() const { return var; }
-    voi set(int x) { var = x; } 
+    void set(int x) { var = x; } 
 };
 
 // bind free variables and functions
