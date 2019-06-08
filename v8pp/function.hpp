@@ -123,7 +123,7 @@ void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 	v8::HandleScope scope(isolate);
 	try
 	{
-		if constexpr (std::is_same_v< FTraits::return_type, void>)
+		if constexpr (std::is_same_v<typename FTraits::return_type, void>)
 		{
 			invoke<Traits, F, FTraits>(args);
 		}

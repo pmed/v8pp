@@ -46,8 +46,8 @@ void test_function()
 		moveonly& operator=(moveonly&&) = default;
 	};
 	moveonly z;
-	context.function("lambda", [x, y, z = std::move(z)](int z) { return x + y + z; });
-	check_eq("lambda", run_script<int>(context, "lambda(3)"), 6);
+	context.function("lambda", [x, y, z = std::move(z)](int a) { return a + x + y + z.v; });
+	check_eq("lambda", run_script<int>(context, "lambda(3)"), 9);
 
 	auto lambda2 = [](){ return 99; };
 	//TODO: static_assert(v8pp::detail::external_data::is_bitcast_allowed<decltype(lambda2)>::value);
