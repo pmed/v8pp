@@ -36,10 +36,22 @@ void test_function()
 	check_eq("h", run_script<int>(context, "h(1, 2)"), 3);
 
 	int x = 1, y = 2;
-	context.function("lambda", [x, y](int z) { return x + y + z; });
+	struct moveonly
+	{
+		double v = 3;
+		moveonly() = default;
+		moveonly(moveonly const&) = delete;
+		moveonly& operator=(moveonly const&) = delete;
+		moveonly(moveonly &&) = default;
+		moveonly& operator=(moveonly&&) = default;
+	};
+	moveonly z;
+	context.function("lambda", [x, y, z = std::move(z)](int z) { return x + y + z; });
 	check_eq("lambda", run_script<int>(context, "lambda(3)"), 6);
 
 	auto lambda2 = [](){ return 99; };
+	//TODO: static_assert(v8pp::detail::external_data::is_bitcast_allowed<decltype(lambda2)>::value);
+
 	context.function("lambda2", lambda2);
 	check_eq("lambda2", run_script<int>(context, "lambda2()"), 99);
 

@@ -59,8 +59,7 @@ struct call_from_v8_traits
 	>::type;
 
 	template<size_t Index, typename Traits>
-	static decltype(arg_convert<Index, Traits>::from_v8(std::declval<v8::Isolate*>(), std::declval<v8::Local<v8::Value>>()))
-	arg_from_v8(v8::FunctionCallbackInfo<v8::Value> const& args)
+	static auto arg_from_v8(v8::FunctionCallbackInfo<v8::Value> const& args)
 	{
 		return arg_convert<Index, Traits>::from_v8(args.GetIsolate(), args[Index - Offset]);
 	}
@@ -118,24 +117,21 @@ using select_call_traits = typename std::conditional<is_first_arg_isolate<F>::va
 >::type;
 
 template<typename Traits, typename F, typename CallTraits, size_t ...Indices>
-typename function_traits<F>::return_type
-call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
+auto call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
 	CallTraits, std::index_sequence<Indices...>)
 {
 	return func(CallTraits::template arg_from_v8<Indices, Traits>(args)...);
 }
 
 template<typename Traits, typename T, typename F, typename CallTraits, size_t ...Indices>
-typename function_traits<F>::return_type
-call_from_v8_impl(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
+auto call_from_v8_impl(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
 	CallTraits, std::index_sequence<Indices...>)
 {
 	return (obj.*func)(CallTraits::template arg_from_v8<Indices, Traits>(args)...);
 }
 
 template<typename Traits, typename F, size_t ...Indices>
-typename function_traits<F>::return_type
-call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
+auto call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
 	isolate_arg_call_traits<F>, std::index_sequence<Indices...>)
 {
 	return func(args.GetIsolate(),
@@ -143,8 +139,7 @@ call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
 }
 
 template<typename Traits, typename T, typename F, size_t ...Indices>
-typename function_traits<F>::return_type
-call_from_v8_impl(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
+auto call_from_v8_impl(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
 	isolate_arg_call_traits<F>, std::index_sequence<Indices...>)
 {
 	return (obj.*func)(args.GetIsolate(),
@@ -152,24 +147,21 @@ call_from_v8_impl(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& a
 }
 
 template<typename Traits, typename F, size_t ...Indices>
-typename function_traits<F>::return_type
-call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
+auto call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
 	isolate_v8_args_call_traits<F>, std::index_sequence<Indices...>)
 {
 	return func(args.GetIsolate(), args);
 }
 
 template<typename Traits, typename T, typename F, size_t ...Indices>
-typename function_traits<F>::return_type
-call_from_v8_impl(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
+auto call_from_v8_impl(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
 	isolate_v8_args_call_traits<F>, std::index_sequence<Indices...>)
 {
 	return (obj.*func)(args.GetIsolate(), args);
 }
 
-template<typename Traits, typename F>
-typename function_traits<F>::return_type
-call_from_v8(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args)
+template<typename Traits, typename F, typename FTraits = function_traits<F>>
+auto call_from_v8(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	using call_traits = select_call_traits<F>;
 	call_traits::check(args);
@@ -177,9 +169,8 @@ call_from_v8(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args)
 		call_traits(), std::make_index_sequence<call_traits::arg_count>());
 }
 
-template<typename Traits, typename T, typename F>
-typename function_traits<F>::return_type
-call_from_v8(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args)
+template<typename Traits, typename F, typename T>
+auto call_from_v8(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	using call_traits = select_call_traits<F>;
 	call_traits::check(args);

@@ -110,102 +110,40 @@ struct r_property_impl
 	{
 	}
 
-	void get_impl(class_type& obj, v8::Local<v8::String>,
+	void get_impl(class_type& obj, v8::Local<v8::String> name,
 		v8::PropertyCallbackInfo<v8::Value> const& info,
-		getter_tag, /*is_mem_fun*/std::true_type)
+		getter_tag)
 	{
-		info.GetReturnValue().Set(to_v8(info.GetIsolate(), (obj.*getter)()));
+		info.GetReturnValue().Set(to_v8(info.GetIsolate(), std::invoke(getter, obj)));
+	}
+
+	void get_impl(v8::Local<v8::String> name,
+		v8::PropertyCallbackInfo<v8::Value> const& info,
+		getter_tag)
+	{
+		info.GetReturnValue().Set(to_v8(info.GetIsolate(), std::invoke(getter)));
 	}
 
 	void get_impl(class_type& obj, v8::Local<v8::String> name,
 		v8::PropertyCallbackInfo<v8::Value> const& info,
-		direct_getter_tag, /*is_mem_fun*/std::true_type)
+		direct_getter_tag)
 	{
-		(obj.*getter)(name, info);
-	}
-
-	void get_impl(class_type& obj, v8::Local<v8::String>,
-		v8::PropertyCallbackInfo<v8::Value> const& info,
-		isolate_getter_tag, /*is_mem_fun*/std::true_type)
-	{
-		v8::Isolate* isolate = info.GetIsolate();
-
-		info.GetReturnValue().Set(to_v8(isolate, (obj.*getter)(isolate)));
-	}
-
-	void get_impl(class_type& obj, v8::Local<v8::String>,
-		v8::PropertyCallbackInfo<v8::Value> const& info,
-		getter_tag, /*is_mem_fun*/std::false_type)
-	{
-		info.GetReturnValue().Set(to_v8(info.GetIsolate(), getter(obj)));
-	}
-
-	void get_impl(class_type& obj, v8::Local<v8::String> name,
-		v8::PropertyCallbackInfo<v8::Value> const& info,
-		direct_getter_tag, /*is_mem_fun*/std::false_type)
-	{
-		getter(obj, name, info);
-	}
-
-	void get_impl(class_type& obj, v8::Local<v8::String>,
-		v8::PropertyCallbackInfo<v8::Value> const& info,
-		isolate_getter_tag, /*is_mem_fun*/std::false_type)
-	{
-		v8::Isolate* isolate = info.GetIsolate();
-
-		info.GetReturnValue().Set(to_v8(isolate, getter(obj, isolate)));
-	}
-
-	template<typename Traits>
-	static void get(v8::Local<v8::String> name,
-		v8::PropertyCallbackInfo<v8::Value> const& info)
-	try
-	{
-		auto obj = v8pp::class_<class_type, Traits>::unwrap_object(info.GetIsolate(), info.This());
-
-		using is_mem_fun = std::is_member_function_pointer<Get>;
-		using offset = std::integral_constant<size_t, is_mem_fun::value? 0 : 1>;
-		detail::external_data::get<property_type>(info.Data())
-			.get_impl(*obj, name, info, select_getter_tag<Get, offset::value>(), is_mem_fun());
-	}
-	catch (std::exception const& ex)
-	{
-		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
-	}
-
-	template<typename Traits>
-	static void set(v8::Local<v8::String> name, v8::Local<v8::Value>,
-		v8::PropertyCallbackInfo<void> const& info)
-	{
-		assert(false && "read-only property");
-		info.GetReturnValue().Set(throw_ex(info.GetIsolate(),
-			"read-only property " + from_v8<std::string>(info.GetIsolate(), name)));
-	}
-};
-
-template<typename Property, typename Get>
-struct r_property_impl<Property, Get, none>
-{
-	using property_type = Property;
-
-	Get getter;
-
-	r_property_impl() = default;
-	r_property_impl(Get&& getter)
-		: getter(std::move(getter))
-	{
-	}
-
-	void get_impl(v8::Local<v8::String>,
-		v8::PropertyCallbackInfo<v8::Value> const& info, getter_tag)
-	{
-		info.GetReturnValue().Set(to_v8(info.GetIsolate(), getter()));
+		std::invoke(getter, obj, name, info);
 	}
 
 	void get_impl(v8::Local<v8::String> name,
 		v8::PropertyCallbackInfo<v8::Value> const& info, direct_getter_tag)
 	{
-		getter(name, info);
+		std::invoke(getter, name, info);
+	}
+
+	void get_impl(class_type& obj, v8::Local<v8::String>,
+		v8::PropertyCallbackInfo<v8::Value> const& info,
+		isolate_getter_tag)
+	{
+		v8::Isolate* isolate = info.GetIsolate();
+
+		info.GetReturnValue().Set(to_v8(isolate, std::invoke(getter, obj, isolate)));
 	}
 
 	void get_impl(v8::Local<v8::String>,
@@ -213,7 +151,7 @@ struct r_property_impl<Property, Get, none>
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
-		info.GetReturnValue().Set(to_v8(isolate, getter(isolate)));
+		info.GetReturnValue().Set(to_v8(isolate, std::invoke(getter, isolate)));
 	}
 
 	template<typename Traits>
@@ -221,8 +159,20 @@ struct r_property_impl<Property, Get, none>
 		v8::PropertyCallbackInfo<v8::Value> const& info)
 	try
 	{
-		detail::external_data::get<property_type>(info.Data()).
-			get_impl(name, info, select_getter_tag<Get, 0>());
+		if constexpr (std::is_same_v<class_type, none>)
+		{
+			detail::external_data::get<property_type>(info.Data()).
+				get_impl(name, info, select_getter_tag<Get, 0>());
+		}
+		else
+		{
+			auto obj = v8pp::class_<class_type, Traits>::unwrap_object(info.GetIsolate(), info.This());
+
+			using is_mem_fun = std::is_member_function_pointer<Get>;
+			using offset = std::integral_constant<size_t, is_mem_fun::value ? 0 : 1>;
+			detail::external_data::get<property_type>(info.Data())
+				.get_impl(*obj, name, info, select_getter_tag<Get, offset::value>());
+		}
 	}
 	catch (std::exception const& ex)
 	{
@@ -255,110 +205,52 @@ struct rw_property_impl
 	{
 	}
 
-	void set_impl(class_type& obj, v8::Local<v8::String>, v8::Local<v8::Value> value,
-		v8::PropertyCallbackInfo<void> const& info,
-		setter_tag, /*is_mem_fun*/std::true_type)
-	{
-		using value_type = typename call_from_v8_traits<Set>::template arg_type<0>;
-
-		(obj.*setter)(v8pp::from_v8<value_type>(info.GetIsolate(), value));
-	}
-
 	void set_impl(class_type& obj, v8::Local<v8::String> name, v8::Local<v8::Value> value,
 		v8::PropertyCallbackInfo<void> const& info,
-		direct_setter_tag, /*is_mem_fun*/std::true_type)
+		setter_tag)
 	{
-		(obj.*setter)(name, value, info);
-	}
-
-	void set_impl(class_type& obj, v8::Local<v8::String>, v8::Local<v8::Value> value,
-		v8::PropertyCallbackInfo<void> const& info,
-		isolate_setter_tag, /*is_mem_fun*/std::true_type)
-	{
-		using value_type = typename call_from_v8_traits<Set>::template arg_type<1>;
-
-		v8::Isolate* isolate = info.GetIsolate();
-
-		(obj.*setter)(isolate, v8pp::from_v8<value_type>(isolate, value));
-	}
-
-	void set_impl(class_type& obj, v8::Local<v8::String>, v8::Local<v8::Value> value,
-		v8::PropertyCallbackInfo<void> const& info,
-		setter_tag, /*is_mem_fun*/std::false_type)
-	{
-		using value_type = typename call_from_v8_traits<Set>::template arg_type<1>;
-
-		setter(obj, v8pp::from_v8<value_type>(info.GetIsolate(), value));
-	}
-
-	void set_impl(class_type& obj, v8::Local<v8::String> name, v8::Local<v8::Value> value,
-		v8::PropertyCallbackInfo<void> const& info,
-		direct_setter_tag, /*is_mem_fun*/std::false_type)
-	{
-		setter(obj, name, value, info);
-	}
-
-	void set_impl(class_type& obj, v8::Local<v8::String>, v8::Local<v8::Value> value,
-		v8::PropertyCallbackInfo<void> const& info,
-		isolate_setter_tag, /*is_mem_fun*/std::false_type)
-	{
-		using value_type = typename call_from_v8_traits<Set>::template arg_type<2>;
-
-		v8::Isolate* isolate = info.GetIsolate();
-
-		setter(obj, isolate, v8pp::from_v8<value_type>(isolate, value));
-	}
-
-	template<typename Traits>
-	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value,
-		v8::PropertyCallbackInfo<void> const& info)
-	try
-	{
-		auto obj = v8pp::class_<class_type, Traits>::unwrap_object(info.GetIsolate(), info.This());
-
 		using is_mem_fun = std::is_member_function_pointer<Set>;
-		using offset = std::integral_constant<size_t, is_mem_fun::value? 0 : 1>;
-		detail::external_data::get<property_type>(info.Data()).
-			set_impl(*obj, name, value, info, select_setter_tag<Set, offset::value>(), is_mem_fun());
-	}
-	catch (std::exception const& ex)
-	{
-		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
-	}
-};
-
-template<typename Property, typename Get, typename Set, typename GetClass>
-struct rw_property_impl<Property, Get, Set, GetClass, none>
-	: r_property_impl<Property, Get, GetClass>
-{
-	using property_type = Property;
-
-	Set setter;
-
-	rw_property_impl() = default;
-	rw_property_impl(Get&& getter, Set&& setter)
-		: r_property_impl<Property, Get, GetClass>(std::move(getter))
-		, setter(std::move(setter))
-	{
+		using offset = std::integral_constant<size_t, is_mem_fun::value ? 0 : 1>;
+		using value_type = typename call_from_v8_traits<Set>::template arg_type<0 + offset()>;
+		std::invoke(setter, obj, v8pp::from_v8<value_type>(info.GetIsolate(), value));
 	}
 
-	void set_impl(v8::Local<v8::String>, v8::Local<v8::Value> value,
+	void set_impl(v8::Local<v8::String> name, v8::Local<v8::Value> value,
 		v8::PropertyCallbackInfo<void> const& info,
 		setter_tag)
 	{
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<0>;
+		std::invoke(setter, v8pp::from_v8<value_type>(info.GetIsolate(), value));
+	}
 
-		setter(v8pp::from_v8<value_type>(info.GetIsolate(), value));
+	void set_impl(class_type& obj, v8::Local<v8::String> name, v8::Local<v8::Value> value,
+		v8::PropertyCallbackInfo<void> const& info,
+		direct_setter_tag)
+	{
+		std::invoke(setter, obj, name, value, info);
 	}
 
 	void set_impl(v8::Local<v8::String> name, v8::Local<v8::Value> value,
 		v8::PropertyCallbackInfo<void> const& info,
 		direct_setter_tag)
 	{
-		setter(name, value, info);
+		std::invoke(setter, name, value, info);
 	}
 
-	void set_impl(v8::Local<v8::String>, v8::Local<v8::Value> value,
+	void set_impl(class_type& obj, v8::Local<v8::String> name, v8::Local<v8::Value> value,
+		v8::PropertyCallbackInfo<void> const& info,
+		isolate_setter_tag)
+	{
+		using is_mem_fun = std::is_member_function_pointer<Set>;
+		using offset = std::integral_constant<size_t, is_mem_fun::value ? 0 : 1>;
+		using value_type = typename call_from_v8_traits<Set>::template arg_type<1 + offset()>;
+
+		v8::Isolate* isolate = info.GetIsolate();
+
+		std::invoke(setter, obj, isolate, v8pp::from_v8<value_type>(isolate, value));
+	}
+
+	void set_impl(v8::Local<v8::String> name, v8::Local<v8::Value> value,
 		v8::PropertyCallbackInfo<void> const& info,
 		isolate_setter_tag)
 	{
@@ -366,7 +258,7 @@ struct rw_property_impl<Property, Get, Set, GetClass, none>
 
 		v8::Isolate* isolate = info.GetIsolate();
 
-		setter(isolate, v8pp::from_v8<value_type>(info.GetIsolate(), value));
+		std::invoke(setter, isolate, v8pp::from_v8<value_type>(isolate, value));
 	}
 
 	template<typename Traits>
@@ -374,8 +266,20 @@ struct rw_property_impl<Property, Get, Set, GetClass, none>
 		v8::PropertyCallbackInfo<void> const& info)
 	try
 	{
-		detail::external_data::get<property_type>(info.Data()).
-			set_impl(name, value, info, select_setter_tag<Set, 0>());
+		if constexpr (std::is_same_v<class_type, none>)
+		{
+			detail::external_data::get<property_type>(info.Data()).
+				set_impl(name, value, info, select_setter_tag<Set, 0>());
+		}
+		else
+		{
+			auto obj = v8pp::class_<class_type, Traits>::unwrap_object(info.GetIsolate(), info.This());
+
+			using is_mem_fun = std::is_member_function_pointer<Set>;
+			using offset = std::integral_constant<size_t, is_mem_fun::value ? 0 : 1>;
+			detail::external_data::get<property_type>(info.Data()).
+				set_impl(*obj, name, value, info, select_setter_tag<Set, offset::value>());
+		}
 	}
 	catch (std::exception const& ex)
 	{

@@ -11,7 +11,6 @@
 
 #include <cstring> // for memcpy
 
-#include <tuple>
 #include <type_traits>
 
 #include "v8pp/call_from_v8.hpp"
@@ -24,64 +23,67 @@ namespace v8pp { namespace detail {
 class external_data
 {
 public:
+	//TODO: allow non-capturing lambdas
 	template<typename T>
 	using is_bitcast_allowed = std::integral_constant<bool,
 		sizeof(T) <= sizeof(void*) &&
 		std::is_default_constructible<T>::value &&
 		std::is_trivially_copyable<T>::value>;
 
-	template<typename T, typename = std::enable_if_t<is_bitcast_allowed<T>::value>>
+	template<typename T>
 	static v8::Local<v8::Value> set(v8::Isolate* isolate, T && value)
 	{
-		void* ptr;
-		memcpy(&ptr, &value, sizeof value);
-		return v8::External::New(isolate, ptr);
-	}
-
-	template<typename T, typename = std::enable_if_t<!is_bitcast_allowed<T>::value>>
-	static v8::Local<v8::External> set(v8::Isolate* isolate, T&& data)
-	{
-		using ExtValue = value<T>;
-		std::unique_ptr<ExtValue> value(new ExtValue);
-		new (value->data()) T(std::forward<T>(data));
-
-		v8::Local<v8::External> ext = v8::External::New(isolate, value.get());
-		value->pext_.Reset(isolate, ext);
-		value->pext_.SetWeak(value.get(),
-			[](v8::WeakCallbackInfo<ExtValue> const& data)
+		if constexpr (is_bitcast_allowed<T>::value)
 		{
-			std::unique_ptr<ExtValue> value(data.GetParameter());
-			if (!value->pext_.IsEmpty())
-			{
-				value->data()->~T();
-				value->pext_.Reset();
-			}
-		}, v8::WeakCallbackType::kParameter);
+			void* ptr;
+			memcpy(&ptr, &value, sizeof value);
+			return v8::External::New(isolate, ptr);
+		}
+		else
+		{
+			using ExtValue = value_holder<T>;
+			std::unique_ptr<ExtValue> ext_value(new ExtValue);
+			new (ext_value->data()) T(std::forward<T>(value));
 
-		value.release();
-		return ext;
+			v8::Local<v8::External> ext = v8::External::New(isolate, ext_value.get());
+			ext_value->pext_.Reset(isolate, ext);
+			ext_value->pext_.SetWeak(ext_value.get(),
+				[](v8::WeakCallbackInfo<ExtValue> const& data)
+				{
+					std::unique_ptr<ExtValue> ext_value(data.GetParameter());
+					if (!ext_value->pext_.IsEmpty())
+					{
+						ext_value->data()->~T();
+						ext_value->pext_.Reset();
+					}
+				}, v8::WeakCallbackType::kParameter);
+
+			ext_value.release();
+			return ext;
+		}
 	}
 
-	template<typename T, typename = std::enable_if_t<is_bitcast_allowed<T>::value>>
-	static T get(v8::Local<v8::Value> value)
+	template<typename T>
+	static decltype(auto) get(v8::Local<v8::Value> value)
 	{
-		void* ptr = value.As<v8::External>()->Value();
-		T data;
-		memcpy(&data, &ptr, sizeof data);
-		return data;
+		if constexpr (is_bitcast_allowed<T>::value)
+		{
+			void* ptr = value.As<v8::External>()->Value();
+			T data;
+			memcpy(&data, &ptr, sizeof data);
+			return data;
+		}
+		else
+		{
+			using ExtValue = value_holder<T>;
+			ExtValue* ext_value = static_cast<ExtValue*>(value.As<v8::External>()->Value());
+			T& data = *(ext_value->data());
+			return (data); // as reference
+		}
 	}
-
-	template<typename T, typename = std::enable_if_t<!is_bitcast_allowed<T>::value>>
-	static T& get(v8::Local<v8::Value> ext)
-	{
-		using ExtValue = value<T>;
-		ExtValue* value = static_cast<ExtValue*>(ext.As<v8::External>()->Value());
-		return *value->data();
-	}
-
 private:
 	template<typename T>
-	struct value
+	struct value_holder
 	{
 		T* data() { return static_cast<T*>(static_cast<void*>(&storage_)); }
 
@@ -90,54 +92,45 @@ private:
 	};
 };
 
-template<typename Traits, typename F>
-typename function_traits<F>::return_type
-invoke(v8::FunctionCallbackInfo<v8::Value> const& args, std::false_type /*is_member_function_pointer*/)
+template<typename Traits, typename F, typename FTraits>
+auto invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	return call_from_v8<Traits, F>(std::forward<F>(external_data::get<F>(args.Data())), args);
-}
-
-template<typename Traits, typename F>
-typename function_traits<F>::return_type
-invoke(v8::FunctionCallbackInfo<v8::Value> const& args, std::true_type /*is_member_function_pointer*/)
-{
-	using class_type = typename std::decay<typename function_traits<F>::class_type>::type;
-
-	v8::Isolate* isolate = args.GetIsolate();
-	v8::Local<v8::Object> obj = args.This();
-	auto ptr = class_<class_type, Traits>::unwrap_object(isolate, obj);
-	if (!ptr)
+	if constexpr (std::is_member_function_pointer<F>())
 	{
-		throw std::runtime_error("method called on null instance");
+		using class_type = std::decay_t<typename FTraits::class_type>;
+		auto ptr = class_<class_type, Traits>::unwrap_object(args.GetIsolate(), args.This());
+		if (!ptr)
+		{
+			throw std::runtime_error("method called on null instance");
+		}
+		return call_from_v8<Traits, F>(*ptr, std::forward<F>(external_data::get<F>(args.Data())), args);
 	}
-	return call_from_v8<Traits, class_type, F>(*ptr, std::forward<F>(external_data::get<F>(args.Data())), args);
-}
-
-template<typename Traits, typename F>
-void forward_ret(v8::FunctionCallbackInfo<v8::Value> const& args, std::true_type /*is_void_return*/)
-{
-	invoke<Traits, F>(args, std::is_member_function_pointer<F>());
-}
-
-template<typename Traits, typename F>
-void forward_ret(v8::FunctionCallbackInfo<v8::Value> const& args, std::false_type /*is_void_return*/)
-{
-	args.GetReturnValue().Set(to_v8(args.GetIsolate(),
-		invoke<Traits, F>(args, std::is_member_function_pointer<F>())));
+	else
+	{
+		return call_from_v8<Traits, F>(std::forward<F>(external_data::get<F>(args.Data())), args);
+	}
 }
 
 template<typename Traits, typename F>
 void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
+	using FTraits = function_traits<F>;
+
 	static_assert(is_callable<F>::value || std::is_member_function_pointer<F>::value,
 		"required callable F");
 
 	v8::Isolate* isolate = args.GetIsolate();
 	v8::HandleScope scope(isolate);
-
 	try
 	{
-		forward_ret<Traits, F>(args, is_void_return<F>());
+		if constexpr (std::is_same_v< FTraits::return_type, void>)
+		{
+			invoke<Traits, F, FTraits>(args);
+		}
+		else
+		{
+			args.GetReturnValue().Set(to_v8(isolate, invoke<Traits, F, FTraits>(args)));
+		}
 	}
 	catch (std::exception const& ex)
 	{
