@@ -96,10 +96,9 @@ using select_setter_tag = typename std::conditional<is_direct_setter<F, Offset>:
 		isolate_setter_tag, setter_tag>::type
 >::type;
 
-template<typename Property, typename Get, typename GetClass>
+template<typename Get, typename GetClass>
 struct r_property_impl
 {
-	using property_type = Property;
 	using class_type = GetClass;
 
 	Get getter;
@@ -154,14 +153,14 @@ struct r_property_impl
 		info.GetReturnValue().Set(to_v8(isolate, std::invoke(getter, isolate)));
 	}
 
-	template<typename Traits>
+	template<typename Property, typename Traits>
 	static void get(v8::Local<v8::String> name,
 		v8::PropertyCallbackInfo<v8::Value> const& info)
 	try
 	{
 		if constexpr (std::is_same_v<class_type, none>)
 		{
-			detail::external_data::get<property_type>(info.Data()).
+			detail::external_data::get<Property>(info.Data()).
 				get_impl(name, info, select_getter_tag<Get, 0>());
 		}
 		else
@@ -170,7 +169,7 @@ struct r_property_impl
 
 			using is_mem_fun = std::is_member_function_pointer<Get>;
 			using offset = std::integral_constant<size_t, is_mem_fun::value ? 0 : 1>;
-			detail::external_data::get<property_type>(info.Data())
+			detail::external_data::get<Property>(info.Data())
 				.get_impl(*obj, name, info, select_getter_tag<Get, offset::value>());
 		}
 	}
@@ -179,7 +178,7 @@ struct r_property_impl
 		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
 	}
 
-	template<typename Traits>
+	template<typename Property, typename Traits>
 	static void set(v8::Local<v8::String> name, v8::Local<v8::Value>,
 		v8::PropertyCallbackInfo<void> const& info)
 	{
@@ -189,18 +188,17 @@ struct r_property_impl
 	}
 };
 
-template<typename Property, typename Get, typename Set, typename GetClass, typename SetClass>
+template<typename Get, typename Set, typename GetClass, typename SetClass>
 struct rw_property_impl
-	: r_property_impl<Property, Get, GetClass>
+	: r_property_impl<Get, GetClass>
 {
-	using property_type = Property;
 	using class_type = SetClass;
 
 	Set setter;
 
 	rw_property_impl() = default;
 	rw_property_impl(Get&& getter, Set&& setter)
-		: r_property_impl<Property, Get, GetClass>(std::move(getter))
+		: r_property_impl<Get, GetClass>(std::move(getter))
 		, setter(std::move(setter))
 	{
 	}
@@ -261,14 +259,14 @@ struct rw_property_impl
 		std::invoke(setter, isolate, v8pp::from_v8<value_type>(isolate, value));
 	}
 
-	template<typename Traits>
+	template<typename Property, typename Traits>
 	static void set(v8::Local<v8::String> name, v8::Local<v8::Value> value,
 		v8::PropertyCallbackInfo<void> const& info)
 	try
 	{
 		if constexpr (std::is_same_v<class_type, none>)
 		{
-			detail::external_data::get<property_type>(info.Data()).
+			detail::external_data::get<Property>(info.Data()).
 				set_impl(name, value, info, select_setter_tag<Set, 0>());
 		}
 		else
@@ -277,7 +275,7 @@ struct rw_property_impl
 
 			using is_mem_fun = std::is_member_function_pointer<Set>;
 			using offset = std::integral_constant<size_t, is_mem_fun::value ? 0 : 1>;
-			detail::external_data::get<property_type>(info.Data()).
+			detail::external_data::get<Property>(info.Data()).
 				set_impl(*obj, name, value, info, select_setter_tag<Set, offset::value>());
 		}
 	}
@@ -292,16 +290,13 @@ struct rw_property_impl
 /// Property with get and set functions
 template<typename Get, typename Set, typename GetClass, typename SetClass>
 struct property
-	: detail::rw_property_impl<property<Get, Set, GetClass, SetClass>, Get, Set, GetClass, SetClass>
+	: detail::rw_property_impl<Get, Set, GetClass, SetClass>
 {
-	using this_class = property<Get, Set, GetClass, SetClass>;
-	using base_class = detail::rw_property_impl<this_class, Get, Set, GetClass, SetClass>;
-
 	static constexpr bool is_readonly = false;
 
 	property() = default;
 	property(Get&& getter, Set&& setter)
-		: base_class(std::move(getter), std::move(setter))
+		: detail::rw_property_impl<Get, Set, GetClass, SetClass>(std::move(getter), std::move(setter))
 	{
 	}
 };
@@ -309,16 +304,13 @@ struct property
 /// Read-only property class specialization for get only method
 template<typename Get, typename GetClass>
 struct property<Get, detail::none, GetClass, detail::none>
-	: detail::r_property_impl<property<Get, detail::none, GetClass, detail::none>, Get, GetClass>
+	: detail::r_property_impl<Get, GetClass>
 {
-	using this_class = property<Get, detail::none, GetClass, detail::none>;
-	using base_class = detail::r_property_impl<this_class, Get, GetClass>;
-
 	static constexpr bool is_readonly = true;
 
 	property() = default;
 	property(Get&& getter, detail::none)
-		: base_class(std::move(getter))
+		: detail::r_property_impl<Get, GetClass>(std::move(getter))
 	{
 	}
 };

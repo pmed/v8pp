@@ -600,8 +600,8 @@ public:
 
 		v8::HandleScope scope(isolate());
 
-		v8::AccessorGetterCallback getter = property_type::template get<Traits>;
-		v8::AccessorSetterCallback setter = property_type::is_readonly? nullptr : property_type::template set<Traits>;
+		v8::AccessorGetterCallback getter = property_type::template get<property_type, Traits>;
+		v8::AccessorSetterCallback setter = property_type::is_readonly? nullptr : property_type::template set<property_type, Traits>;
 		v8::Local<v8::String> v8_name = v8pp::to_v8(isolate(), name);
 		v8::Local<v8::Value> data = detail::external_data::set(isolate(), property_type(std::move(get), std::move(set)));
 		class_info_.class_function_template()->PrototypeTemplate()
