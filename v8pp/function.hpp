@@ -160,7 +160,7 @@ v8::Handle<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&
 /// Set nullptr or empty string for name
 /// to make the function anonymous
 template<typename Traits, typename F>
-v8::Local<v8::Function> wrap_function(v8::Isolate* isolate, string_view name, F&& func)
+v8::Local<v8::Function> wrap_function(v8::Isolate* isolate, std::string_view name, F&& func)
 {
 	using F_type = typename std::decay<F>::type;
 	v8::Local<v8::Function> fn = v8::Function::New(isolate->GetCurrentContext(),
@@ -174,7 +174,7 @@ v8::Local<v8::Function> wrap_function(v8::Isolate* isolate, string_view name, F&
 }
 
 template<typename F>
-v8::Handle<v8::Function> wrap_function(v8::Isolate* isolate, string_view name, F&& func)
+v8::Handle<v8::Function> wrap_function(v8::Isolate* isolate, std::string_view name, F&& func)
 {
 	return wrap_function<raw_ptr_traits>(isolate, name, std::forward<F>(func));
 }

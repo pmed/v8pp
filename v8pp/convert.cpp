@@ -6,14 +6,14 @@
 namespace v8pp {
 
 template struct convert<std::string>;
-template struct convert<string_view>;
+template struct convert<std::string_view>;
 
 template struct convert<std::u16string>;
-template struct convert<u16string_view>;
+template struct convert<std::u16string_view>;
 
 #ifdef _WIN32
 template struct convert<std::wstring>;
-template struct convert<wstring_view>;
+template struct convert<std::wstring_view>;
 #endif
 
 template struct convert<char>;

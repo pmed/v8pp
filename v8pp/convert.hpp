@@ -52,7 +52,7 @@ struct invalid_argument : std::invalid_argument
 
 // converter specializations for string types
 template<typename Char, typename Traits>
-struct convert<basic_string_view<Char, Traits>>
+struct convert<std::basic_string_view<Char, Traits>>
 {
 	static_assert(sizeof(Char) <= sizeof(uint16_t),
 		"only UTF-8 and UTF-16 strings are supported");
@@ -92,7 +92,7 @@ struct convert<basic_string_view<Char, Traits>>
 		}
 	}
 
-	static to_type to_v8(v8::Isolate* isolate, basic_string_view<Char, Traits> value)
+	static to_type to_v8(v8::Isolate* isolate, std::basic_string_view<Char, Traits> value)
 	{
 		if constexpr (sizeof(Char) == 1)
 		{
@@ -110,18 +110,18 @@ struct convert<basic_string_view<Char, Traits>>
 };
 
 template<typename Char, typename Traits, typename Alloc>
-struct convert<std::basic_string<Char, Traits, Alloc>> : convert<basic_string_view<Char, Traits>>
+struct convert<std::basic_string<Char, Traits, Alloc>> : convert<std::basic_string_view<Char, Traits>>
 {
 };
 
 // converter specializations for null-terminated strings
 template<>
-struct convert<char const*> : convert<basic_string_view<char>> {};
+struct convert<char const*> : convert<std::basic_string_view<char>> {};
 template<>
-struct convert<char16_t const*> : convert<basic_string_view<char16_t>> {};
+struct convert<char16_t const*> : convert<std::basic_string_view<char16_t>> {};
 #ifdef WIN32
 template<>
-struct convert<wchar_t const*> : convert<basic_string_view<wchar_t>> {};
+struct convert<wchar_t const*> : convert<std::basic_string_view<wchar_t>> {};
 #endif
 
 // converter specializations for primitive types
@@ -445,7 +445,7 @@ template<typename Char, typename Traits, typename Alloc>
 struct is_wrapped_class<std::basic_string<Char, Traits, Alloc>> : std::false_type {};
 
 template<typename Char, typename Traits>
-struct is_wrapped_class<basic_string_view<Char, Traits>> : std::false_type {};
+struct is_wrapped_class<std::basic_string_view<Char, Traits>> : std::false_type {};
 
 template<typename T, size_t N>
 struct is_wrapped_class<std::array<T, N>> : std::false_type{};
@@ -601,54 +601,54 @@ auto from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value,U const& default_v
 
 inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, char const* str)
 {
-	return convert<string_view>::to_v8(isolate, string_view(str));
+	return convert<std::string_view>::to_v8(isolate, std::string_view(str));
 }
 
 inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, char const* str, size_t len)
 {
-	return convert<string_view>::to_v8(isolate, string_view(str, len));
+	return convert<std::string_view>::to_v8(isolate, std::string_view(str, len));
 }
 
 template<size_t N>
 v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 	char const (&str)[N], size_t len = N - 1)
 {
-	return convert<string_view>::to_v8(isolate, string_view(str, len));
+	return convert<std::string_view>::to_v8(isolate, std::string_view(str, len));
 }
 
 inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str)
 {
-	return convert<u16string_view>::to_v8(isolate, u16string_view(str));
+	return convert<std::u16string_view>::to_v8(isolate, std::u16string_view(str));
 }
 
 inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str, size_t len)
 {
-	return convert<u16string_view>::to_v8(isolate, u16string_view(str, len));
+	return convert<std::u16string_view>::to_v8(isolate, std::u16string_view(str, len));
 }
 
 template<size_t N>
 v8::Handle<v8::String> to_v8(v8::Isolate* isolate,
 	char16_t const (&str)[N], size_t len = N - 1)
 {
-	return convert<u16string_view>::to_v8(isolate, u16string_view(str, len));
+	return convert<std::u16string_view>::to_v8(isolate, std::u16string_view(str, len));
 }
 
 #ifdef WIN32
 inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, wchar_t const* str)
 {
-	return convert<wstring_view>::to_v8(isolate, wstring_view(str));
+	return convert<std::wstring_view>::to_v8(isolate, std::wstring_view(str));
 }
 
 inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, wchar_t const* str, size_t len)
 {
-	return convert<wstring_view>::to_v8(isolate, wstring_view(str, len));
+	return convert<std::wstring_view>::to_v8(isolate, std::wstring_view(str, len));
 }
 
 template<size_t N>
 v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 	wchar_t const (&str)[N], size_t len = N - 1)
 {
-	return convert<wstring_view>::to_v8(isolate, wstring_view(str, len));
+	return convert<std::wstring_view>::to_v8(isolate, std::wstring_view(str, len));
 }
 #endif
 
