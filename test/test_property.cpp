@@ -89,49 +89,6 @@ static_assert(is_direct_setter<decltype(&X::set3), 0>::value,
 static_assert(is_direct_setter<decltype(&external_set3), 1>::value,
 	"direct setter external function");
 
-// tag selectors
-static_assert(std::is_same<select_getter_tag<decltype(&get1), 0>,
-	getter_tag>::value, "getter function tag");
-static_assert(std::is_same<select_getter_tag<decltype(&X::get1), 0>,
-	getter_tag>::value, "getter member function tag");
-static_assert(std::is_same<select_getter_tag<decltype(&external_get1), 1>,
-	getter_tag>::value, "getter external function tag");
-
-static_assert(std::is_same<select_setter_tag<decltype(&set1), 0>,
-	setter_tag>::value, "setter function tag");
-static_assert(std::is_same<select_setter_tag<decltype(&X::set1), 0>,
-	setter_tag>::value, "setter member function tag");
-static_assert(std::is_same<select_setter_tag<decltype(&external_set1), 1>,
-	setter_tag>::value, "setter external function tag");
-
-static_assert(std::is_same<select_getter_tag<decltype(&get2), 0>,
-	isolate_getter_tag>::value, "isolate getter function tag");
-static_assert(std::is_same<select_getter_tag<decltype(&X::get2), 0>,
-	isolate_getter_tag>::value, "isolate getter member function tag");
-static_assert(std::is_same<select_getter_tag<decltype(&external_get2), 1>,
-	isolate_getter_tag>::value, "isolate getter external function tag");
-
-static_assert(std::is_same<select_setter_tag<decltype(&set2), 0>,
-	isolate_setter_tag>::value, "isolate setter function tag");
-static_assert(std::is_same<select_setter_tag<decltype(&X::set2), 0>,
-	isolate_setter_tag>::value, "isolate setter member function tag");
-static_assert(std::is_same<select_setter_tag<decltype(&external_set2), 1>,
-	isolate_setter_tag>::value, "isolate setter external function tag");
-
-static_assert(std::is_same<select_getter_tag<decltype(&get3), 0>,
-	direct_getter_tag>::value, "direct getter function tag");
-static_assert(std::is_same<select_getter_tag<decltype(&X::get3), 0>,
-	direct_getter_tag>::value, "direct getter member function tag");
-static_assert(std::is_same<select_getter_tag<decltype(&external_get3), 1>,
-	direct_getter_tag>::value, "direct getter external function tag");
-
-static_assert(std::is_same<select_setter_tag<decltype(&set3), 0>,
-	direct_setter_tag>::value, "direct setter function tag");
-static_assert(std::is_same<select_setter_tag<decltype(&X::set3), 0>,
-	direct_setter_tag>::value, "direct setter member function tag");
-static_assert(std::is_same<select_setter_tag<decltype(&external_set3), 1>,
-	direct_setter_tag>::value, "direct setter external function tag");
-
 template<typename Get, typename Set>
 void test_property(Get&& get, Set&& set)
 {

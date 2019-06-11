@@ -86,18 +86,7 @@ public:
 	}
 
 	object_registry(object_registry const&) = delete;
-	object_registry(object_registry && src) // = default; Visual C++ can't do this: error C2610
-		: class_info(std::move(static_cast<class_info&&>(src)))
-		, bases_(std::move(src.bases_))
-		, derivatives_(std::move(src.derivatives_))
-		, objects_(std::move(src.objects_))
-		, isolate_(std::move(src.isolate_))
-		, func_(std::move(src.func_))
-		, js_func_(std::move(src.js_func_))
-		, ctor_(std::move(src.ctor_))
-		, dtor_(std::move(src.dtor_))
-	{
-	}
+	object_registry(object_registry && src) = default;
 
 	object_registry& operator=(object_registry const&) = delete;
 	object_registry& operator=(object_registry &&) = delete;
@@ -587,21 +576,15 @@ public:
 			|| detail::is_callable<Setter>::value
 			|| std::is_same<Setter, detail::none>::value, "SetFunction must be callable");
 
-		using GetClass = typename std::conditional<
-			detail::function_with_object<Getter, T>::value,
-			T, detail::none
-		>::type;
-		using SetClass = typename std::conditional<
-			detail::function_with_object<Setter, T>::value,
-			T, detail::none
-		>::type;
+		using GetClass = std::conditional_t<detail::function_with_object<Getter, T>::value, T, detail::none>;
+		using SetClass = std::conditional_t<detail::function_with_object<Setter, T>::value, T, detail::none>;
 
 		using property_type = v8pp::property<Getter, Setter, GetClass, SetClass>;
 
 		v8::HandleScope scope(isolate());
 
-		v8::AccessorGetterCallback getter = property_type::template get<property_type, Traits>;
-		v8::AccessorSetterCallback setter = property_type::is_readonly? nullptr : property_type::template set<property_type, Traits>;
+		v8::AccessorGetterCallback getter = property_type::template get<Traits>;
+		v8::AccessorSetterCallback setter = property_type::is_readonly? nullptr : property_type::template set<Traits>;
 		v8::Local<v8::String> v8_name = v8pp::to_v8(isolate(), name);
 		v8::Local<v8::Value> data = detail::external_data::set(isolate(), property_type(std::move(get), std::move(set)));
 		class_info_.class_function_template()->PrototypeTemplate()
