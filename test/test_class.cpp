@@ -249,7 +249,7 @@ void test_class_()
 	check_eq("X::fun3(str)", run_script<std::string>(context, "x = new X(); x.fun3('str')"), "str1");
 	check_eq("X::fun4([foo, bar])",
 		run_script<std::vector<std::string>>(context, "x = new X(); x.fun4(['foo', 'bar'])"),
-		std::vector<std::string>{ "foo", "bar", "1" });
+		std::vector<std::string>{{ "foo", "bar", "1" }});
 	check_eq("X::static_fun(1)", run_script<int>(context, "X.static_fun(1)"), 1);
 	check_eq("X::static_lambda(1)", run_script<int>(context, "X.static_lambda(1)"), 4);
 	check_eq("X::extern_fun(5)", run_script<int>(context, "x = new X(); x.extern_fun(5)"), 6);

@@ -113,6 +113,7 @@ struct r_property_impl
 		v8::PropertyCallbackInfo<v8::Value> const& info,
 		getter_tag)
 	{
+		(void)name;
 		info.GetReturnValue().Set(to_v8(info.GetIsolate(), std::invoke(getter, obj)));
 	}
 
@@ -120,6 +121,7 @@ struct r_property_impl
 		v8::PropertyCallbackInfo<v8::Value> const& info,
 		getter_tag)
 	{
+		(void)name;
 		info.GetReturnValue().Set(to_v8(info.GetIsolate(), std::invoke(getter)));
 	}
 
@@ -136,18 +138,20 @@ struct r_property_impl
 		std::invoke(getter, name, info);
 	}
 
-	void get_impl(class_type& obj, v8::Local<v8::String>,
+	void get_impl(class_type& obj, v8::Local<v8::String> name,
 		v8::PropertyCallbackInfo<v8::Value> const& info,
 		isolate_getter_tag)
 	{
+		(void)name;
 		v8::Isolate* isolate = info.GetIsolate();
 
 		info.GetReturnValue().Set(to_v8(isolate, std::invoke(getter, obj, isolate)));
 	}
 
-	void get_impl(v8::Local<v8::String>,
+	void get_impl(v8::Local<v8::String> name,
 		v8::PropertyCallbackInfo<v8::Value> const& info, isolate_getter_tag)
 	{
+		(void)name;
 		v8::Isolate* isolate = info.GetIsolate();
 
 		info.GetReturnValue().Set(to_v8(isolate, std::invoke(getter, isolate)));
@@ -207,6 +211,7 @@ struct rw_property_impl
 		v8::PropertyCallbackInfo<void> const& info,
 		setter_tag)
 	{
+		(void)name;
 		using is_mem_fun = std::is_member_function_pointer<Set>;
 		using offset = std::integral_constant<size_t, is_mem_fun::value ? 0 : 1>;
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<0 + offset()>;
@@ -217,6 +222,7 @@ struct rw_property_impl
 		v8::PropertyCallbackInfo<void> const& info,
 		setter_tag)
 	{
+		(void)name;
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<0>;
 		std::invoke(setter, v8pp::from_v8<value_type>(info.GetIsolate(), value));
 	}
@@ -239,6 +245,7 @@ struct rw_property_impl
 		v8::PropertyCallbackInfo<void> const& info,
 		isolate_setter_tag)
 	{
+		(void)name;
 		using is_mem_fun = std::is_member_function_pointer<Set>;
 		using offset = std::integral_constant<size_t, is_mem_fun::value ? 0 : 1>;
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<1 + offset()>;
@@ -252,6 +259,7 @@ struct rw_property_impl
 		v8::PropertyCallbackInfo<void> const& info,
 		isolate_setter_tag)
 	{
+		(void)name;
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<1>;
 
 		v8::Isolate* isolate = info.GetIsolate();

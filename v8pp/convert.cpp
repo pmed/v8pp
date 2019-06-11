@@ -34,7 +34,6 @@ template struct convert<unsigned long long>;
 
 template struct convert<float>;
 template struct convert<double>;
-template struct convert<long double>;
 
 } // v8pp
 #endif

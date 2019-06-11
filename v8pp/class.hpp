@@ -135,9 +135,9 @@ public:
 		info.derivatives_.emplace_back(this);
 	}
 
-	bool cast(pointer_type& ptr, type_info const& type) const
+	bool cast(pointer_type& ptr, type_info const& actual_type) const
 	{
-		if (this->type == type || !ptr)
+		if (this->type == actual_type || !ptr)
 		{
 			return true;
 		}
@@ -145,7 +145,7 @@ public:
 		// fast way - search a direct parent
 		for (base_class_info const& base : bases_)
 		{
-			if (base.info.type == type)
+			if (base.info.type == actual_type)
 			{
 				ptr = base.cast(ptr);
 				return true;
@@ -156,7 +156,7 @@ public:
 		for (base_class_info const& base : bases_)
 		{
 			pointer_type p = base.cast(ptr);
-			if (base.info.cast(p, type))
+			if (base.info.cast(p, actual_type))
 			{
 				ptr = p;
 				return true;
@@ -187,13 +187,13 @@ public:
 		objects_.clear();
 	}
 
-	pointer_type find_object(object_id id, type_info const& type) const
+	pointer_type find_object(object_id id, type_info const& actual_type) const
 	{
 		auto it = objects_.find(Traits::key(id));
 		if (it != objects_.end())
 		{
 			pointer_type ptr = it->first;
-			if (cast(ptr, type))
+			if (cast(ptr, actual_type))
 			{
 				return ptr;
 			}

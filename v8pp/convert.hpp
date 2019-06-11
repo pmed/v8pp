@@ -291,7 +291,7 @@ struct convert<std::array<T, N>>
 				+ std::to_string(array->Length()));
 		}
 
-		from_type result;
+		from_type result = {};
 		for (uint32_t i = 0; i < N; ++i)
 		{
 			result[i] = convert<T>::from_v8(isolate, array->Get(context, i).ToLocalChecked());
@@ -595,8 +595,9 @@ template<typename T, typename U>
 auto from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value,U const& default_value)
 	-> decltype(convert<T>::from_v8(isolate, value))
 {
+	using return_type = decltype(convert<T>::from_v8(isolate, value));
 	return convert<T>::is_valid(isolate, value)?
-		convert<T>::from_v8(isolate, value) : default_value;
+		convert<T>::from_v8(isolate, value) : static_cast<return_type>(default_value);
 }
 
 inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, char const* str)
