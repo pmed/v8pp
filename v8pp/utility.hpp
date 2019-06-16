@@ -161,8 +161,7 @@ template<typename F>
 struct function_traits<F&&> : function_traits<F> {};
 
 template<typename F>
-using is_void_return = std::is_same<void,
-	typename function_traits<F>::return_type>;
+inline constexpr bool is_void_return = std::is_same_v<void, typename function_traits<F>::return_type>;
 
 template<typename F, bool is_class>
 struct is_callable_impl

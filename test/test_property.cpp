@@ -47,47 +47,29 @@ void external_set3(volatile X&, v8::Local<v8::String>, v8::Local<v8::Value>, v8:
 using namespace v8pp::detail;
 
 //property metafunctions
-static_assert(is_getter<decltype(&get1), 0>::value,
-	"getter function");
-static_assert(is_getter<decltype(&X::get1), 0>::value,
-	"getter member function");
-static_assert(is_getter<decltype(&external_get1), 1>::value,
-	"getter external function");
+static_assert(is_getter<decltype(&get1), 0>, "getter function");
+static_assert(is_getter<decltype(&X::get1), 0>, "getter member function");
+static_assert(is_getter<decltype(&external_get1), 1>, "getter external function");
 
-static_assert(is_setter<decltype(&set1), 0>::value,
-	"setter function");
-static_assert(is_setter<decltype(&X::set1), 0>::value,
-	"setter member function");
-static_assert(is_setter<decltype(&external_set1), 1>::value,
-	"setter external function");
+static_assert(is_setter<decltype(&set1), 0>, "setter function");
+static_assert(is_setter<decltype(&X::set1), 0>,	"setter member function");
+static_assert(is_setter<decltype(&external_set1), 1>, "setter external function");
 
-static_assert(is_isolate_getter<decltype(&get2), 0>::value,
-	"isolate getter function");
-static_assert(is_isolate_getter<decltype(&X::get2), 0>::value,
-	"isolate getter member function");
-static_assert(is_isolate_getter<decltype(&external_get2), 1>::value,
-	"isolate getter external function");
+static_assert(is_isolate_getter<decltype(&get2), 0>, "isolate getter function");
+static_assert(is_isolate_getter<decltype(&X::get2), 0>,	"isolate getter member function");
+static_assert(is_isolate_getter<decltype(&external_get2), 1>, "isolate getter external function");
 
-static_assert(is_isolate_setter<decltype(&set2), 0>::value,
-	"isolate setter function");
-static_assert(is_isolate_setter<decltype(&X::set2), 0>::value,
-	"isolate setter member function");
-static_assert(is_isolate_setter<decltype(&external_set2), 1>::value,
-	"isolate setter external function");
+static_assert(is_isolate_setter<decltype(&set2), 0>, "isolate setter function");
+static_assert(is_isolate_setter<decltype(&X::set2), 0>, "isolate setter member function");
+static_assert(is_isolate_setter<decltype(&external_set2), 1>, "isolate setter external function");
 
-static_assert(is_direct_getter<decltype(&get3), 0>::value,
-	"direct getter function");
-static_assert(is_direct_getter<decltype(&X::get3), 0>::value,
-	"direct getter member function");
-static_assert(is_direct_getter<decltype(&external_get3), 1>::value,
-	"direct getter external function");
+static_assert(is_direct_getter<decltype(&get3), 0>, "direct getter function");
+static_assert(is_direct_getter<decltype(&X::get3), 0>, "direct getter member function");
+static_assert(is_direct_getter<decltype(&external_get3), 1>, "direct getter external function");
 
-static_assert(is_direct_setter<decltype(&set3), 0>::value,
-	"direct setter function");
-static_assert(is_direct_setter<decltype(&X::set3), 0>::value,
-	"direct setter member function");
-static_assert(is_direct_setter<decltype(&external_set3), 1>::value,
-	"direct setter external function");
+static_assert(is_direct_setter<decltype(&set3), 0>, "direct setter function");
+static_assert(is_direct_setter<decltype(&X::set3), 0>, "direct setter member function");
+static_assert(is_direct_setter<decltype(&external_set3), 1>, "direct setter external function");
 
 template<typename Get, typename Set>
 void test_property(Get&& get, Set&& set)

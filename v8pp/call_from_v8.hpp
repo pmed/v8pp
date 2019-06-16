@@ -65,17 +65,13 @@ struct call_from_v8_traits
 	}
 };
 
-template<typename F, size_t Offset>
-using is_direct_args = std::integral_constant<bool,
-	call_from_v8_traits<F>::arg_count == (Offset + 1) &&
-	std::is_same<typename call_from_v8_traits<F>::template arg_type<Offset>,
-		v8::FunctionCallbackInfo<v8::Value> const&>::value>;
+template<typename F, size_t Offset, typename CallTraits = call_from_v8_traits<F>>
+inline constexpr bool is_direct_args = CallTraits::arg_count == (Offset + 1) &&
+	std::is_same_v<typename CallTraits::template arg_type<Offset>, v8::FunctionCallbackInfo<v8::Value> const&>;
 
-template<typename F, size_t Offset = 0>
-using is_first_arg_isolate = std::integral_constant<bool,
-	call_from_v8_traits<F>::arg_count != (Offset + 0) &&
-	std::is_same<typename call_from_v8_traits<F>::template arg_type<Offset +0>,
-		v8::Isolate*>::value>;
+template<typename F, size_t Offset = 0, typename CallTraits = call_from_v8_traits<F>>
+inline constexpr bool is_first_arg_isolate = CallTraits::arg_count != (Offset + 0) &&
+	std::is_same_v<typename CallTraits::template arg_type<Offset>, v8::Isolate*>;
 
 template<typename Traits, typename F, typename CallTraits, size_t ...Indices, typename ...ObjArg>
 decltype(auto) call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
@@ -89,8 +85,8 @@ decltype(auto) call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> c
 template<typename Traits, typename F, typename ...ObjArg>
 decltype(auto) call_from_v8(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args, ObjArg& ...obj)
 {
-	constexpr bool with_isolate = is_first_arg_isolate<F>::value;
-	if constexpr (is_direct_args<F, with_isolate>::value)
+	constexpr bool with_isolate = is_first_arg_isolate<F>;
+	if constexpr (is_direct_args<F, with_isolate>)
 	{
 		if constexpr (with_isolate)
 		{

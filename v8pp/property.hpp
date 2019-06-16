@@ -22,56 +22,36 @@ struct property;
 namespace detail {
 
 template<typename F, typename T, typename U = typename call_from_v8_traits<F>::template arg_type<0>>
-using function_with_object = std::integral_constant<bool,
-	std::is_member_function_pointer_v<F> ||
-	(std::is_lvalue_reference_v<U> && std::is_base_of_v<T, std::remove_cv_t<std::remove_reference_t<U>>>)
->;
+inline constexpr bool function_with_object = std::is_member_function_pointer_v<F> ||
+	(std::is_lvalue_reference_v<U> && std::is_base_of_v<T, std::remove_cv_t<std::remove_reference_t<U>>>);
 
-template<typename F, size_t Offset>
-using is_getter = std::integral_constant<bool,
-	call_from_v8_traits<F>::arg_count == 0 + Offset &&
-	!is_void_return<F>::value
->;
+template<typename F, size_t Offset, typename CallTraits = call_from_v8_traits<F>>
+inline constexpr bool is_getter = CallTraits::arg_count == 0 + Offset && !is_void_return<F>;
 
-template<typename F, size_t Offset>
-using is_direct_getter = std::integral_constant<bool,
-	call_from_v8_traits<F>::arg_count == 2 + Offset &&
-	std::is_same<typename call_from_v8_traits<F>::template arg_type<0 + Offset>,
-		v8::Local<v8::String>>::value &&
-	std::is_same<typename call_from_v8_traits<F>::template arg_type<1 + Offset>,
-		v8::PropertyCallbackInfo<v8::Value> const&>::value &&
-	is_void_return<F>::value
->;
+template<typename F, size_t Offset, typename CallTraits = call_from_v8_traits<F>>
+inline constexpr bool is_direct_getter = CallTraits::arg_count == 2 + Offset &&
+	std::is_same_v<typename CallTraits::template arg_type<0 + Offset>, v8::Local<v8::String>> &&
+	std::is_same_v<typename CallTraits::template arg_type<1 + Offset>, v8::PropertyCallbackInfo<v8::Value> const&> &&
+	is_void_return<F>;
 
-template<typename F, size_t Offset>
-using is_isolate_getter = std::integral_constant<bool,
-	call_from_v8_traits<F>::arg_count == 1 + Offset &&
-	is_first_arg_isolate<F, Offset>::value &&
-	!is_void_return<F>::value
->;
+template<typename F, size_t Offset, typename CallTraits = call_from_v8_traits<F>>
+inline constexpr bool is_isolate_getter = CallTraits::arg_count == 1 + Offset &&
+	is_first_arg_isolate<F, Offset> &&
+	!is_void_return<F>;
 
-template<typename F, size_t Offset>
-using is_setter = std::integral_constant<bool,
-	call_from_v8_traits<F>::arg_count == 1 + Offset
->;
+template<typename F, size_t Offset, typename CallTraits = call_from_v8_traits<F>>
+inline constexpr bool is_setter = CallTraits::arg_count == 1 + Offset;
 
-template<typename F, size_t Offset>
-using is_direct_setter = std::integral_constant<bool,
-	call_from_v8_traits<F>::arg_count == 3 + Offset &&
-	std::is_same<typename call_from_v8_traits<F>::template arg_type<0 + Offset>,
-		v8::Local<v8::String>>::value &&
-	std::is_same<typename call_from_v8_traits<F>::template arg_type<1 + Offset>,
-		v8::Local<v8::Value>>::value &&
-	std::is_same<typename call_from_v8_traits<F>::template arg_type<2 + Offset>,
-		v8::PropertyCallbackInfo<void> const&>::value &&
-	is_void_return<F>::value
->;
+template<typename F, size_t Offset, typename CallTraits = call_from_v8_traits<F>>
+inline constexpr bool is_direct_setter = CallTraits::arg_count == 3 + Offset &&
+	std::is_same_v<typename CallTraits::template arg_type<0 + Offset>, v8::Local<v8::String>> &&
+	std::is_same_v<typename CallTraits::template arg_type<1 + Offset>, v8::Local<v8::Value>> &&
+	std::is_same_v<typename CallTraits::template arg_type<2 + Offset>, v8::PropertyCallbackInfo<void> const&> &&
+	is_void_return<F>;
 
-template<typename F, size_t Offset>
-using is_isolate_setter = std::integral_constant<bool,
-	call_from_v8_traits<F>::arg_count == 2 + Offset &&
-	is_first_arg_isolate<F, Offset>::value
->;
+template<typename F, size_t Offset, typename CallTraits = call_from_v8_traits<F>>
+inline constexpr bool is_isolate_setter = CallTraits::arg_count == 2 + Offset &&
+	is_first_arg_isolate<F, Offset>;
 
 template<typename Get, typename ...ObjArg>
 void property_get(Get& getter, v8::Local<v8::String> name,
@@ -81,17 +61,17 @@ void property_get(Get& getter, v8::Local<v8::String> name,
 
 	v8::Isolate* isolate = info.GetIsolate();
 
-	if constexpr (is_direct_getter<Get, offset>::value)
+	if constexpr (is_direct_getter<Get, offset>)
 	{
 		(void)isolate;
 		std::invoke(getter, obj..., name, info);
 	}
-	else if constexpr (is_isolate_getter<Get, offset>::value)
+	else if constexpr (is_isolate_getter<Get, offset>)
 	{
 		(void)name;
 		info.GetReturnValue().Set(to_v8(isolate, std::invoke(getter, obj..., isolate)));
 	}
-	else if constexpr (is_getter<Get, offset>::value)
+	else if constexpr (is_getter<Get, offset>)
 	{
 		(void)name;
 		info.GetReturnValue().Set(to_v8(isolate, std::invoke(getter, obj...)));
@@ -114,18 +94,18 @@ void property_set(Set& setter, v8::Local<v8::String> name, v8::Local<v8::Value> 
 
 	v8::Isolate* isolate = info.GetIsolate();
 
-	if constexpr (is_direct_setter<Set, offset>::value)
+	if constexpr (is_direct_setter<Set, offset>)
 	{
 		(void)isolate;
 		std::invoke(setter, obj..., name, value, info);
 	}
-	else if constexpr (is_isolate_setter<Set, offset>::value)
+	else if constexpr (is_isolate_setter<Set, offset>)
 	{
 		(void)name;
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<1 + offset>;
 		std::invoke(setter, obj..., isolate, v8pp::from_v8<value_type>(isolate, value));
 	}
-	else if constexpr (is_setter<Set, offset>::value)
+	else if constexpr (is_setter<Set, offset>)
 	{
 		(void)name;
 		using value_type = typename call_from_v8_traits<Set>::template arg_type<0 + offset>;
