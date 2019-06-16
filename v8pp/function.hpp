@@ -98,16 +98,16 @@ auto invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
 	if constexpr (std::is_member_function_pointer<F>())
 	{
 		using class_type = std::decay_t<typename FTraits::class_type>;
-		auto ptr = class_<class_type, Traits>::unwrap_object(args.GetIsolate(), args.This());
-		if (!ptr)
+		auto obj = class_<class_type, Traits>::unwrap_object(args.GetIsolate(), args.This());
+		if (!obj)
 		{
 			throw std::runtime_error("method called on null instance");
 		}
-		return call_from_v8<Traits, F>(*ptr, std::forward<F>(external_data::get<F>(args.Data())), args);
+		return call_from_v8<Traits>(std::forward<F>(external_data::get<F>(args.Data())), args, *obj);
 	}
 	else
 	{
-		return call_from_v8<Traits, F>(std::forward<F>(external_data::get<F>(args.Data())), args);
+		return call_from_v8<Traits>(std::forward<F>(external_data::get<F>(args.Data())), args);
 	}
 }
 
