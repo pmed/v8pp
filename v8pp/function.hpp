@@ -25,15 +25,14 @@ class external_data
 public:
 	//TODO: allow non-capturing lambdas
 	template<typename T>
-	using is_bitcast_allowed = std::integral_constant<bool,
-		sizeof(T) <= sizeof(void*) &&
-		std::is_default_constructible<T>::value &&
-		std::is_trivially_copyable<T>::value>;
+	static constexpr bool is_bitcast_allowed = sizeof(T) <= sizeof(void*) &&
+		std::is_default_constructible_v<T> &&
+		std::is_trivially_copyable_v<T>;
 
 	template<typename T>
 	static v8::Local<v8::Value> set(v8::Isolate* isolate, T && value)
 	{
-		if constexpr (is_bitcast_allowed<T>::value)
+		if constexpr (is_bitcast_allowed<T>)
 		{
 			void* ptr;
 			memcpy(&ptr, &value, sizeof value);
@@ -66,7 +65,7 @@ public:
 	template<typename T>
 	static decltype(auto) get(v8::Local<v8::Value> value)
 	{
-		if constexpr (is_bitcast_allowed<T>::value)
+		if constexpr (is_bitcast_allowed<T>)
 		{
 			void* ptr = value.As<v8::External>()->Value();
 			T data;
