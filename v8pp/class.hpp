@@ -13,9 +13,7 @@
 #include <memory>
 #include <type_traits>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
-#include <list>
 
 #include "v8pp/config.hpp"
 #include "v8pp/factory.hpp"
@@ -93,7 +91,6 @@ public:
 		, bases_(std::move(src.bases_))
 		, derivatives_(std::move(src.derivatives_))
 		, objects_(std::move(src.objects_))
-		, unowned_objects_(std::move(src.unowned_objects_))
 		, isolate_(std::move(src.isolate_))
 		, func_(std::move(src.func_))
 		, js_func_(std::move(src.js_func_))
@@ -168,14 +165,14 @@ public:
 		return false;
 	}
 
-	void remove_object(object_id const& obj, bool call_dtor = true)
+	void remove_object(object_id const& obj)
 	{
 		auto it = objects_.find(Traits::key(obj));
 		assert(it != objects_.end() && "no object");
 		if (it != objects_.end())
 		{
 			v8::HandleScope scope(isolate_);
-			reset_object(*it, call_dtor);
+			reset_object(it->first, it->second);
 			objects_.erase(it);
 		}
 	}
@@ -183,9 +180,9 @@ public:
 	void remove_objects()
 	{
 		v8::HandleScope scope(isolate_);
-		for (auto& object : objects_)
+		for (auto& object_wrapped : objects_)
 		{
-			reset_object(object);
+			reset_object(object_wrapped.first, object_wrapped.second);
 		}
 		objects_.clear();
 	}
@@ -209,7 +206,7 @@ public:
 		auto it = objects_.find(ptr);
 		if (it != objects_.end())
 		{
-			return to_local(isolate_, it->second);
+			return to_local(isolate_, it->second.pobj);
 		}
 
 		v8::Local<v8::Object> result;
@@ -239,19 +236,15 @@ public:
 
 		obj->SetAlignedPointerInInternalField(0, Traits::pointer_id(object));
 		obj->SetAlignedPointerInInternalField(1, this);
-		if (!call_dtor) {
-			unowned_objects_.emplace(object);
-		}
 
 		v8::Global<v8::Object> pobj(isolate_, obj);
 		pobj.SetWeak(this, [](v8::WeakCallbackInfo<object_registry> const& data)
 		{
 			object_id object = data.GetInternalField(0);
 			object_registry* this_ = static_cast<object_registry*>(data.GetInternalField(1));
-			bool call_dtor = this_ == static_cast<object_registry*>(data.GetInternalField(2));
-			this_->remove_object(object, call_dtor);
+			this_->remove_object(object);
 		}, v8::WeakCallbackType::kInternalFields);
-		objects_.emplace(object, std::move(pobj));
+		objects_.emplace(object, wrapped_object{ std::move(pobj), call_dtor });
 
 		return scope.Escape(obj);
 	}
@@ -296,22 +289,19 @@ public:
 	}
 
 private:
-	void reset_object(std::pair<pointer_type const, v8::Global<v8::Object>>& object, bool call_dtor = true)
+	struct wrapped_object
 	{
-		if (!object.second.IsNearDeath())
+		v8::Global<v8::Object> pobj;
+		bool call_dtor;
+	};
+
+	void reset_object(pointer_type const& object, wrapped_object& wrapped)
+	{
+		if (wrapped.call_dtor)
 		{
-			v8::Local<v8::Object> obj = to_local(isolate_, object.second);
-			assert(obj->InternalFieldCount() == 2);
-			assert(obj->GetAlignedPointerFromInternalField(0) == Traits::pointer_id(object.first));
-			assert(obj->GetAlignedPointerFromInternalField(1) == this);
-			// remove internal fields to disable unwrapping for this V8 Object
-			obj->SetAlignedPointerInInternalField(0, nullptr);
-			obj->SetAlignedPointerInInternalField(1, nullptr);
-		}
-		if (unowned_objects_.find(object.first) == unowned_objects_.end()) {
-			dtor_(isolate_, object.first);
-		}
-		object.second.Reset();
+			dtor_(isolate_, object);
+		} 
+		wrapped.pobj.Reset();
 	}
 
 	struct base_class_info
@@ -328,9 +318,7 @@ private:
 
 	std::vector<base_class_info> bases_;
 	std::vector<object_registry*> derivatives_;
-
-	std::unordered_map<pointer_type, v8::Global<v8::Object>> objects_;
-	std::unordered_set<pointer_type> unowned_objects_;
+	std::unordered_map<pointer_type, wrapped_object> objects_;
 
 	v8::Isolate* isolate_;
 	v8::Global<v8::FunctionTemplate> func_;
