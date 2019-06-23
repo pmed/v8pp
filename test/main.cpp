@@ -109,7 +109,11 @@ int main(int argc, char const * argv[])
 
 	//v8::V8::InitializeICU();
 	v8::V8::InitializeExternalStartupData(argv[0]);
+#if V8_MAJOR_VERSION >= 7
+	std::unique_ptr<v8::Platform> platform(v8::platform::NewDefaultPlatform());
+#else
 	std::unique_ptr<v8::Platform> platform(v8::platform::CreateDefaultPlatform());
+#endif
 	v8::V8::InitializePlatform(platform.get());
 	v8::V8::Initialize();
 
