@@ -24,8 +24,6 @@ namespace v8pp {
 
 namespace detail {
 
-std::string pointer_str(void const* ptr);
-
 struct class_info
 {
 	type_info const type;

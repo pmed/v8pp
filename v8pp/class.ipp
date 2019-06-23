@@ -1,12 +1,12 @@
 #include "v8pp/class.hpp"
 
-#include <cstdio>
+#include <cstdio> // for snprintf
 
 namespace v8pp {
 
 namespace detail {
 
-V8PP_IMPL std::string pointer_str(void const* ptr)
+static V8PP_IMPL std::string pointer_str(void const* ptr)
 {
 	std::string buf(sizeof(void*) * 2 + 3, 0); // +3 for 0x and \0 terminator
 	int const len =
