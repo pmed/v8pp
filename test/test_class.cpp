@@ -71,6 +71,15 @@ static X_ptr create_X(v8::FunctionCallbackInfo<v8::Value> const& args)
 	return x;
 }
 
+template<typename Traits, typename E_ptr = typename v8pp::class_<E, Traits>::object_pointer_type>
+static E_ptr create_E(v8::FunctionCallbackInfo<v8::Value> const& args)
+{
+	E_ptr e(new E);
+	if (args.Length() == 0)
+		v8pp::throw_ex(args.GetIsolate(), "MyException");
+	return e;
+}
+
 struct Y : X
 {
 	static int instance_count;
@@ -87,6 +96,8 @@ struct Y : X
 int Y::instance_count = 0;
 
 struct Z {};
+
+struct E {};
 
 namespace v8pp {
 template<>
@@ -174,6 +185,22 @@ void test_class_()
 			})
 		;
 
+	auto const E_ctor = [](v8::FunctionCallbackInfo<v8::Value> const& args)
+	{
+		return create_E<Traits>(args);
+	};
+
+	auto const E_dtor = [](v8::Isolate* isolate, typename Traits::template object_pointer_type<E> const& obj)
+	{
+		Traits::destroy(obj);
+	};
+
+	v8pp::class_<E, Traits> E_class(isolate, E_dtor);
+	E_class
+		.template ctor<v8::FunctionCallbackInfo<v8::Value> const&>(E_ctor)
+		.set_const("konst", 42)
+		;
+
 	check_ex<std::runtime_error>("already wrapped class X", [isolate]()
 	{
 		v8pp::class_<X, Traits> X_class(isolate);
@@ -190,6 +217,7 @@ void test_class_()
 	context
 		.set("X", X_class)
 		.set("Y", Y_class)
+		.set("E", E_class)
 		;
 
 	check_eq("C++ exception from X ctor",
@@ -295,6 +323,9 @@ void test_class_()
 	v8pp::class_<Y, Traits>::destroy(isolate);
 	check_eq("Y count after class_<Y>::destroy", Y::instance_count,
 		1 + 2 * use_shared_ptr); // y1 + (y2 + y3 when use_shared_ptr)
+
+	check_eq("E ctor class with exception",    run_script<std::string>(context, "retError = ""; try { var e = new E(); } catch(err) { retError = err; } retError"),  "MyException");
+	check_eq("E ctor class without exception", run_script<std::string>(context, "retError = ""; try { var e = new E(1); } catch(err) { retError = err; } retError"), "");
 }
 
 template<typename Traits>
