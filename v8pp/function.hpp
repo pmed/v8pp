@@ -92,7 +92,7 @@ private:
 };
 
 template<typename Traits, typename F, typename FTraits>
-auto invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
+decltype(auto) invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	if constexpr (std::is_member_function_pointer<F>())
 	{
@@ -102,11 +102,11 @@ auto invoke(v8::FunctionCallbackInfo<v8::Value> const& args)
 		{
 			throw std::runtime_error("method called on null instance");
 		}
-		return call_from_v8<Traits>(std::forward<F>(external_data::get<F>(args.Data())), args, *obj);
+		return (call_from_v8<Traits>(std::forward<F>(external_data::get<F>(args.Data())), args, *obj));
 	}
 	else
 	{
-		return call_from_v8<Traits>(std::forward<F>(external_data::get<F>(args.Data())), args);
+		return (call_from_v8<Traits>(std::forward<F>(external_data::get<F>(args.Data())), args));
 	}
 }
 
