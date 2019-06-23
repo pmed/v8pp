@@ -234,35 +234,32 @@ public:
 		return *this;
 	}
 
-	/// Set C++ class member function
-	template<typename Method>
-	typename std::enable_if<std::is_member_function_pointer<Method>::value, class_&>::type
-	function(std::string_view name, Method mem_func, v8::PropertyAttribute attr = v8::None)
+	/// Set class member function, or static function, or lambda
+	template<typename Function>
+	class_& function(std::string_view name, Function&& func, v8::PropertyAttribute attr = v8::None)
 	{
-		v8::HandleScope scope(isolate());
+		constexpr bool is_mem_fun = std::is_member_function_pointer_v<Function>;
+	
+		static_assert(is_mem_fun || detail::is_callable<Function>::value,
+			"Function must be pointer to member function or callable object");
 
-		using mem_func_type =
-			typename detail::function_traits<Method>::template pointer_type<T>;
-
-		v8::Local<v8::Name> v8_name = v8pp::to_v8(isolate(), name);
-		v8::Local<v8::Data> wrapped_fun = wrap_function_template<Traits>(isolate(), mem_func_type(mem_func));
-
-		class_info_.class_function_template()->PrototypeTemplate()->Set(v8_name, wrapped_fun, attr);
-		return *this;
-	}
-
-	/// Set static class function
-	template<typename Function, typename Func = typename std::decay<Function>::type>
-	typename std::enable_if<detail::is_callable<Func>::value, class_&>::type
-	function(std::string_view name, Function&& func, v8::PropertyAttribute attr = v8::None)
-	{
 		v8::HandleScope scope(isolate());
 
 		v8::Local<v8::Name> v8_name = v8pp::to_v8(isolate(), name);
-		v8::Local<v8::Data> wrapped_fun = wrap_function_template<Traits>(isolate(), std::forward<Function>(func));
+		v8::Local<v8::Data> wrapped_fun;
+
+		if constexpr (is_mem_fun)
+		{
+			using mem_func_type = typename detail::function_traits<Function>::template pointer_type<T>;
+			wrapped_fun = wrap_function_template<Traits>(isolate(), mem_func_type(func));
+		}
+		else
+		{
+			wrapped_fun = wrap_function_template<Traits>(isolate(), std::forward<Function>(func));
+			class_info_.js_function_template()->Set(v8_name, wrapped_fun, attr);
+		}
 
 		class_info_.class_function_template()->PrototypeTemplate()->Set(v8_name, wrapped_fun, attr);
-		class_info_.js_function_template()->Set(v8_name, wrapped_fun, attr);
 		return *this;
 	}
 
