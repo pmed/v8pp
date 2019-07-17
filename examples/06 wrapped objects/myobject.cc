@@ -13,7 +13,7 @@
 
 using namespace v8;
 
-void MyObject::Init(Handle<Object> exports) {
+void MyObject::Init(Local<Object> exports) {
   Isolate* isolate = Isolate::GetCurrent();
 
   // Prepare class binding
