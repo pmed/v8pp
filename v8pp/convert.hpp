@@ -622,13 +622,13 @@ inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str)
 	return convert<std::u16string_view>::to_v8(isolate, std::u16string_view(str));
 }
 
-inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str, size_t len)
+inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str, size_t len)
 {
 	return convert<std::u16string_view>::to_v8(isolate, std::u16string_view(str, len));
 }
 
 template<size_t N>
-v8::Handle<v8::String> to_v8(v8::Isolate* isolate,
+v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 	char16_t const (&str)[N], size_t len = N - 1)
 {
 	return convert<std::u16string_view>::to_v8(isolate, std::u16string_view(str, len));

@@ -16,7 +16,7 @@
 
 using namespace v8;
 
-Handle<Object> CreateObject(const FunctionCallbackInfo<Value>& args) {
+Local<Object> CreateObject(const FunctionCallbackInfo<Value>& args) {
   MyObject* obj = new MyObject(args);
   return v8pp::class_<MyObject>::import_external(args.GetIsolate(), obj);
 }
@@ -25,7 +25,7 @@ double Add(MyObject const& obj1, MyObject const& obj2) {
   return obj1.value() + obj2.value();
 }
 
-void InitAll(Handle<Object> exports) {
+void InitAll(Local<Object> exports) {
   Isolate* isolate = Isolate::GetCurrent();
 
   v8pp::class_<MyObject> MyObject_class(isolate);

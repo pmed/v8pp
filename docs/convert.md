@@ -15,13 +15,13 @@ v8::Local<v8::Value>  v8_int = v8pp::to_v8(isolate, 42);
 v8::Local<v8::String> v8_str = v8pp::to_v8(isolate, "hello");
 ```
 
-The opposite function template `v8pp::from_v8<T>(v8::Isolate*, v8::Handle<v8::Value> value)`
+The opposite function template `v8pp::from_v8<T>(v8::Isolate*, v8::Local<v8::Value> value)`
 converts a V8 value to a C++ value of explicitly declared type `T`.
 
 If source V8 value is empty or not convertible to the specified C++ type,
 a `std::invalid_argument` exception would be thrown.
 
-An overloaded function `v8pp::from_v8<T>(v8::Isolate*, v8::Handle<v8::Value>, T const& default_value)`
+An overloaded function `v8pp::from_v8<T>(v8::Isolate*, v8::Local<v8::Value>, T const& default_value)`
 converts a V8 value or returns `default_value` on conversion error.
 
 ```c++
@@ -142,13 +142,13 @@ struct convert
 	using from_type = T;
 
 	// V8 return type for v8pp::to_v8() function
-	using to_type = v8::Handle<v8::Value>;
+	using to_type = v8::Local<v8::Value>;
 
 	// Is V8 value valid to convert from?
-	static bool is_valid(v8::Isolate* isolate, v8::Handle<v8::Value> value);
+	static bool is_valid(v8::Isolate* isolate, v8::Local<v8::Value> value);
 
 	// Convert V8 value to C++
-	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value);
+	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value);
 
 	// Convert C++ value to V8
 	static to_type to_v8(v8::Isolate* isolate, T const& value);
@@ -168,15 +168,15 @@ template<>
 struct v8pp::convert<Vector3>
 {
 	using from_type = Vector3;
-	using to_type = v8::Handle<v8::Array>;
+	using to_type = v8::Local<v8::Array>;
 
-	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
+	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
 	{
 		return !value.IsEmpty() && value->IsArray()
 			&& value.As<v8::Array>()->Length() == 3;
 	}
 
-	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
 		if (!is_valid(isolate, value))
 		{
@@ -228,15 +228,15 @@ template<typename T>
 struct v8pp::convert<Vector3<T>>
 {
 	using from_type = Vector3<T>;
-	using to_type = v8::Handle<v8::Array>;
+	using to_type = v8::Local<v8::Array>;
 
-	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
+	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
 	{
 		return !value.IsEmpty() && value->IsArray()
 			&& value.As<v8::Array>()->Length() == 3;
 	}
 
-	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
 		if (!is_valid(isolate, value))
 		{

@@ -20,7 +20,7 @@ void RunCallback(Local<Function> cb) {
   v8pp::call_v8(isolate, cb, isolate->GetCurrentContext()->Global(), "hello world");
 }
 
-void Init(Handle<Object> exports, Handle<Object> module) {
+void Init(Local<Object> exports, Local<Object> module) {
   Isolate* isolate = Isolate::GetCurrent();
   v8pp::set_option(isolate, module, "exports", v8pp::wrap_function(isolate, "exports", &RunCallback));
 }

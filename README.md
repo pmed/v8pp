@@ -80,7 +80,7 @@ The library is suitable to make [Node.js](http://nodejs.org/) and [io.js](https:
 
 ```c++
 
-void RegisterModule(v8::Handle<v8::Object> exports)
+void RegisterModule(v8::Local<v8::Object> exports)
 {
     v8pp::module addon(v8::Isolate::GetCurrent());
 
@@ -122,7 +122,7 @@ void log(v8::FunctionCallbackInfo<v8::Value> const& args)
     std::cout << std::endl;
 }
 
-v8::Handle<v8::Value> init(v8::Isolate* isolate)
+v8::Local<v8::Value> init(v8::Isolate* isolate)
 {
     v8pp::module m(isolate);
     m.function("log", &log);
@@ -219,7 +219,7 @@ public:
         return stream_.good();
     }
 
-    v8::Handle<v8::Value> getline(v8::Isolate* isolate)
+    v8::Local<v8::Value> getline(v8::Isolate* isolate)
     {
         if ( stream_.good() && ! stream_.eof())
         {
@@ -234,7 +234,7 @@ public:
     }
 };
 
-v8::Handle<v8::Value> init(v8::Isolate* isolate)
+v8::Local<v8::Value> init(v8::Isolate* isolate)
 {
     v8::EscapableHandleScope scope(isolate);
 
@@ -326,7 +326,7 @@ console.log("exit")
 // Memory for C++ class will remain when JavaScript object is deleted.
 // Useful for classes you only wish to inject.
 typedef v8pp::class_<my_class> my_class_wrapper(isolate);
-v8::Handle<v8::Value> val = my_class_wrapper::reference_external(&my_class::instance());
+v8::Local<v8::Value> val = my_class_wrapper::reference_external(&my_class::instance());
 // Assuming my_class::instance() returns reference to class
 ```
 
@@ -336,7 +336,7 @@ v8::Handle<v8::Value> val = my_class_wrapper::reference_external(&my_class::inst
 // Memory for c++ object will be reclaimed by JavaScript using "delete" when
 // JavaScript class is deleted.
 typedef v8pp::class_<my_class> my_class_wrapper(isolate);
-v8::Handle<v8::Value> val = my_class_wrapper::import_external(new my_class);
+v8::Local<v8::Value> val = my_class_wrapper::import_external(new my_class);
 ```
 
 ## Compile-time configuration

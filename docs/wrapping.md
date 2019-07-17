@@ -6,7 +6,7 @@ and `v8::FunctionTemplate` to call C++ functions from JavaScript.
 ## Wrapping C++ functions
 
 To create a new `v8::FunctionTemplate` for an arbitrary C++ function `func`
-use a function template `v8::Handle<v8::FunctionTemplate> v8pp::wrap_function_template(v8::Isolate* isolate, F func)`
+use a function template `v8::Local<v8::FunctionTemplate> v8pp::wrap_function_template(v8::Isolate* isolate, F func)`
 
 When a function generated from such a function template is being invoked in
 JavaScript, all function arguments will be converted from `v8::Value`s to
@@ -17,7 +17,7 @@ that returns `void` a `v8::Undefined` will be returned.
 If the wrapped C++ function throws an exception, a `v8::Exception::Error` will
 be returned into calling JavaScript code.
 
-A function `v8::Handle<v8::Function> v8pp::wrap_function(v8::Isolate* isolate, char const* name, F func)`
+A function `v8::Local<v8::Function> v8pp::wrap_function(v8::Isolate* isolate, char const* name, F func)`
 is used to wrap a C++ function to a `v8::Function` value. The V8 function will
 be created as anonymous when `nullptr` or `""` string literal is supplied for
 its `name`:
