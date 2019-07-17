@@ -15,7 +15,7 @@ double Add(double arg1, double arg2) {
   return arg1 + arg2;
 }
 
-void Init(Handle<Object> exports) {
+void Init(Local<Object> exports) {
   v8pp::module addon(Isolate::GetCurrent());
   addon.set("add", &Add);
   exports->SetPrototype(Isolate::GetCurrent()->GetCurrentContext(), addon.new_instance());

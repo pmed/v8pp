@@ -15,7 +15,7 @@ char const* Method() {
   return "world";
 }
 
-void init(Handle<Object> exports) {
+void init(Local<Object> exports) {
   v8pp::module addon(Isolate::GetCurrent());
   addon.set("hello", &Method);
   exports->SetPrototype(Isolate::GetCurrent()->GetCurrentContext(), addon.new_instance());

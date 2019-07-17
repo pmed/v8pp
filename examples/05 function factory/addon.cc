@@ -16,7 +16,7 @@ std::string MyFunction() {
   return "hello world";
 }
 
-Handle<Function> CreateFunction(Isolate* isolate) {
+Local<Function> CreateFunction(Isolate* isolate) {
   EscapableHandleScope scope(isolate);
 
   Local<FunctionTemplate> tpl = v8pp::wrap_function_template(isolate, &MyFunction);
@@ -27,7 +27,7 @@ Handle<Function> CreateFunction(Isolate* isolate) {
   return scope.Escape(fn);
 }
 
-void Init(Handle<Object> exports, Handle<Object> module) {
+void Init(Local<Object> exports, Local<Object> module) {
   Isolate* isolate = Isolate::GetCurrent();
   v8pp::set_option(isolate, module, "exports", v8pp::wrap_function(isolate, "exports", &CreateFunction));
 }

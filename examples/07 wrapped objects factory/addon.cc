@@ -15,12 +15,12 @@
 
 using namespace v8;
 
-static Handle<Object> CreateObject(const FunctionCallbackInfo<Value>& args) {
+static Local<Object> CreateObject(const FunctionCallbackInfo<Value>& args) {
   MyObject* obj = new MyObject(args);
   return v8pp::class_<MyObject>::import_external(args.GetIsolate(), obj);
 }
 
-void InitAll(Handle<Object> exports, Handle<Object> module) {
+void InitAll(Local<Object> exports, Local<Object> module) {
   MyObject::Init();
 
   Isolate* isolate = Isolate::GetCurrent();
