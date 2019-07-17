@@ -647,13 +647,13 @@ v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 	return convert<char const*>::to_v8(isolate, str, len);
 }
 
-inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str, size_t len)
+inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str, size_t len)
 {
 	return convert<char16_t const*>::to_v8(isolate, str, len);
 }
 
 template<size_t N>
-v8::Handle<v8::String> to_v8(v8::Isolate* isolate,
+v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 	char16_t const (&str)[N], size_t len = N - 1)
 {
 	return convert<char16_t const*>::to_v8(isolate, str, len);

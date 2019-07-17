@@ -32,7 +32,7 @@ struct persistent : public v8::Global<T>
 	}
 
 	template<typename S>
-	persistent(v8::Isolate* isolate, v8::Handle<S> const& handle)
+	persistent(v8::Isolate* isolate, v8::Local<S> const& handle)
 		: base_class(isolate, handle)
 	{
 	}
