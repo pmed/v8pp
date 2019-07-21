@@ -58,13 +58,10 @@ struct call_from_v8_traits
 	>;
 
 	template<size_t Index, typename Traits>
-	using arg_convert = arg_converter<arg_type<Index>, Traits>;
-
-	template<size_t Index, typename Traits>
 	static decltype(auto) arg_from_v8(v8::FunctionCallbackInfo<v8::Value> const& args)
 	{
 		// might be reference
-		return (arg_convert<Index, Traits>::from_v8(args.GetIsolate(), args[Index - offset]));
+		return (arg_converter<arg_type<Index>, Traits>::from_v8(args.GetIsolate(), args[Index - offset]));
 	}
 };
 
