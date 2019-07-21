@@ -39,15 +39,11 @@ struct call_from_v8_traits
 		using type = void;
 	};
 
-	template<size_t Index>
-	using arg_type = typename tuple_element<Index + is_mem_fun,
-		Index < (arg_count + Offset)>::type;
-
-	template<size_t Index, typename Traits, typename Arg = arg_type<Index>,
+	template<typename Arg, typename Traits,
 		typename T = typename std::remove_reference<Arg>::type,
 		typename U = typename std::remove_pointer<T>::type
 	>
-	using arg_convert = typename std::conditional<
+	using arg_converter = typename std::conditional<
 		is_wrapped_class<typename std::remove_cv<U>::type>::value,
 		typename std::conditional<
 			std::is_pointer<T>::value,
@@ -56,6 +52,13 @@ struct call_from_v8_traits
 		>::type,
 		convert<typename std::remove_cv<T>::type>
 	>::type;
+
+	template<size_t Index>
+	using arg_type = typename tuple_element<Index + is_mem_fun,
+		Index < (arg_count + Offset)>::type;
+
+	template<size_t Index, typename Traits>
+	using arg_convert = arg_converter<arg_type<Index>, Traits>;
 
 	template<size_t Index, typename Traits>
 	static decltype(arg_convert<Index, Traits>::from_v8(std::declval<v8::Isolate*>(), std::declval<v8::Local<v8::Value>>()))
