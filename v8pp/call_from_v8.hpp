@@ -45,10 +45,10 @@ struct call_from_v8_traits
 	using arg_type = typename tuple_element<Index + is_mem_fun,
 		Index < (arg_count + offset)>::type;
 
-	template<size_t Index, typename Traits, typename Arg = arg_type<Index>,
+	template<typename Arg, typename Traits,
 		typename T = std::remove_reference_t<Arg>,
 		typename U = std::remove_pointer_t<T>>
-	using arg_convert = typename std::conditional_t<
+	using arg_converter = typename std::conditional_t<
 		is_wrapped_class<std::remove_cv_t<U>>::value,
 		std::conditional_t<std::is_pointer_v<T>,
 			typename Traits::template convert_ptr<U>,
@@ -56,6 +56,9 @@ struct call_from_v8_traits
 		>,
 		convert<std::remove_cv_t<T>>
 	>;
+
+	template<size_t Index, typename Traits>
+	using arg_convert = arg_converter<arg_type<Index>, Traits>;
 
 	template<size_t Index, typename Traits>
 	static decltype(auto) arg_from_v8(v8::FunctionCallbackInfo<v8::Value> const& args)

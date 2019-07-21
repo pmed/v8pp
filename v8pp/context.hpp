@@ -68,7 +68,7 @@ public:
 	{
 		using Fun = typename std::decay<Function>::type;
 		static_assert(detail::is_callable<Fun>::value, "Function must be callable");
-		return value(name, wrap_function<Traits>(isolate_, name, std::forward<Function>(func)));
+		return value(name, wrap_function<Function, Traits>(isolate_, name, std::forward<Function>(func)));
 	}
 
 	/// Set class to the context global object

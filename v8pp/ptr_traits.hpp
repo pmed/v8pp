@@ -47,9 +47,15 @@ struct raw_ptr_traits
 	}
 
 	template<typename T>
-	static void destroy(object_pointer_type<T> const& object)
+	static object_pointer_type<T> clone(T const& src)
 	{
-		delete object;
+		return new T(src);
+	}
+
+	template<typename T>
+	static void destroy(object_pointer_type<T> const& ptr)
+	{
+		delete ptr;
 	}
 
 	template<typename T>
@@ -89,6 +95,12 @@ struct shared_ptr_traits
 	static object_pointer_type<T> create(Args&&... args)
 	{
 		return std::make_shared<T>(std::forward<Args>(args)...);
+	}
+
+	template<typename T>
+	static object_pointer_type<T> clone(T const& src)
+	{
+		return std::make_shared<T>(src);
 	}
 
 	template<typename T>

@@ -128,7 +128,9 @@ void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 		}
 		else
 		{
-			args.GetReturnValue().Set(to_v8(isolate, invoke<Traits, F, FTraits>(args)));
+			using return_type = typename FTraits::return_type;
+			using converter = typename call_from_v8_traits<F>::template arg_converter<return_type, Traits>;
+			args.GetReturnValue().Set(converter::to_v8(isolate, invoke<Traits, F, FTraits>(args)));
 		}
 	}
 	catch (std::exception const& ex)
@@ -140,7 +142,7 @@ void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 } // namespace detail
 
 /// Wrap C++ function into new V8 function template
-template<typename Traits, typename F>
+template<typename F, typename Traits = raw_ptr_traits>
 v8::Local<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&& func)
 {
 	using F_type = typename std::decay<F>::type;
@@ -149,16 +151,10 @@ v8::Local<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&&
 		detail::external_data::set(isolate, std::forward<F_type>(func)));
 }
 
-template<typename F>
-v8::Handle<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&& func)
-{
-	return wrap_function_template<raw_ptr_traits>(isolate, std::forward<F>(func));
-}
-
 /// Wrap C++ function into new V8 function
 /// Set nullptr or empty string for name
 /// to make the function anonymous
-template<typename Traits, typename F>
+template<typename F, typename Traits = raw_ptr_traits>
 v8::Local<v8::Function> wrap_function(v8::Isolate* isolate, std::string_view name, F&& func)
 {
 	using F_type = typename std::decay<F>::type;
@@ -170,12 +166,6 @@ v8::Local<v8::Function> wrap_function(v8::Isolate* isolate, std::string_view nam
 		fn->SetName(to_v8(isolate, name));
 	}
 	return fn;
-}
-
-template<typename F>
-v8::Handle<v8::Function> wrap_function(v8::Isolate* isolate, std::string_view name, F&& func)
-{
-	return wrap_function<raw_ptr_traits>(isolate, name, std::forward<F>(func));
 }
 
 } // namespace v8pp

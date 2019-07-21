@@ -491,6 +491,7 @@ struct convert<T, typename std::enable_if<is_wrapped_class<T>::value>::type>
 {
 	using from_type = T&;
 	using to_type = v8::Local<v8::Object>;
+	using class_type = typename std::remove_cv<T>::type;
 
 	static bool is_valid(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
@@ -503,7 +504,8 @@ struct convert<T, typename std::enable_if<is_wrapped_class<T>::value>::type>
 		{
 			throw invalid_argument(isolate, value, "Object");
 		}
-		if (T* object = convert<T*>::from_v8(isolate, value))
+		T* object = class_<class_type, raw_ptr_traits>::unwrap_object(isolate, value);
+		if (object)
 		{
 			return *object;
 		}
@@ -512,7 +514,7 @@ struct convert<T, typename std::enable_if<is_wrapped_class<T>::value>::type>
 
 	static to_type to_v8(v8::Isolate* isolate, T const& value)
 	{
-		v8::Local<v8::Object> result = convert<T*>::to_v8(isolate, &value);
+		v8::Local<v8::Object> result = class_<class_type, raw_ptr_traits>::find_object(isolate, value);
 		if (!result.IsEmpty()) return result;
 		throw std::runtime_error("failed to wrap C++ object");
 	}
@@ -550,6 +552,7 @@ struct convert<T, ref_from_shared_ptr>
 {
 	using from_type = T&;
 	using to_type = v8::Local<v8::Object>;
+	using class_type = typename std::remove_cv<T>::type;
 
 	static bool is_valid(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
@@ -562,7 +565,8 @@ struct convert<T, ref_from_shared_ptr>
 		{
 			throw invalid_argument(isolate, value, "Object");
 		}
-		if (std::shared_ptr<T> object = convert<std::shared_ptr<T>>::from_v8(isolate, value))
+		std::shared_ptr<T> object = class_<class_type, shared_ptr_traits>::unwrap_object(isolate, value);
+		if (object)
 		{
 //			assert(object.use_count() > 1);
 			return *object;
@@ -572,7 +576,7 @@ struct convert<T, ref_from_shared_ptr>
 
 	static to_type to_v8(v8::Isolate* isolate, T const& value)
 	{
-		v8::Local<v8::Object> result = convert<std::shared_ptr<T>>::to_v8(isolate, &value);
+		v8::Local<v8::Object> result = class_<class_type, shared_ptr_traits>::find_object(isolate, value);
 		if (!result.IsEmpty()) return result;
 		throw std::runtime_error("failed to wrap C++ object");
 	}

@@ -70,7 +70,7 @@ public:
 	{
 		using Fun = typename std::decay<Function>::type;
 		static_assert(detail::is_callable<Fun>::value, "Function must be callable");
-		return value(name, wrap_function_template<Traits>(isolate_, std::forward<Function>(func)));
+		return value(name, wrap_function_template<Function, Traits>(isolate_, std::forward<Function>(func)));
 	}
 
 	/// Set a C++ variable in the module with specified name

@@ -70,6 +70,9 @@ public:
 		return to_local(isolate_, js_func_);
 	}
 
+	void set_auto_wrap_objects(bool auto_wrap) { auto_wrap_objects_ = auto_wrap; }
+	bool auto_wrap_objects() const { return auto_wrap_objects_; }
+
 	void set_ctor(ctor_function&& ctor) { ctor_ = std::move(ctor); }
 
 	void add_base(object_registry& info, cast_function cast);
@@ -116,6 +119,7 @@ private:
 
 	ctor_function ctor_;
 	dtor_function dtor_;
+	bool auto_wrap_objects_;
 };
 
 class classes
@@ -234,6 +238,13 @@ public:
 		return *this;
 	}
 
+	/// Enable new C++ objects auto-wrapping
+	class_& auto_wrap_objects(bool auto_wrap = true)
+	{
+		class_info_.set_auto_wrap_objects(auto_wrap);
+		return *this;
+	}
+
 	/// Set class member function, or static function, or lambda
 	template<typename Function>
 	class_& function(std::string_view name, Function&& func, v8::PropertyAttribute attr = v8::None)
@@ -251,11 +262,11 @@ public:
 		if constexpr (is_mem_fun)
 		{
 			using mem_func_type = typename detail::function_traits<Function>::template pointer_type<T>;
-			wrapped_fun = wrap_function_template<Traits>(isolate(), mem_func_type(func));
+			wrapped_fun = wrap_function_template<mem_func_type, Traits>(isolate(), mem_func_type(func));
 		}
 		else
 		{
-			wrapped_fun = wrap_function_template<Traits>(isolate(), std::forward<Function>(func));
+			wrapped_fun = wrap_function_template<Function, Traits>(isolate(), std::forward<Function>(func));
 			class_info_.js_function_template()->Set(v8_name, wrapped_fun, attr);
 		}
 
@@ -409,6 +420,24 @@ public:
 		using namespace detail;
 		return classes::find<Traits>(isolate, type_id<T>())
 			.find_v8_object(Traits::const_pointer_cast(obj));
+	}
+
+	/// Find V8 object handle for a wrapped C++ object, may return empty handle on fail
+	/// or wrap a copy of the obj if class_.auto_wrap_objects()
+	static v8::Local<v8::Object> find_object(v8::Isolate* isolate, T const& obj)
+	{
+		using namespace detail;
+		detail::object_registry<Traits>& class_info = classes::find<Traits>(isolate, type_id<T>());
+		v8::Local<v8::Object> wrapped_object = class_info.find_v8_object(Traits::key(const_cast<T*>(&obj)));
+		if (wrapped_object.IsEmpty() && class_info.auto_wrap_objects())
+		{
+			object_pointer_type clone = Traits::clone(obj);
+			if (clone)
+			{
+				wrapped_object = class_info.wrap_object(clone, true);
+			}
+		}
+		return wrapped_object;
 	}
 
 	/// Destroy wrapped C++ object
