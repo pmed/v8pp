@@ -407,6 +407,33 @@ void test_const_instance_in_module()
 	check_eq("xconst.f()", run_script<int>(context, "api.xconst.f(1)"), 1);
 }
 
+template<typename Traits>
+void test_auto_wrap_objects()
+{
+	struct X
+	{
+		int x;
+		explicit X(int x) : x(x) {}
+		int get_x() const { return x; }
+	};
+
+	v8pp::context context;
+	v8::Isolate* isolate = context.isolate();
+	v8::HandleScope scope(isolate);
+
+	v8pp::class_<X, Traits> X_class(isolate);
+	X_class
+		.template ctor<int>()
+		.auto_wrap_objects(true)
+		.set("x", v8pp::property(&X::get_x));
+
+	auto f0 = [](int x) { return X(x); };
+	auto f = v8pp::wrap_function<decltype(f0), Traits>(isolate, "f", std::move(f0));
+	context.set("X", X_class);
+	context.set("f", f);
+	check_eq("return X object", run_script<int>(context, "obj = f(123); obj.x"), 123);
+}
+
 void test_class()
 {
 	test_class_<v8pp::raw_ptr_traits>();
@@ -417,4 +444,7 @@ void test_class()
 
 	test_const_instance_in_module<v8pp::raw_ptr_traits>();
 	test_const_instance_in_module<v8pp::shared_ptr_traits>();
+
+	test_auto_wrap_objects<v8pp::raw_ptr_traits>();
+	test_auto_wrap_objects<v8pp::shared_ptr_traits>();
 }

@@ -44,6 +44,7 @@ V8PP_IMPL object_registry<Traits>::object_registry(v8::Isolate* isolate, type_in
 	, isolate_(isolate)
 	, ctor_() // no wrapped class constructor available by default
 	, dtor_(std::move(dtor))
+	, auto_wrap_objects_(false)
 {
 	v8::HandleScope scope(isolate_);
 

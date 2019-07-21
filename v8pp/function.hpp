@@ -154,7 +154,7 @@ template<typename Traits, typename F>
 void forward_ret(v8::FunctionCallbackInfo<v8::Value> const& args, std::false_type /*is_void_return*/)
 {
 	using return_type = typename function_traits<F>::return_type;
-	using converter = call_from_v8_traits<F>::arg_converter<return_type, Traits>;
+	using converter = typename call_from_v8_traits<F>::template arg_converter<return_type, Traits>;
 	args.GetReturnValue().Set(converter::to_v8(args.GetIsolate(),
 		invoke<Traits, F>(args, std::is_member_function_pointer<F>())));
 }
