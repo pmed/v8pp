@@ -325,8 +325,8 @@ console.log("exit")
 ```c++
 // Memory for C++ class will remain when JavaScript object is deleted.
 // Useful for classes you only wish to inject.
-typedef v8pp::class_<my_class> my_class_wrapper(isolate);
-v8::Local<v8::Value> val = my_class_wrapper::reference_external(&my_class::instance());
+typedef v8pp::class_<my_class> my_class_wrapper;
+v8::Local<v8::Value> val = my_class_wrapper::reference_external(isolate, &my_class::instance());
 // Assuming my_class::instance() returns reference to class
 ```
 
@@ -335,8 +335,8 @@ v8::Local<v8::Value> val = my_class_wrapper::reference_external(&my_class::insta
 ```c++
 // Memory for c++ object will be reclaimed by JavaScript using "delete" when
 // JavaScript class is deleted.
-typedef v8pp::class_<my_class> my_class_wrapper(isolate);
-v8::Local<v8::Value> val = my_class_wrapper::import_external(new my_class);
+typedef v8pp::class_<my_class> my_class_wrapper;
+v8::Local<v8::Value> val = my_class_wrapper::import_external(isolate, new my_class);
 ```
 
 ## Compile-time configuration
