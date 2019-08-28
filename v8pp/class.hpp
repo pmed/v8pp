@@ -257,6 +257,33 @@ public:
 		return *this;
 	}
 
+	/// Set indexed accessor
+    template<typename Accessor>
+    typename std::enable_if<
+            std::is_member_function_pointer<Accessor>::value, class_&>::type
+    set_indexed_accessor(Accessor accessor, bool readonly = false)
+    {
+        v8::HandleScope scope(isolate());
+
+        using accessor_type = typename
+        detail::function_traits<Accessor>::template pointer_type<T>;
+        accessor_type acc(accessor);
+        v8::IndexedPropertyGetterCallback getter = &indexed_get<accessor_type>;
+        v8::IndexedPropertySetterCallback setter = &indexed_set<accessor_type>;
+        if (readonly)
+        {
+            setter = nullptr;
+        }
+
+        class_info_.class_function_template()->InstanceTemplate()
+                ->SetIndexedPropertyHandler(
+					getter, setter, nullptr, nullptr, nullptr,
+                    detail::set_external_data(isolate(), std::forward<accessor_type>(acc))
+				);
+
+        return *this;
+    }
+
 	/// Set class member data
 	template<typename Attribute>
 	typename std::enable_if<
@@ -475,6 +502,43 @@ private:
 			info.GetReturnValue().Set(throw_ex(isolate, ex.what()));
 		}
 	}
+
+	template<typename Accessor>
+	static void indexed_get(uint32_t index,
+	        v8::PropertyCallbackInfo<v8::Value> const& info)
+    {
+        v8::Isolate* isolate = info.GetIsolate();
+
+        try
+        {
+            auto self = unwrap_object(isolate, info.This());
+            Accessor accessor = detail::get_external_data<Accessor>(info.Data());
+            info.GetReturnValue().Set(to_v8(isolate, ((*self).*accessor)(index)));
+        }
+        catch (std::exception const& ex)
+        {
+            info.GetReturnValue().Set(throw_ex(isolate, ex.what()));
+        }
+    }
+
+    template<typename Accessor>
+    static void indexed_set(uint32_t index, v8::Local<v8::Value> value,
+            v8::PropertyCallbackInfo<v8::Value> const& info)
+    {
+        v8::Isolate* isolate = info.GetIsolate();
+
+        try
+        {
+            auto self = unwrap_object(isolate, info.This());
+            Accessor accessor = detail::get_external_data<Accessor>(info.Data());
+            using ret_type = typename detail::function_traits<Accessor>::return_type;
+            ((*self).*accessor)(index) = v8pp::from_v8<ret_type>(isolate, value);
+        }
+        catch (std::exception const& ex)
+        {
+            info.GetReturnValue().Set(throw_ex(isolate, ex.what()));
+        }
+    }
 };
 
 /// Interface to access C++ classes bound to V8
