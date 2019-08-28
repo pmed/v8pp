@@ -179,7 +179,11 @@ struct convert<bool>
 		{
 			throw invalid_argument(isolate, value, "Boolean");
 		}
-		return value->BooleanValue(isolate->GetCurrentContext()).FromJust();
+#if V8_MAJOR_VERSION >= 7 && V8_MINOR_VERSION >= 7
+		return value->BooleanValue(isolate);
+#else
+        return value->BooleanValue(isolate->GetCurrentContext()).FromJust();
+#endif
 	}
 
 	static to_type to_v8(v8::Isolate* isolate, bool value)
