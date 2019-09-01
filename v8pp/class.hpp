@@ -384,7 +384,7 @@ public:
 
 	/// Create a wrapped C++ object and import it into JavaScript
 	template<typename ...Args>
-	static v8::Local<v8::Object> create_object(v8::Isolate* isolate, Args... args)
+	static v8::Local<v8::Object> create_object(v8::Isolate* isolate, Args&&... args)
 	{
 		return import_external(isolate,
 			factory<T, Traits>::create(isolate, std::forward<Args>(args)...));
