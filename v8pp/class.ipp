@@ -198,20 +198,21 @@ V8PP_IMPL v8::Local<v8::Object> object_registry<Traits>::wrap_object(pointer_typ
 	v8::EscapableHandleScope scope(isolate_);
 
 	v8::Local<v8::Context> context = isolate_->GetCurrentContext();
-	v8::Local<v8::Object> obj = class_function_template()
-		->GetFunction(context).ToLocalChecked()->NewInstance(context).ToLocalChecked();
-
-	obj->SetAlignedPointerInInternalField(0, Traits::pointer_id(object));
-	obj->SetAlignedPointerInInternalField(1, this);
-
-	v8::Global<v8::Object> pobj(isolate_, obj);
-	pobj.SetWeak(this, [](v8::WeakCallbackInfo<object_registry> const& data)
-		{
-			object_id object = data.GetInternalField(0);
-			object_registry* this_ = static_cast<object_registry*>(data.GetInternalField(1));
-			this_->remove_object(object);
-		}, v8::WeakCallbackType::kInternalFields);
-	objects_.emplace(object, wrapped_object{ std::move(pobj), call_dtor });
+	v8::Local<v8::Object> obj{};
+	v8::Local<v8::Function> func{};
+	if (class_function_template()->GetFunction(context).ToLocal (&func) && func->NewInstance(context).ToLocal(&obj)) {
+		obj->SetAlignedPointerInInternalField(0, Traits::pointer_id(object));
+		obj->SetAlignedPointerInInternalField(1, this);
+	
+		v8::Global<v8::Object> pobj(isolate_, obj);
+		pobj.SetWeak(this, [](v8::WeakCallbackInfo<object_registry> const& data)
+			{
+				object_id object = data.GetInternalField(0);
+				object_registry* this_ = static_cast<object_registry*>(data.GetInternalField(1));
+				this_->remove_object(object);
+			}, v8::WeakCallbackType::kInternalFields);
+		objects_.emplace(object, wrapped_object{ std::move(pobj), call_dtor });
+	}
 
 	return scope.Escape(obj);
 }
