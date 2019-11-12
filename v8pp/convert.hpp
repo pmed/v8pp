@@ -142,7 +142,7 @@ struct convert<bool>
 		{
 			throw invalid_argument(isolate, value, "Boolean");
 		}
-#if ((V8_MAJOR_VERSION << 16) + (V8_MINOR_VERSION << 8)) >= ((7 << 16) + (1 << 8))
+#if (V8_MAJOR_VERSION > 7) || (V8_MAJOR_VERSION == 7 && V8_MINOR_VERSION >= 1)
 		return value->BooleanValue(isolate);
 #else
 		return value->BooleanValue(isolate->GetCurrentContext()).FromJust();
