@@ -260,7 +260,7 @@ public:
 	/// Set class member data
 	template<typename Attribute>
 	typename std::enable_if<
-	        std::is_member_object_pointer<Attribute>::value, class_&>::type
+		std::is_member_object_pointer<Attribute>::value, class_&>::type
 	set(char const *name, Attribute attribute, bool readonly = false)
 	{
 		v8::HandleScope scope(isolate());
@@ -283,7 +283,7 @@ public:
 		return *this;
 	}
 
-    /// Set read/write class property with getter and setter
+		/// Set read/write class property with getter and setter
 	template<typename GetMethod, typename SetMethod>
 	typename std::enable_if<std::is_member_function_pointer<GetMethod>::value
 		&& std::is_member_function_pointer<SetMethod>::value, class_&>::type
@@ -296,8 +296,6 @@ public:
 			typename detail::function_traits<SetMethod>::template pointer_type<T>
 		>;
 		property_type prop(property);
-
-		// Need to generate one that chains property getter with the member getter below
 		v8::AccessorGetterCallback getter = property_type::template get<Traits>;
 		v8::AccessorSetterCallback setter = property_type::template set<Traits>;
 		if (prop.is_readonly)
