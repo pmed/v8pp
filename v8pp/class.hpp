@@ -283,7 +283,7 @@ public:
 		return *this;
 	}
 
-		/// Set read/write class property with getter and setter
+	/// Set read/write class property with getter and setter
 	template<typename GetMethod, typename SetMethod>
 	typename std::enable_if<std::is_member_function_pointer<GetMethod>::value
 		&& std::is_member_function_pointer<SetMethod>::value, class_&>::type
