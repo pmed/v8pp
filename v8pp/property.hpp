@@ -371,7 +371,6 @@ struct rw_member_property {
 					v8::PropertyCallbackInfo<v8::Value> const& info)
 	try
 	{
-	    static_assert(std::is_member_pointer<Attribute>::value,"XXX");
 		auto obj = v8pp::class_<class_type, Traits>::unwrap_object(info.GetIsolate(), info.This());
 		assert(obj);
 
