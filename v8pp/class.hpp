@@ -390,13 +390,27 @@ public:
 			factory<T, Traits>::create(isolate, std::forward<Args>(args)...));
 	}
 
-	/// Find V8 object handle for a wrapped C++ object, may return empty handle on fail.
+	// Find V8 object handle for a wrapped C++ object, may return empty handle on fail.
+    // When auto-wrap, returned object is automatically wrapped. If auto_wrap
+    // is true, the returned object is wrapped automatically. In the case of
+    // shared_ptr_traits the returned item is the same underlying pointer. In
+    // thie case the constness is lost, but this is also the case when the
+    // object isn't auto-wrapped.
 	static v8::Local<v8::Object> find_object(v8::Isolate* isolate,
 		object_const_pointer_type const& obj)
 	{
 		using namespace detail;
-		return classes::find<Traits>(isolate, type_id<T>())
-			.find_v8_object(Traits::const_pointer_cast(obj));
+		detail::object_registry<Traits>& class_info = classes::find<Traits>(isolate, type_id<T>());
+        v8::Local<v8::Object> wrapped_object = class_info.find_v8_object(Traits::const_pointer_cast(obj));
+		if (wrapped_object.IsEmpty() && class_info.auto_wrap_objects())
+		{
+			object_pointer_type clone = Traits::ptr_clone(obj);
+			if (clone)
+			{
+				wrapped_object = class_info.wrap_object(clone, true);
+			}
+		}
+		return wrapped_object;
 	}
 
 	/// Find V8 object handle for a wrapped C++ object, may return empty handle on fail
