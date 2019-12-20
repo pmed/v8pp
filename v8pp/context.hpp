@@ -97,6 +97,7 @@ public:
         struct v8locks {
           v8::Locker locker;
           v8::Isolate::Scope scope;
+		  v8::HandleScope handle;
         };
         bool owns_locks_;
         union {
