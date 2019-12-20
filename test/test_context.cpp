@@ -74,7 +74,6 @@ void test_context()
         bool enter_context = false;
 		v8pp::context context(isolate, allocator, add_default_global_methods, enter_context);
 
-		v8::HandleScope scope(context.isolate());
 		v8pp::context::context_scope context_scope(context);
 		v8::Local<v8::Object> global = context.isolate()->GetCurrentContext()->Global();
 		v8::Local<v8::Value> value;

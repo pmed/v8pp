@@ -308,6 +308,7 @@ context::context_scope::context_scope(context &context) :
   if (owns_locks_){
 	::new(&locks_.locker)v8::Locker(context_.isolate());
 	::new(&locks_.scope)v8::Isolate::Scope(context_.isolate());
+	::new(&locks_.handle)v8::HandleScope(context_.isolate());
   }
   context_.enter();
 }
@@ -315,6 +316,7 @@ context::context_scope::context_scope(context &context) :
 context::context_scope::~context_scope() {
   context_.exit();
   if (owns_locks_){
+	locks_.handle.~HandleScope();
 	locks_.scope.~Scope();
 	locks_.locker.~Locker();
   }
