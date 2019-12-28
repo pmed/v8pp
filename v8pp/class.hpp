@@ -21,6 +21,8 @@
 #include "v8pp/property.hpp"
 #include "v8pp/ptr_traits.hpp"
 
+#include <iostream> // XXX
+
 namespace v8pp {
 
 namespace detail {
@@ -308,6 +310,60 @@ public:
 				detail::set_external_data(isolate(),
 					std::forward<property_type>(prop)), v8::DEFAULT,
 				v8::PropertyAttribute(v8::DontDelete | (setter ? 0 : v8::ReadOnly)));
+		return *this;
+	}
+	
+	/// Set read/write class property with "external" getter and setter
+	template<typename GetFunction, typename SetFunction>
+	typename std::enable_if<detail::is_object_getter<GetFunction>::value
+		&& std::is_same<typename std::decay<typename detail::call_from_v8_traits<GetFunction>::template arg_type<0>>::type, T>::value
+		&& detail::is_object_setter<SetFunction>::value	
+		&& std::is_same<typename std::decay<typename detail::call_from_v8_traits<SetFunction>::template arg_type<0>>::type, T>::value, 
+		class_&>::type
+	set(char const *name, property_<GetFunction, SetFunction>&& property)
+	{
+		
+		v8::HandleScope scope(isolate());
+
+		using property_type = property_<GetFunction, SetFunction>;
+
+		property_type prop(property);
+		v8::AccessorGetterCallback getter = property_type::template get_with_object<Traits>;
+		v8::AccessorSetterCallback setter = property_type::template set_with_object<Traits>;
+		if (prop.is_readonly)
+		{
+			setter = nullptr;
+		}
+
+		class_info_.class_function_template()->PrototypeTemplate()
+			->SetAccessor(v8pp::to_v8(isolate(), name), getter, setter,
+				detail::set_external_data(isolate(),
+					std::forward<property_type>(prop)), v8::DEFAULT,
+				v8::PropertyAttribute(v8::DontDelete | (setter ? 0 : v8::ReadOnly)));
+		return *this;
+	}
+
+	/// Set read/write class property with "external" getter and setter
+	template<typename GetFunction>
+	typename std::enable_if<detail::is_object_getter<GetFunction>::value
+		&& std::is_same<typename std::decay<typename detail::call_from_v8_traits<GetFunction>::template arg_type<0>>::type, T>::value
+		, 
+		class_&>::type
+	set(char const *name, property_<GetFunction, GetFunction>&& property)
+	{
+		
+		v8::HandleScope scope(isolate());
+
+		using property_type = property_<GetFunction, GetFunction>;
+
+		property_type prop(property);
+		v8::AccessorGetterCallback getter = property_type::template get_with_object<Traits>;
+
+		class_info_.class_function_template()->PrototypeTemplate()
+			->SetAccessor(v8pp::to_v8(isolate(), name), getter, nullptr,
+				detail::set_external_data(isolate(),
+					std::forward<property_type>(prop)), v8::DEFAULT,
+				v8::PropertyAttribute(v8::DontDelete | v8::ReadOnly));
 		return *this;
 	}
 
