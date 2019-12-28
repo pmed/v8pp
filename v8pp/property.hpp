@@ -27,14 +27,23 @@ namespace detail {
 struct getter_tag {};
 struct direct_getter_tag {};
 struct isolate_getter_tag {};
+struct object_getter_tag {};
 
 struct setter_tag {};
 struct direct_setter_tag {};
 struct isolate_setter_tag {};
+struct object_setter_tag {};
 
 template<typename F>
 using is_getter = std::integral_constant<bool,
 	call_from_v8_traits<F>::arg_count == 0 && !is_void_return<F>::value>;
+
+template<typename F> 
+using is_object_getter = std::integral_constant<bool,
+	call_from_v8_traits<F>::arg_count == 1 &&
+	std::is_reference<typename call_from_v8_traits<F>::template arg_type<0>>::value && 
+	std::is_const<typename std::remove_reference<typename call_from_v8_traits<F>::template arg_type<0>>::type>::value &&	
+	!is_void_return<F>::value>;
 
 template<typename F>
 using is_direct_getter = std::integral_constant<bool,
@@ -55,6 +64,13 @@ using is_isolate_getter = std::integral_constant<bool,
 template<typename F>
 using is_setter = std::integral_constant<bool,
 	call_from_v8_traits<F>::arg_count == 1 && is_void_return<F>::value>;
+	
+template<typename F> 
+using is_object_setter = std::integral_constant<bool,
+	call_from_v8_traits<F>::arg_count == 2 &&
+	std::is_reference<typename call_from_v8_traits<F>::template arg_type<0>>::value && 
+	!std::is_const<typename std::remove_reference<typename call_from_v8_traits<F>::template arg_type<0>>::type>::value &&	
+	is_void_return<F>::value>;	
 
 template<typename F>
 using is_loose_setter = std::integral_constant<bool,
@@ -86,14 +102,20 @@ template<typename F>
 using select_getter_tag = typename std::conditional<is_direct_getter<F>::value,
 	direct_getter_tag,
 	typename std::conditional<is_isolate_getter<F>::value,
-		isolate_getter_tag, getter_tag>::type
+		isolate_getter_tag, 
+	//typename std::conditional<is_object_getter<F>::value, 
+	//	object_getter_tag, 
+	getter_tag>::type
 >::type;
 
 template<typename F>
 using select_setter_tag = typename std::conditional<is_direct_setter<F>::value,
 	direct_setter_tag,
 	typename std::conditional<is_isolate_setter<F>::value,
-		isolate_setter_tag, setter_tag>::type
+		isolate_setter_tag, 
+//	typename std::conditional<is_object_setter<F>::value,
+//		object_setter_tag, 
+		setter_tag>::type
 >::type;
 
 template<typename Get, typename Set, bool get_is_mem_fun>
@@ -211,6 +233,29 @@ struct r_property_impl<Get, Set, false>
 		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
 	}
 
+	template<class Traits>
+	static void get_with_object(v8::Local<v8::String> name,
+		v8::PropertyCallbackInfo<v8::Value> const& info)
+	try {
+		using class_type = typename std::decay<typename std::tuple_element<0,
+			typename function_traits<Get>::arguments>::type>::type;
+		auto obj = v8pp::class_<class_type, Traits>::unwrap_object(info.GetIsolate(), info.This());
+		assert(obj);
+
+		property_type const& prop = detail::get_external_data<property_type>(info.Data());
+		assert(prop.getter);
+
+		if (prop.getter)
+		{
+			info.GetReturnValue().Set(to_v8(info.GetIsolate(), prop.getter(*obj)));
+		}
+	} 
+	catch (std::exception const& ex) 
+	{
+		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
+	}
+
+
 	static void set(v8::Local<v8::String> name, v8::Local<v8::Value>,
 		v8::PropertyCallbackInfo<void> const& info)
 	{
@@ -299,7 +344,6 @@ struct rw_property_impl<Get, Set, false>
 	{
 		set(name, value, info);
 	}
-
 	static void set_impl(Set set, v8::Local<v8::String>,
 		v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
 		isolate_setter_tag)
@@ -327,6 +371,30 @@ struct rw_property_impl<Get, Set, false>
 	{
 		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
 	}
+
+	template<class Traits>
+	static void set_with_object(v8::Local<v8::String> name,
+		v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info)
+	try
+	{
+		using class_type = typename std::decay<typename std::tuple_element<0,
+			typename function_traits<Set>::arguments>::type>::type;
+		auto obj = v8pp::class_<class_type, Traits>::unwrap_object(info.GetIsolate(), info.This());
+		assert(obj);
+		property_type const& prop = detail::get_external_data<property_type>(info.Data());
+		assert(prop.setter);
+
+		if (prop.setter)
+		{
+			using value_type = typename call_from_v8_traits<Set>::template arg_type<1>;
+			prop.setter(*obj, v8pp::from_v8<value_type>(info.GetIsolate(), value));
+		}
+	}
+	catch (std::exception const& ex)
+	{
+		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
+	}
+
 };
 
 template <typename Attribute, typename Get, typename Set>
@@ -445,6 +513,7 @@ struct property_
 	: detail::rw_property_impl<Get, Set, std::is_member_function_pointer<Set>::value>
 {
 	static_assert(detail::is_getter<Get>::value
+		|| detail::is_object_getter<Get>::value
 		|| detail::is_direct_getter<Get>::value
 		|| detail::is_isolate_getter<Get>::value,
 		"property get function must be either `T ()` or "
@@ -452,6 +521,7 @@ struct property_
 		"`T (v8::Isolate*)`");
 
 	static_assert(detail::is_setter<Set>::value
+		|| detail::is_object_setter<Set>::value
 		|| detail::is_direct_setter<Set>::value
 		|| detail::is_isolate_setter<Set>::value,
 		"property set function must be either `void (T)` or \
@@ -483,6 +553,7 @@ struct property_<Get, Get>
 	: detail::r_property_impl<Get, Get, std::is_member_function_pointer<Get>::value>
 {
 	static_assert(detail::is_getter<Get>::value
+		|| detail::is_object_getter<Get>::value
 		|| detail::is_direct_getter<Get>::value
 		|| detail::is_isolate_getter<Get>::value,
 		"property get function must be either `T ()` or "
