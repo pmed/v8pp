@@ -115,6 +115,14 @@ static int extern_fun(v8::FunctionCallbackInfo<v8::Value> const& args)
 	return x;
 }
 
+int get_var(X const &x) {
+	return x.var;
+}
+
+void set_var(X &x, int v) {
+	x.var = v;
+}
+
 template<typename Traits>
 void test_class_()
 {
@@ -160,12 +168,11 @@ void test_class_()
 		.set_static("my_static_const_var", 42, true)
 		.set_static("my_static_var", 1)
 		.set("lwprop", v8pp::property(
-			[](const X& x) -> int {return x.var; } ,
-			[](X& x, int v) {x.var = v;}
+			get_var,
+			set_var
 			))
 		.set("lrprop", v8pp::property(
-			[](const X& x) {return x.var; } 
-			))
+			get_var))
 		;
 
 	v8pp::class_<Y, Traits> Y_class(isolate);
