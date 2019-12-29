@@ -172,7 +172,7 @@ void test_class_()
 			set_var
 			))
 		.set("lrprop", v8pp::property(
-			get_var))
+			[](const X& x) {return x.var;} ))
 		;
 
 	v8pp::class_<Y, Traits> Y_class(isolate);
