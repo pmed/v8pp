@@ -234,7 +234,7 @@ struct r_property_impl<Get, Set, false>
 		property_type const& prop = detail::get_external_data<property_type>(info.Data());
 		assert(prop.getter);
 
-		if (prop.getter)
+		if (function_traits<Get>::is_not_empty(prop.getter))
 		{
 			info.GetReturnValue().Set(to_v8(info.GetIsolate(), prop.getter(*obj)));
 		}
@@ -373,7 +373,7 @@ struct rw_property_impl<Get, Set, false>
 		property_type const& prop = detail::get_external_data<property_type>(info.Data());
 		assert(prop.setter);
 
-		if (prop.setter)
+		if (function_traits<Set>::is_not_empty(prop.setter))
 		{
 			using value_type = typename call_from_v8_traits<Set>::template arg_type<1>;
 			prop.setter(*obj, v8pp::from_v8<value_type>(info.GetIsolate(), value));
