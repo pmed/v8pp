@@ -140,7 +140,7 @@ private:
 public:
 	using return_type = typename callable_traits::return_type;
 	using arguments = typename tuple_tail<typename callable_traits::arguments>::type;
-	static bool is_not_empty(F const &f) { return f != nullptr; } 
+	static bool is_not_empty(F const &f) { return true; } 
 };
 
 template<typename F>
