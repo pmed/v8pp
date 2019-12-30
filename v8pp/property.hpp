@@ -243,7 +243,7 @@ struct r_property_impl<Get, Set, false>
 		assert(obj);
 
 		property_type const& prop = detail::get_external_data<property_type>(info.Data());
-		assert(prop.getter);
+		// XXX assert(prop.getter);
 
 		if (function_traits<Get>::is_not_empty(prop.getter))
 		{
