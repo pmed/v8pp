@@ -188,6 +188,8 @@ void test_class_()
 			})
 		;
 
+	auto Y_class_find  = v8pp::class_<Y, Traits>::extend_class(isolate);
+
 	check_ex<std::runtime_error>("already wrapped class X", [isolate]()
 	{
 		v8pp::class_<X, Traits> X_class(isolate);

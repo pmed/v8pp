@@ -193,6 +193,8 @@ public:
 	{
 	}
 
+	static class_ extend_class(v8::Isolate* isolate) { return class_(isolate, detail::type_id<T>());}
+
 	/// Set class constructor signature
 	template<typename ...Args, typename Create = factory_create<Args...>>
 	class_& ctor(ctor_function create = &Create::call)
@@ -565,6 +567,9 @@ public:
 	}
 
 private:
+	explicit class_(v8::Isolate *isolate, detail::type_info const &ty) :
+		class_info_(detail::classes::find<Traits>(isolate, ty)) { }
+
 	template<typename Attribute>
 	static void member_get(v8::Local<v8::String>,
 		v8::PropertyCallbackInfo<v8::Value> const& info)
