@@ -188,6 +188,8 @@ void test_class_()
 			})
 		;
 
+	auto Y_class_find  = v8pp::class_<Y, Traits>::extend_class(isolate);
+
 	check_ex<std::runtime_error>("already wrapped class X", [isolate]()
 	{
 		v8pp::class_<X, Traits> X_class(isolate);
@@ -463,4 +465,37 @@ void test_class()
 
 	test_auto_wrap_objects<v8pp::raw_ptr_traits>();
 	test_auto_wrap_objects<v8pp::shared_ptr_traits>();
+}
+
+class NCC  {
+  public:
+  NCC() = default;
+  NCC(const NCC &) = delete;
+  
+};
+
+class CC {
+  public:
+  CC() = default;
+  CC(const CC &) = default;
+};
+
+void test_non_copy_constructible() {
+	v8pp::context context;
+	v8::Isolate* isolate = context.isolate();
+	v8::HandleScope scope(isolate);
+    v8pp::class_<NCC> NCC_class(isolate);
+    NCC ncc;
+    auto wrapped_ncc= NCC_class.reference_external(isolate, &ncc);
+    auto instance_ncc = v8pp::to_v8(isolate, &ncc);
+    check("instance_ncc should be empty for non-copy constructible pointers", instance_ncc.IsEmpty());
+
+    v8pp::class_<CC> CC_class(isolate);
+    CC cc;
+    auto wrapped_cc = CC_class.reference_external(isolate, &cc);
+    auto instance_cc = v8pp::to_v8(isolate, &ncc);
+    check("A copy is returned for copyable instance_ccs", !instance_cc.IsEmpty());
+    auto cc_copy = CC_class.unwrap_object(isolate, instance_cc.As<v8::Value>());
+    check("A copy is returned for copyable instance_ccs", &cc != cc_copy);
+
 }

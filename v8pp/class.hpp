@@ -193,6 +193,8 @@ public:
 	{
 	}
 
+	static class_ extend_class(v8::Isolate* isolate) { return class_(isolate, detail::type_id<T>());}
+
 	/// Set class constructor signature
 	template<typename ...Args, typename Create = factory_create<Args...>>
 	class_& ctor(ctor_function create = &Create::call)
@@ -367,9 +369,65 @@ public:
 		return *this;
 	}
 
+	template<typename Attribute, typename GetMethod, typename SetMethod>
+	typename std::enable_if<std::is_member_pointer<Attribute>::value
+        && std::is_member_function_pointer<GetMethod>::value
+        && std::is_member_function_pointer<SetMethod>::value, class_&>::type
+     set(char const *name, member_property_<Attribute, GetMethod, SetMethod> &&property) {
+        using attribute_type = typename
+        detail::function_traits<Attribute>::template pointer_type<T>;
+
+        using property_type = member_property_<
+                Attribute,
+                GetMethod,
+                SetMethod
+                //typename detail::function_traits<GetMethod>::template pointer_type<>,
+                //typename detail::function_traits<SetMethod>::template pointer_type<>
+        >;
+        property_type prop(property);
+        v8::AccessorGetterCallback getter = property_type::template get<Traits>;
+        v8::AccessorSetterCallback setter = property_type::template set<Traits>;
+
+        if (prop.is_readonly)
+        {
+            setter = nullptr;
+        }
+
+        class_info_.class_function_template()->PrototypeTemplate()
+                ->SetAccessor(v8pp::to_v8(isolate(), name), getter, setter,
+                              detail::set_external_data(isolate(),
+                                                        std::forward<property_type>(prop)), v8::DEFAULT,
+                              v8::PropertyAttribute(v8::DontDelete | (setter ? 0 : v8::ReadOnly)));
+        return *this;
+
+	}
+
+    /// Set class member data
+    template<typename Attribute>
+    typename std::enable_if<
+            std::is_member_object_pointer<Attribute>::value, class_&>::type
+    set_const(char const *name, Attribute attribute)
+    {
+        v8::HandleScope scope(isolate());
+
+        using attribute_type = typename
+        detail::function_traits<Attribute>::template pointer_type<T>;
+        attribute_type attr(attribute);
+        v8::AccessorGetterCallback getter = &member_get<attribute_type>;
+
+        class_info_.class_function_template()->PrototypeTemplate()
+                ->SetAccessor(v8pp::to_v8(isolate(), name), getter, nullptr,
+                              detail::set_external_data(isolate(),
+                                                        std::forward<attribute_type>(attr)), v8::DEFAULT,
+                              v8::PropertyAttribute(v8::DontDelete |  v8::ReadOnly));
+        return *this;
+    }
+
 	/// Set value as a read-only property
 	template<typename Value>
-	class_& set_const(char const* name, Value const& value)
+    typename std::enable_if<
+            !std::is_member_object_pointer<Value>::value, class_&>::type
+	set_const(char const* name, Value const& value)
 	{
 		v8::HandleScope scope(isolate());
 
@@ -446,13 +504,27 @@ public:
 			factory<T, Traits>::create(isolate, std::forward<Args>(args)...));
 	}
 
-	/// Find V8 object handle for a wrapped C++ object, may return empty handle on fail.
+	// Find V8 object handle for a wrapped C++ object, may return empty handle on fail.
+    // When auto-wrap, returned object is automatically wrapped. If auto_wrap
+    // is true, the returned object is wrapped automatically. In the case of
+    // shared_ptr_traits the returned item is the same underlying pointer. In
+    // thie case the constness is lost, but this is also the case when the
+    // object isn't auto-wrapped.
 	static v8::Local<v8::Object> find_object(v8::Isolate* isolate,
 		object_const_pointer_type const& obj)
 	{
 		using namespace detail;
-		return classes::find<Traits>(isolate, type_id<T>())
-			.find_v8_object(Traits::const_pointer_cast(obj));
+		detail::object_registry<Traits>& class_info = classes::find<Traits>(isolate, type_id<T>());
+        v8::Local<v8::Object> wrapped_object = class_info.find_v8_object(Traits::const_pointer_cast(obj));
+		if (wrapped_object.IsEmpty() && class_info.auto_wrap_objects())
+		{
+			object_pointer_type clone = Traits::ptr_clone(obj);
+			if (clone)
+			{
+				wrapped_object = class_info.wrap_object(clone, true);
+			}
+		}
+		return wrapped_object;
 	}
 
 	/// Find V8 object handle for a wrapped C++ object, may return empty handle on fail
@@ -495,6 +567,9 @@ public:
 	}
 
 private:
+	explicit class_(v8::Isolate *isolate, detail::type_info const &ty) :
+		class_info_(detail::classes::find<Traits>(isolate, ty)) { }
+
 	template<typename Attribute>
 	static void member_get(v8::Local<v8::String>,
 		v8::PropertyCallbackInfo<v8::Value> const& info)
