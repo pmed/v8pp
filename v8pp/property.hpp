@@ -232,7 +232,7 @@ struct r_property_impl<Get, Set, false>
 		assert(obj);
 
 		property_type const& prop = detail::get_external_data<property_type>(info.Data());
-		assert(prop.getter);
+		assert(function_traits<Get>::is_not_empty(prop.getter));
 
 		if (function_traits<Get>::is_not_empty(prop.getter))
 		{
@@ -371,7 +371,7 @@ struct rw_property_impl<Get, Set, false>
 		auto obj = v8pp::class_<class_type, Traits>::unwrap_object(info.GetIsolate(), info.This());
 		assert(obj);
 		property_type const& prop = detail::get_external_data<property_type>(info.Data());
-		assert(prop.setter);
+		assert(function_traits<Set>::is_not_empty(prop.setter));
 
 		if (function_traits<Set>::is_not_empty(prop.setter))
 		{
