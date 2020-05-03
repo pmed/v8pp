@@ -35,16 +35,6 @@ struct context::dynamic_module
 {
 	void* handle;
 	v8::Global<v8::Value> exports;
-
-	dynamic_module() = default;
-	dynamic_module(dynamic_module&& other)
-		: handle(other.handle)
-		, exports(std::move(other.exports))
-	{
-		other.handle = nullptr;
-	}
-
-	dynamic_module(dynamic_module const&) = delete;
 };
 
 void context::load_module(v8::FunctionCallbackInfo<v8::Value> const& args)
@@ -62,9 +52,9 @@ void context::load_module(v8::FunctionCallbackInfo<v8::Value> const& args)
 		}
 
 		context* ctx = detail::external_data::get<context*>(args.Data());
-		context::dynamic_modules::iterator it = ctx->modules_.find(name);
 
 		// check if module is already loaded
+		const auto it = ctx->modules_.find(name);
 		if (it != ctx->modules_.end())
 		{
 			result = v8::Local<v8::Value>::New(isolate, it->second.exports);
