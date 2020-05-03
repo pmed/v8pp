@@ -6,6 +6,7 @@
     <ClCompile Include="class.cpp" />
     <ClCompile Include="throw_ex.cpp" />
     <ClCompile Include="convert.cpp" />
+    <ClCompile Include="version.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="context.hpp" />
@@ -23,11 +24,13 @@
     <ClInclude Include="json.hpp" />
     <ClInclude Include="ptr_traits.hpp" />
     <ClInclude Include="persistent.hpp" />
+    <ClInclude Include="version.hpp" />
+    <ClInclude Include="class.ipp" />
+    <ClInclude Include="json.ipp" />
+    <ClInclude Include="throw_ex.ipp" />
+    <ClInclude Include="version.ipp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="class.ipp" />
-    <None Include="json.ipp" />
-    <None Include="throw_ex.ipp" />
   </ItemGroup>
 </Project>

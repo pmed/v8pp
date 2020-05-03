@@ -17,6 +17,7 @@
 #include <libplatform/libplatform.h>
 
 #include "v8pp/context.hpp"
+#include "v8pp/version.hpp"
 
 void run_tests()
 {
@@ -91,6 +92,7 @@ int main(int argc, char const * argv[])
 		else if (arg == "-v" || arg == "--version")
 		{
 			std::cout << "V8 version " << v8::V8::GetVersion() << std::endl;
+			std::cout << "v8pp version " << v8pp::version() << std::endl;
 		}
 		else if (arg == "--lib-path")
 		{
