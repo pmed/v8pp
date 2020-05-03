@@ -23,7 +23,6 @@
     <ClInclude Include="object.hpp" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="ptr_traits.hpp" />
-    <ClInclude Include="persistent.hpp" />
     <ClInclude Include="version.hpp" />
     <ClInclude Include="class.ipp" />
     <ClInclude Include="json.ipp" />
