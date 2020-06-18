@@ -198,9 +198,11 @@ V8PP_IMPL v8::Local<v8::Object> object_registry<Traits>::wrap_object(pointer_typ
 	v8::EscapableHandleScope scope(isolate_);
 
 	v8::Local<v8::Context> context = isolate_->GetCurrentContext();
-	v8::Local<v8::Object> obj{};
-	v8::Local<v8::Function> func{};
-	if (class_function_template()->GetFunction(context).ToLocal (&func) && func->NewInstance(context).ToLocal(&obj)) {
+	v8::Local<v8::Function> func;
+	v8::Local<v8::Object> obj;
+	if (class_function_template()->GetFunction(context).ToLocal(&func)
+		&& func->NewInstance(context).ToLocal(&obj))
+	{
 		obj->SetAlignedPointerInInternalField(0, Traits::pointer_id(object));
 		obj->SetAlignedPointerInInternalField(1, this);
 	

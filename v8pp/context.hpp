@@ -85,13 +85,11 @@ private:
 	v8::Isolate* isolate_;
 	v8::Global<v8::Context> impl_;
 
-	struct dynamic_module;
-	using dynamic_modules = std::map<std::string, dynamic_module>;
-
 	static void load_module(v8::FunctionCallbackInfo<v8::Value> const& args);
 	static void run_file(v8::FunctionCallbackInfo<v8::Value> const& args);
 
-	dynamic_modules modules_;
+	struct dynamic_module;
+	std::map<std::string, dynamic_module> modules_;
 	std::string lib_path_;
 };
 

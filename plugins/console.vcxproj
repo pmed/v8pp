@@ -1,13 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\packages\v8-v141-x86.7.4.288.28\build\native\v8-v141-x86.props" Condition="Exists('..\packages\v8-v141-x86.7.4.288.28\build\native\v8-v141-x86.props')" />
-  <Import Project="..\packages\v8.redist-v141-x86.7.4.288.28\build\native\v8.redist-v141-x86.props" Condition="Exists('..\packages\v8.redist-v141-x86.7.4.288.28\build\native\v8.redist-v141-x86.props')" />
-  <Import Project="..\packages\v8-v141-x64.7.4.288.26\build\native\v8-v141-x64.props" Condition="Exists('..\packages\v8-v141-x64.7.4.288.26\build\native\v8-v141-x64.props')" />
-  <Import Project="..\packages\v8.redist-v141-x64.7.4.288.26\build\native\v8.redist-v141-x64.props" Condition="Exists('..\packages\v8.redist-v141-x64.7.4.288.26\build\native\v8.redist-v141-x64.props')" />
+  <Import Project="..\packages\v8.symbols-v142-x86.7.5.288.23\build\native\v8.symbols-v142-x86.props" Condition="Exists('..\packages\v8.symbols-v142-x86.7.5.288.23\build\native\v8.symbols-v142-x86.props')" />
   <Import Project="..\packages\v8-v142-x86.7.5.288.23\build\native\v8-v142-x86.props" Condition="Exists('..\packages\v8-v142-x86.7.5.288.23\build\native\v8-v142-x86.props')" />
   <Import Project="..\packages\v8.redist-v142-x86.7.5.288.23\build\native\v8.redist-v142-x86.props" Condition="Exists('..\packages\v8.redist-v142-x86.7.5.288.23\build\native\v8.redist-v142-x86.props')" />
-  <Import Project="..\packages\v8-v140-x86.7.4.288.11\build\native\v8-v140-x86.props" Condition="Exists('..\packages\v8-v140-x86.7.4.288.11\build\native\v8-v140-x86.props')" />
-  <Import Project="..\packages\v8.redist-v140-x86.7.4.288.11\build\native\v8.redist-v140-x86.props" Condition="Exists('..\packages\v8.redist-v140-x86.7.4.288.11\build\native\v8.redist-v140-x86.props')" />
+  <Import Project="..\packages\v8.symbols-v142-x64.8.0.426.28\build\native\v8.symbols-v142-x64.props" Condition="Exists('..\packages\v8.symbols-v142-x64.8.0.426.28\build\native\v8.symbols-v142-x64.props')" />
+  <Import Project="..\packages\v8-v142-x64.8.0.426.28\build\native\v8-v142-x64.props" Condition="Exists('..\packages\v8-v142-x64.8.0.426.28\build\native\v8-v142-x64.props')" />
+  <Import Project="..\packages\v8.redist-v142-x64.8.0.426.28\build\native\v8.redist-v142-x64.props" Condition="Exists('..\packages\v8.redist-v142-x64.8.0.426.28\build\native\v8.redist-v142-x64.props')" />
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -30,20 +28,20 @@
     <ProjectGuid>{967D7CE6-8AD1-465C-A838-0A7E666DC1AE}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>console</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -55,7 +53,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -168,13 +166,11 @@
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\v8.redist-v140-x86.7.4.288.11\build\native\v8.redist-v140-x86.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.redist-v140-x86.7.4.288.11\build\native\v8.redist-v140-x86.props'))" />
-    <Error Condition="!Exists('..\packages\v8-v140-x86.7.4.288.11\build\native\v8-v140-x86.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8-v140-x86.7.4.288.11\build\native\v8-v140-x86.props'))" />
+    <Error Condition="!Exists('..\packages\v8.redist-v142-x64.8.0.426.28\build\native\v8.redist-v142-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.redist-v142-x64.8.0.426.28\build\native\v8.redist-v142-x64.props'))" />
+    <Error Condition="!Exists('..\packages\v8-v142-x64.8.0.426.28\build\native\v8-v142-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8-v142-x64.8.0.426.28\build\native\v8-v142-x64.props'))" />
+    <Error Condition="!Exists('..\packages\v8.symbols-v142-x64.8.0.426.28\build\native\v8.symbols-v142-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.symbols-v142-x64.8.0.426.28\build\native\v8.symbols-v142-x64.props'))" />
     <Error Condition="!Exists('..\packages\v8.redist-v142-x86.7.5.288.23\build\native\v8.redist-v142-x86.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.redist-v142-x86.7.5.288.23\build\native\v8.redist-v142-x86.props'))" />
     <Error Condition="!Exists('..\packages\v8-v142-x86.7.5.288.23\build\native\v8-v142-x86.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8-v142-x86.7.5.288.23\build\native\v8-v142-x86.props'))" />
-    <Error Condition="!Exists('..\packages\v8.redist-v141-x64.7.4.288.26\build\native\v8.redist-v141-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.redist-v141-x64.7.4.288.26\build\native\v8.redist-v141-x64.props'))" />
-    <Error Condition="!Exists('..\packages\v8-v141-x64.7.4.288.26\build\native\v8-v141-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8-v141-x64.7.4.288.26\build\native\v8-v141-x64.props'))" />
-    <Error Condition="!Exists('..\packages\v8.redist-v141-x86.7.4.288.28\build\native\v8.redist-v141-x86.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.redist-v141-x86.7.4.288.28\build\native\v8.redist-v141-x86.props'))" />
-    <Error Condition="!Exists('..\packages\v8-v141-x86.7.4.288.28\build\native\v8-v141-x86.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8-v141-x86.7.4.288.28\build\native\v8-v141-x86.props'))" />
+    <Error Condition="!Exists('..\packages\v8.symbols-v142-x86.7.5.288.23\build\native\v8.symbols-v142-x86.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.symbols-v142-x86.7.5.288.23\build\native\v8.symbols-v142-x86.props'))" />
   </Target>
 </Project>
