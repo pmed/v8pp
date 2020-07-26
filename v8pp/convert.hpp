@@ -625,7 +625,7 @@ v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 	return convert<std::string_view>::to_v8(isolate, std::string_view(str, len));
 }
 
-inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str)
+inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str)
 {
 	return convert<std::u16string_view>::to_v8(isolate, std::u16string_view(str));
 }
