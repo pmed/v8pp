@@ -37,6 +37,7 @@ struct function_traits<R (Args...)>
 {
 	using return_type = R;
 	using arguments = std::tuple<Args...>;
+	static bool is_not_empty(R (&)(Args...)) { return true; } 
 };
 
 // function pointer
@@ -45,6 +46,7 @@ struct function_traits<R (*)(Args...)>
 	: function_traits<R (Args...)>
 {
 	using pointer_type = R (*)(Args...);
+	static bool is_not_empty(pointer_type t) { return t != nullptr; } 
 };
 
 // member function pointer
@@ -54,6 +56,7 @@ struct function_traits<R (C::*)(Args...)>
 {
 	template<typename D = C>
 	using pointer_type = R (D::*)(Args...);
+	static bool is_not_empty(pointer_type<C> t) { return t != nullptr; } 
 };
 
 // const member function pointer
@@ -63,6 +66,7 @@ struct function_traits<R (C::*)(Args...) const>
 {
 	template<typename D = C>
 	using pointer_type = R (D::*)(Args...) const;
+	static bool is_not_empty(pointer_type<C> t) { return t != nullptr; } 
 };
 
 // volatile member function pointer
@@ -72,6 +76,7 @@ struct function_traits<R (C::*)(Args...) volatile>
 {
 	template<typename D = C>
 	using pointer_type = R (D::*)(Args...) volatile;
+	static bool is_not_empty(pointer_type<C> t) { return t != nullptr; } 
 };
 
 // const volatile member function pointer
@@ -81,6 +86,7 @@ struct function_traits<R (C::*)(Args...) const volatile>
 {
 	template<typename D = C>
 	using pointer_type = R (D::*)(Args...) const volatile;
+	static bool is_not_empty(pointer_type<C> t) { return t != nullptr; } 
 };
 
 // member object pointer
@@ -90,6 +96,7 @@ struct function_traits<R (C::*)>
 {
 	template<typename D = C>
 	using pointer_type = R (D::*);
+	static bool is_not_empty(pointer_type<C> t) { return t != nullptr; } 
 };
 
 // const member object pointer
@@ -99,6 +106,7 @@ struct function_traits<const R (C::*)>
 {
 	template<typename D = C>
 	using pointer_type = const R (D::*);
+	static bool is_not_empty(pointer_type<C> t) { return t != nullptr; } 
 };
 
 // volatile member object pointer
@@ -108,6 +116,7 @@ struct function_traits<volatile R (C::*)>
 {
 	template<typename D = C>
 	using pointer_type = volatile R (D::*);
+	static bool is_not_empty(pointer_type<C> t) { return t != nullptr; } 
 };
 
 // const volatile member object pointer
@@ -117,6 +126,7 @@ struct function_traits<const volatile R (C::*)>
 {
 	template<typename D = C>
 	using pointer_type = const volatile R (D::*);
+	static bool is_not_empty(pointer_type<C> t) { return t != nullptr; } 
 };
 
 // function object, std::function, lambda
@@ -130,6 +140,7 @@ private:
 public:
 	using return_type = typename callable_traits::return_type;
 	using arguments = typename tuple_tail<typename callable_traits::arguments>::type;
+	static bool is_not_empty(F const &f) { return true; } 
 };
 
 template<typename F>

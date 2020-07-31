@@ -115,6 +115,14 @@ static int extern_fun(v8::FunctionCallbackInfo<v8::Value> const& args)
 	return x;
 }
 
+std::string get_var(X const &x) {
+	return std::to_string(x.var);
+}
+
+void set_var(X &x, std::string const &v) {
+	x.var = std::stoi(v);
+}
+
 template<typename Traits>
 void test_class_()
 {
@@ -159,6 +167,12 @@ void test_class_()
 		.set("toJSON", &X::to_json)
 		.set_static("my_static_const_var", 42, true)
 		.set_static("my_static_var", 1)
+		.set("lwprop", v8pp::property(
+			get_var,
+			set_var
+			))
+		.set("lrprop", v8pp::property(
+			[](const X& x) {return x.var;} ))
 		;
 
 	v8pp::class_<Y, Traits> Y_class(isolate);
@@ -173,6 +187,8 @@ void test_class_()
 				args.GetReturnValue().Set(v8pp::json_object(args.GetIsolate(), args.This(), with_functions));
 			})
 		;
+
+	auto Y_class_find  = v8pp::class_<Y, Traits>::extend_class(isolate);
 
 	check_ex<std::runtime_error>("already wrapped class X", [isolate]()
 	{
@@ -217,6 +233,8 @@ void test_class_()
 	check_eq("X::my_static_const_var after assign", run_script<int>(context, "X.my_static_const_var = 123; X.my_static_const_var"), 42);
 	check_eq("X::my_static_var", run_script<int>(context, "X.my_static_var"), 1);
 	check_eq("X::my_static_var after assign", run_script<int>(context, "X.my_static_var = 123; X.my_static_var"), 123);
+	check_eq("X::lrprop", run_script<int>(context, "x = new X(); x.lrprop"), 1);
+	check_eq("X::lwprop", run_script<int>(context, "x = new X(); x.lwprop  = x.lwprop + '0' ; Number(x.lwprop) "), 10);
 
 	check_ex<std::runtime_error>("call method with invalid instance", [&context]()
 	{
@@ -230,7 +248,7 @@ void test_class_()
 
 	check_eq("JSON.stringify(Y)",
 		run_script<std::string>(context, "JSON.stringify({'obj': new Y(10), 'arr': [new Y(11), new Y(12)] })"),
-		R"({"obj":{"useX":"function useX() { [native code] }","useX_ptr":"function useX_ptr() { [native code] }","toJSON":"function toJSON() { [native code] }","wprop2":10,"wprop":10,"rprop":10,"var":10,"konst":99,"fun1":"function fun1() { [native code] }","fun2":"function fun2() { [native code] }","fun3":"function fun3() { [native code] }","fun4":"function fun4() { [native code] }","static_fun":"function static_fun() { [native code] }","static_lambda":"function static_lambda() { [native code] }","extern_fun":"function extern_fun() { [native code] }"},"arr":[{"useX":"function useX() { [native code] }","useX_ptr":"function useX_ptr() { [native code] }","toJSON":"function toJSON() { [native code] }","wprop2":11,"wprop":11,"rprop":11,"var":11,"konst":99,"fun1":"function fun1() { [native code] }","fun2":"function fun2() { [native code] }","fun3":"function fun3() { [native code] }","fun4":"function fun4() { [native code] }","static_fun":"function static_fun() { [native code] }","static_lambda":"function static_lambda() { [native code] }","extern_fun":"function extern_fun() { [native code] }"},{"useX":"function useX() { [native code] }","useX_ptr":"function useX_ptr() { [native code] }","toJSON":"function toJSON() { [native code] }","wprop2":12,"wprop":12,"rprop":12,"var":12,"konst":99,"fun1":"function fun1() { [native code] }","fun2":"function fun2() { [native code] }","fun3":"function fun3() { [native code] }","fun4":"function fun4() { [native code] }","static_fun":"function static_fun() { [native code] }","static_lambda":"function static_lambda() { [native code] }","extern_fun":"function extern_fun() { [native code] }"}]})"
+		R"({"obj":{"useX":"function useX() { [native code] }","useX_ptr":"function useX_ptr() { [native code] }","toJSON":"function toJSON() { [native code] }","lrprop":10,"lwprop":"10","wprop2":10,"wprop":10,"rprop":10,"var":10,"konst":99,"fun1":"function fun1() { [native code] }","fun2":"function fun2() { [native code] }","fun3":"function fun3() { [native code] }","fun4":"function fun4() { [native code] }","static_fun":"function static_fun() { [native code] }","static_lambda":"function static_lambda() { [native code] }","extern_fun":"function extern_fun() { [native code] }"},"arr":[{"useX":"function useX() { [native code] }","useX_ptr":"function useX_ptr() { [native code] }","toJSON":"function toJSON() { [native code] }","lrprop":11,"lwprop":"11","wprop2":11,"wprop":11,"rprop":11,"var":11,"konst":99,"fun1":"function fun1() { [native code] }","fun2":"function fun2() { [native code] }","fun3":"function fun3() { [native code] }","fun4":"function fun4() { [native code] }","static_fun":"function static_fun() { [native code] }","static_lambda":"function static_lambda() { [native code] }","extern_fun":"function extern_fun() { [native code] }"},{"useX":"function useX() { [native code] }","useX_ptr":"function useX_ptr() { [native code] }","toJSON":"function toJSON() { [native code] }","lrprop":12,"lwprop":"12","wprop2":12,"wprop":12,"rprop":12,"var":12,"konst":99,"fun1":"function fun1() { [native code] }","fun2":"function fun2() { [native code] }","fun3":"function fun3() { [native code] }","fun4":"function fun4() { [native code] }","static_fun":"function static_fun() { [native code] }","static_lambda":"function static_lambda() { [native code] }","extern_fun":"function extern_fun() { [native code] }"}]})"
 	);
 
 	check_eq("Y object", run_script<int>(context, "y = new Y(-100); y.konst + y.var"), -1);
@@ -447,4 +465,37 @@ void test_class()
 
 	test_auto_wrap_objects<v8pp::raw_ptr_traits>();
 	test_auto_wrap_objects<v8pp::shared_ptr_traits>();
+}
+
+class NCC  {
+  public:
+  NCC() = default;
+  NCC(const NCC &) = delete;
+  
+};
+
+class CC {
+  public:
+  CC() = default;
+  CC(const CC &) = default;
+};
+
+void test_non_copy_constructible() {
+	v8pp::context context;
+	v8::Isolate* isolate = context.isolate();
+	v8::HandleScope scope(isolate);
+    v8pp::class_<NCC> NCC_class(isolate);
+    NCC ncc;
+    auto wrapped_ncc= NCC_class.reference_external(isolate, &ncc);
+    auto instance_ncc = v8pp::to_v8(isolate, &ncc);
+    check("instance_ncc should be empty for non-copy constructible pointers", instance_ncc.IsEmpty());
+
+    v8pp::class_<CC> CC_class(isolate);
+    CC cc;
+    auto wrapped_cc = CC_class.reference_external(isolate, &cc);
+    auto instance_cc = v8pp::to_v8(isolate, &ncc);
+    check("A copy is returned for copyable instance_ccs", !instance_cc.IsEmpty());
+    auto cc_copy = CC_class.unwrap_object(isolate, instance_cc.As<v8::Value>());
+    check("A copy is returned for copyable instance_ccs", &cc != cc_copy);
+
 }
