@@ -262,7 +262,7 @@ public:
 		if constexpr (is_mem_fun)
 		{
 			using mem_func_type = typename detail::function_traits<Function>::template pointer_type<T>;
-			wrapped_fun = wrap_function_template<mem_func_type, Traits>(isolate(), mem_func_type(func));
+			wrapped_fun = wrap_function_template<mem_func_type, Traits>(isolate(), mem_func_type(std::forward<Function>(func)));
 		}
 		else
 		{
