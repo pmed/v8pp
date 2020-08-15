@@ -97,7 +97,8 @@ read-write property to `v8pp::class_`:
 struct X
 {
 	bool b;
-	X(bool b) : b(b) {}
+	int c;
+	X(bool b) : b(b), c(0) {}
 };
 
 struct Y : X
@@ -148,6 +149,9 @@ Y_class
 	// bind a static function
 	.set("ext_fun", &ext_fun)
 	;
+
+// Extend existing X bindings
+v8pp::class_<X>::extend(isolate).set("c", &X::c);
 
 // set class into the module template
 module.set("X", X_class);
