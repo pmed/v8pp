@@ -102,7 +102,8 @@ Allowed `class_` bindings:
 struct X
 {
 	bool b;
-	X(bool b) : b(b) {}
+	int c;
+	X(bool b) : b(b), c(0) {}
 };
 
 struct Y : X
@@ -153,6 +154,9 @@ Y_class
 	// bind a static function
 	.function("ext_fun", &ext_fun)
 	;
+
+// Extend existing X bindings
+v8pp::class_<X>::extend(isolate).var("c", &X::c);
 
 // set class into the module template
 module.class_("X", X_class);
