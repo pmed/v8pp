@@ -32,11 +32,16 @@ public:
 	//  and add default global methods (`require()`, `run()`)
 	explicit context(v8::Isolate* isolate = nullptr,
 		v8::ArrayBuffer::Allocator* allocator = nullptr,
-		bool add_default_global_methods = true);
+		bool add_default_global_methods = true,
+		bool enter_context = true);
+
 	~context();
 
 	/// V8 isolate associated with this context
 	v8::Isolate* isolate() { return isolate_; }
+
+	/// V8 context implementation
+	v8::Local<v8::Context> impl() { return to_local(isolate_, impl_); }
 
 	/// Library search path
 	std::string const& lib_path() const { return lib_path_; }
@@ -70,6 +75,7 @@ public:
 
 private:
 	bool own_isolate_;
+	bool enter_context_;
 	v8::Isolate* isolate_;
 	v8::Global<v8::Context> impl_;
 
