@@ -157,7 +157,7 @@ struct array_buffer_allocator : v8::ArrayBuffer::Allocator
 static array_buffer_allocator array_buffer_allocator_;
 
 context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
-	bool add_default_global_methods)
+	bool add_default_global_methods, bool enter_context)
 {
 	own_isolate_ = (isolate == nullptr);
 	if (own_isolate_)
@@ -185,7 +185,11 @@ context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
 	}
 
 	v8::Local<v8::Context> impl = v8::Context::New(isolate_, nullptr, global);
-	impl->Enter();
+	enter_context_ = enter_context;
+	if (enter_context_)
+	{
+		impl->Enter();
+	}
 	impl_.Reset(isolate_, impl);
 }
 
@@ -209,10 +213,12 @@ context::~context()
 	}
 	modules_.clear();
 
-	v8::Local<v8::Context> impl = to_local(isolate_, impl_);
-	impl->Exit();
-
+	if (enter_context_)
+	{
+		to_local(isolate_, impl_)->Exit();
+	}
 	impl_.Reset();
+
 	if (own_isolate_)
 	{
 		isolate_->Exit();
