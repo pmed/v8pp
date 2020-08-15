@@ -27,6 +27,14 @@ class class_;
 class context
 {
 public:
+	struct options
+	{
+		v8::Isolate* isolate = nullptr;
+		v8::ArrayBuffer::Allocator* allocator = nullptr;
+		bool add_default_global_methods = true;
+		bool enter_context = true;
+	};
+
 	/// Create context with optional existing v8::Isolate
 	/// and v8::ArrayBuffer::Allocator,
 	//  and add default global methods (`require()`, `run()`)
@@ -34,6 +42,11 @@ public:
 		v8::ArrayBuffer::Allocator* allocator = nullptr,
 		bool add_default_global_methods = true,
 		bool enter_context = true);
+
+	explicit context(options const& opts)
+		: context(opts.isolate, opts.allocator, opts.add_default_global_methods, opts.enter_context)
+	{
+	}
 
 	~context();
 

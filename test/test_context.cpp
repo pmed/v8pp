@@ -45,11 +45,10 @@ void test_context()
 	}
 
 	{
-		v8::Isolate* isolate = nullptr;
-		v8::ArrayBuffer::Allocator* allocator = nullptr;
-		bool add_default_global_methods = false;
-		bool enter_context = false;
-		v8pp::context context(isolate, allocator, add_default_global_methods, enter_context);
+		v8pp::context::options options;
+		options.add_default_global_methods = false;
+		options.enter_context = false;
+		v8pp::context context(options);
 
 		v8::HandleScope scope(context.isolate());
 		v8::Context::Scope context_scope(context.impl());
