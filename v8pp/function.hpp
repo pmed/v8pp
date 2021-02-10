@@ -42,8 +42,17 @@ public:
 	operator T() const { return value; }
 };
 
+class external_data_base
+{
+public:
+    static constexpr uint16_t class_id = 1;
+    virtual ~external_data_base(){
+
+    }
+};
+
 template<typename T>
-class external_data
+class external_data final : public external_data_base
 {
 public:
 	static v8::Local<v8::External> set(v8::Isolate* isolate, T&& data)
@@ -61,6 +70,7 @@ public:
 
 		v8::Local<v8::External> ext = v8::External::New(isolate, value);
 		value->pext_.Reset(isolate, ext);
+		value->pext_.SetWrapperClassId(external_data_base::class_id);
 		value->pext_.SetWeak(value,
 			[](v8::WeakCallbackInfo<external_data> const& data)
 		{

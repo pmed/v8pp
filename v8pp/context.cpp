@@ -27,6 +27,32 @@ static char const path_sep = '/';
 #define STRINGIZE(s) STRINGIZE0(s)
 #define STRINGIZE0(s) #s
 
+namespace {
+
+    class PHV : public v8::PersistentHandleVisitor
+    {
+        v8::Isolate  *isolate_;
+    public:
+		static void destroyObjects(v8::Isolate * isolate){
+			::PHV phv(isolate);
+        	isolate->VisitHandlesWithClassIds(&phv);
+		}
+        PHV(v8::Isolate * isolate) : isolate_(isolate) {}
+        ~PHV() {}
+        virtual void VisitPersistentHandle(v8::Persistent<v8::Value> *value, uint16_t class_id) override
+        {
+            if (class_id == v8pp::detail::external_data_base::class_id){
+                v8::HandleScope hs(isolate_);
+                v8::Local<v8::External> ext = value->Get(isolate_).As<v8::External>();
+                if (!ext.IsEmpty()){
+                    auto ptr =static_cast<v8pp::detail::external_data_base*>(ext->Value());
+                    delete ptr;
+                }
+            }
+        }
+    };
+}
+
 namespace v8pp {
 
 struct context::dynamic_module
@@ -203,6 +229,9 @@ context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
 
 context::~context()
 {
+	// Destroy objects derived from external_data_base
+	::PHV::destroyObjects(isolate_);
+
 	// remove all class singletons before modules unload
 	cleanup(isolate_);
 
