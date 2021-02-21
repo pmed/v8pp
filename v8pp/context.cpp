@@ -59,7 +59,7 @@ void context::load_module(v8::FunctionCallbackInfo<v8::Value> const& args)
 			throw std::runtime_error("load_module: require module name string argument");
 		}
 
-		context* ctx = detail::get_external_data<context*>(args.Data());
+		context* ctx = detail::external_data::get<context*>(args.Data());
 		context::dynamic_modules::iterator it = ctx->modules_.find(name);
 
 		// check if module is already loaded
@@ -137,7 +137,7 @@ void context::run_file(v8::FunctionCallbackInfo<v8::Value> const& args)
 			throw std::runtime_error("run_file: require filename string argument");
 		}
 
-		context* ctx = detail::get_external_data<context*>(args.Data());
+		context* ctx = detail::external_data::get<context*>(args.Data());
 		result = to_v8(isolate, ctx->run_file(filename));
 	}
 	catch (std::exception const& ex)
@@ -185,7 +185,7 @@ context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
 
 	if (add_default_global_methods)
 	{
-		v8::Local<v8::Value> data = detail::set_external_data(isolate_, this);
+		v8::Local<v8::Value> data = detail::external_data::set(isolate_, this);
 		global->Set(isolate_, "require",
 			v8::FunctionTemplate::New(isolate_, context::load_module, data));
 		global->Set(isolate_, "run",
@@ -203,7 +203,7 @@ context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
 
 context::~context()
 {
-	// remove all class singletons before modules unload
+	// remove all class singletons and external data before modules unload
 	cleanup(isolate_);
 
 	for (auto& kv : modules_)
