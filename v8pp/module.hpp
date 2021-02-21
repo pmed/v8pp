@@ -87,7 +87,8 @@ public:
 		}
 
 		obj_->SetAccessor(v8pp::to_v8(isolate_, name), getter, setter,
-			detail::set_external_data(isolate_, &var), v8::DEFAULT,
+			detail::external_data::set(isolate_, &var),
+			v8::DEFAULT,
 			v8::PropertyAttribute(v8::DontDelete | (setter ? 0 : v8::ReadOnly)));
 		return *this;
 	}
@@ -108,7 +109,7 @@ public:
 		}
 
 		obj_->SetAccessor(v8pp::to_v8(isolate_, name), getter, setter,
-			detail::set_external_data(isolate_, std::forward<property_type>(property)),
+			detail::external_data::set(isolate_, std::forward<property_type>(property)),
 			v8::DEFAULT,
 			v8::PropertyAttribute(v8::DontDelete | (setter ? 0 : v8::ReadOnly)));
 		return *this;
@@ -148,7 +149,7 @@ private:
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
-		Variable* var = detail::get_external_data<Variable*>(info.Data());
+		Variable* var = detail::external_data::get<Variable*>(info.Data());
 		info.GetReturnValue().Set(to_v8(isolate, *var));
 	}
 
@@ -158,7 +159,7 @@ private:
 	{
 		v8::Isolate* isolate = info.GetIsolate();
 
-		Variable* var = detail::get_external_data<Variable*>(info.Data());
+		Variable* var = detail::external_data::get<Variable*>(info.Data());
 		*var = v8pp::from_v8<Variable>(isolate, value);
 	}
 

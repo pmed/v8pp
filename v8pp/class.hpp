@@ -250,7 +250,7 @@ public:
 		class_info_.class_function_template()->PrototypeTemplate()->Set(
 			v8pp::to_v8(isolate(), name), v8::FunctionTemplate::New(isolate(),
 				&detail::forward_function<Traits, mem_func_type>,
-				detail::set_external_data(isolate(), std::forward<mem_func_type>(mf))), attr);
+				detail::external_data::set(isolate(), std::forward<mem_func_type>(mf))), attr);
 		return *this;
 	}
 
@@ -288,8 +288,8 @@ public:
 
 		class_info_.class_function_template()->PrototypeTemplate()
 			->SetAccessor(v8pp::to_v8(isolate(), name), getter, setter,
-				detail::set_external_data(isolate(),
-					std::forward<attribute_type>(attr)), v8::DEFAULT,
+				detail::external_data::set(isolate(), std::forward<attribute_type>(attr)),
+				v8::DEFAULT,
 				v8::PropertyAttribute(v8::DontDelete | (setter? 0 : v8::ReadOnly)));
 		return *this;
 	}
@@ -316,8 +316,8 @@ public:
 
 		class_info_.class_function_template()->PrototypeTemplate()
 			->SetAccessor(v8pp::to_v8(isolate(), name), getter, setter,
-				detail::set_external_data(isolate(),
-					std::forward<property_type>(prop)), v8::DEFAULT,
+				detail::external_data::set(isolate(), std::forward<property_type>(prop)),
+				v8::DEFAULT,
 				v8::PropertyAttribute(v8::DontDelete | (setter ? 0 : v8::ReadOnly)));
 		return *this;
 	}
@@ -459,7 +459,7 @@ private:
 		try
 		{
 			auto self = unwrap_object(isolate, info.This());
-			Attribute attr = detail::get_external_data<Attribute>(info.Data());
+			Attribute attr = detail::external_data::get<Attribute>(info.Data());
 			info.GetReturnValue().Set(to_v8(isolate, (*self).*attr));
 		}
 		catch (std::exception const& ex)
@@ -477,7 +477,7 @@ private:
 		try
 		{
 			auto self = unwrap_object(isolate, info.This());
-			Attribute ptr = detail::get_external_data<Attribute>(info.Data());
+			Attribute ptr = detail::external_data::get<Attribute>(info.Data());
 			using attr_type = typename detail::function_traits<Attribute>::return_type;
 			(*self).*ptr = v8pp::from_v8<attr_type>(isolate, value);
 		}

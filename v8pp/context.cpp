@@ -27,32 +27,6 @@ static char const path_sep = '/';
 #define STRINGIZE(s) STRINGIZE0(s)
 #define STRINGIZE0(s) #s
 
-namespace {
-
-    class PHV : public v8::PersistentHandleVisitor
-    {
-        v8::Isolate  *isolate_;
-    public:
-		static void destroyObjects(v8::Isolate * isolate){
-			::PHV phv(isolate);
-        	isolate->VisitHandlesWithClassIds(&phv);
-		}
-        PHV(v8::Isolate * isolate) : isolate_(isolate) {}
-        ~PHV() {}
-        virtual void VisitPersistentHandle(v8::Persistent<v8::Value> *value, uint16_t class_id) override
-        {
-            if (class_id == v8pp::detail::external_data_base::class_id){
-                v8::HandleScope hs(isolate_);
-                v8::Local<v8::External> ext = value->Get(isolate_).As<v8::External>();
-                if (!ext.IsEmpty()){
-                    auto ptr =static_cast<v8pp::detail::external_data_base*>(ext->Value());
-                    delete ptr;
-                }
-            }
-        }
-    };
-}
-
 namespace v8pp {
 
 struct context::dynamic_module
@@ -85,7 +59,7 @@ void context::load_module(v8::FunctionCallbackInfo<v8::Value> const& args)
 			throw std::runtime_error("load_module: require module name string argument");
 		}
 
-		context* ctx = detail::get_external_data<context*>(args.Data());
+		context* ctx = detail::external_data::get<context*>(args.Data());
 		context::dynamic_modules::iterator it = ctx->modules_.find(name);
 
 		// check if module is already loaded
@@ -163,7 +137,7 @@ void context::run_file(v8::FunctionCallbackInfo<v8::Value> const& args)
 			throw std::runtime_error("run_file: require filename string argument");
 		}
 
-		context* ctx = detail::get_external_data<context*>(args.Data());
+		context* ctx = detail::external_data::get<context*>(args.Data());
 		result = to_v8(isolate, ctx->run_file(filename));
 	}
 	catch (std::exception const& ex)
@@ -211,7 +185,7 @@ context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
 
 	if (add_default_global_methods)
 	{
-		v8::Local<v8::Value> data = detail::set_external_data(isolate_, this);
+		v8::Local<v8::Value> data = detail::external_data::set(isolate_, this);
 		global->Set(isolate_, "require",
 			v8::FunctionTemplate::New(isolate_, context::load_module, data));
 		global->Set(isolate_, "run",
@@ -229,10 +203,7 @@ context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
 
 context::~context()
 {
-	// Destroy objects derived from external_data_base
-	::PHV::destroyObjects(isolate_);
-
-	// remove all class singletons before modules unload
+	// remove all class singletons and external data before modules unload
 	cleanup(isolate_);
 
 	for (auto& kv : modules_)

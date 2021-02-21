@@ -53,7 +53,7 @@ V8PP_IMPL object_registry<Traits>::object_registry(v8::Isolate* isolate, type_in
 		[](v8::FunctionCallbackInfo<v8::Value> const& args)
 		{
 			v8::Isolate* isolate = args.GetIsolate();
-			object_registry* this_ = get_external_data<object_registry*>(args.Data());
+			object_registry* this_ = external_data::get<object_registry*>(args.Data());
 			try
 			{
 				return args.GetReturnValue().Set(this_->wrap_object(args));
@@ -62,7 +62,7 @@ V8PP_IMPL object_registry<Traits>::object_registry(v8::Isolate* isolate, type_in
 			{
 				args.GetReturnValue().Set(throw_ex(isolate, ex.what()));
 			}
-		}, set_external_data(isolate, this));
+		}, external_data::set(isolate, this));
 
 	func_.Reset(isolate, func);
 	js_func_.Reset(isolate, js_func);
@@ -402,6 +402,7 @@ V8PP_IMPL classes* classes::instance(operation op, v8::Isolate* isolate)
 V8PP_IMPL void cleanup(v8::Isolate* isolate)
 {
 	detail::classes::remove_all(isolate);
+	detail::external_data::destroy_all(isolate);
 }
 
 } // namespace v8pp
