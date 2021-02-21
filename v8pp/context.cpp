@@ -195,7 +195,7 @@ context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
 
 context::~context()
 {
-	// remove all class singletons before modules unload
+	// remove all class singletons and external data before modules unload
 	cleanup(isolate_);
 
 	for (auto& kv : modules_)

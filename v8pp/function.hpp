@@ -41,24 +41,8 @@ public:
 		else
 		{
 			using ExtValue = value_holder<T>;
-			std::unique_ptr<ExtValue> ext_value(new ExtValue);
-			new (ext_value->data()) T(std::forward<T>(value));
-
-			v8::Local<v8::External> ext = v8::External::New(isolate, ext_value.get());
-			ext_value->pext_.Reset(isolate, ext);
-			ext_value->pext_.SetWeak(ext_value.get(),
-				[](v8::WeakCallbackInfo<ExtValue> const& data)
-				{
-					std::unique_ptr<ExtValue> ext_value(data.GetParameter());
-					if (!ext_value->pext_.IsEmpty())
-					{
-						ext_value->data()->~T();
-						ext_value->pext_.Reset();
-					}
-				}, v8::WeakCallbackType::kParameter);
-
-			ext_value.release();
-			return ext;
+			ExtValue* ext_value = new ExtValue(isolate, std::forward<T>(value));
+			return v8::Local<v8::External>::New(isolate, ext_value->pext);
 		}
 	}
 
@@ -76,18 +60,75 @@ public:
 		{
 			using ExtValue = value_holder<T>;
 			ExtValue* ext_value = static_cast<ExtValue*>(value.As<v8::External>()->Value());
-			T& data = *(ext_value->data());
-			return (data); // as reference
+			return (ext_value->data()); // as reference
 		}
 	}
-private:
-	template<typename T>
-	struct value_holder
-	{
-		T* data() { return static_cast<T*>(static_cast<void*>(&storage_)); }
 
-		std::aligned_storage_t<sizeof(T), alignof(T)> storage_;
-		v8::Global<v8::External> pext_;
+	static void destroy_all(v8::Isolate* isolate)
+	{
+		handle_visitor visitor(isolate);
+		isolate->VisitHandlesWithClassIds(&visitor);
+	}
+
+private:
+	static constexpr uint16_t class_id = 0x7bc;
+
+	struct value_holder_base
+	{
+		virtual ~value_holder_base() = default;
+	};
+
+	template<typename T>
+	struct value_holder final : value_holder_base
+	{
+		std::aligned_storage_t<sizeof(T), alignof(T)> storage;
+		v8::Global<v8::External> pext;
+
+		T& data() { return *static_cast<T*>(static_cast<void*>(&storage)); }
+
+		value_holder(v8::Isolate* isolate, T&& data)
+		{
+			new (&storage) T(std::forward<T>(data));
+			pext.Reset(isolate, v8::External::New(isolate, this));
+			pext.SetWrapperClassId(external_data::class_id);
+			pext.SetWeak(this,
+				[](v8::WeakCallbackInfo<value_holder> const& info)
+				{
+					delete info.GetParameter();
+				}, v8::WeakCallbackType::kParameter);
+		}
+
+		~value_holder()
+		{
+			if (!pext.IsEmpty())
+			{
+				data().~T();
+				pext.Reset();
+			}
+		}
+	};
+
+	struct handle_visitor final : v8::PersistentHandleVisitor
+	{
+		v8::Isolate* isolate;
+
+		explicit handle_visitor(v8::Isolate* isolate)
+			: isolate(isolate)
+		{
+		}
+
+		virtual void VisitPersistentHandle(v8::Persistent<v8::Value>* value, uint16_t value_class_id) override
+		{
+			if (value_class_id == external_data::class_id)
+			{
+				v8::HandleScope scope(isolate);
+				v8::Local<v8::External> ext = value->Get(isolate).As<v8::External>();
+				if (!ext.IsEmpty())
+				{
+					delete static_cast<value_holder_base*>(ext->Value());
+				}
+			}
+		}
 	};
 };
 
