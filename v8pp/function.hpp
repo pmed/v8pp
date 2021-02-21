@@ -44,7 +44,6 @@ class external_data
 		operator T() const { return value; }
 	};
 
-	static constexpr uint16_t class_id = 0x7bc;
 public:
 	template<typename T>
 	static typename std::enable_if<is_pointer_cast_allowed<T>::value, v8::Local<v8::Value>>::type
@@ -57,7 +56,7 @@ public:
 	static typename std::enable_if<!is_pointer_cast_allowed<T>::value, v8::Local<v8::Value>>::type
 	set(v8::Isolate* isolate, T&& data)
 	{
-		ext_value<T>* value = new ext_value<T>(isolate, std::forward<T>(data));
+		value_holder<T>* value = new value_holder<T>(isolate, std::forward<T>(data));
 		return v8::Local<v8::External>::New(isolate, value->pext);
 	}
 
@@ -72,7 +71,7 @@ public:
 	static typename std::enable_if<!is_pointer_cast_allowed<T>::value, T&>::type
 	get(v8::Local<v8::Value> ext)
 	{
-		ext_value<T>* value = static_cast<ext_value<T>*>(ext.As<v8::External>()->Value());
+		value_holder<T>* value = static_cast<value_holder<T>*>(ext.As<v8::External>()->Value());
 		return value->data();
 	}
 
@@ -83,32 +82,34 @@ public:
 	}
 
 private:
-	struct ext_value_base
+	static constexpr uint16_t class_id = 0x7bc;
+
+	struct value_holder_base
 	{
-		virtual ~ext_value_base() = default;
+		virtual ~value_holder_base() = default;
 	};
 
 	template<typename T>
-	struct ext_value final : ext_value_base
+	struct value_holder final : value_holder_base
 	{
 		typename std::aligned_storage<sizeof(T)>::type storage;
 		v8::Global<v8::External> pext;
 
 		T& data() { return *static_cast<T*>(static_cast<void*>(&storage)); }
 
-		ext_value(v8::Isolate* isolate, T&& data)
+		value_holder(v8::Isolate* isolate, T&& data)
 		{
 			new (&storage) T(std::forward<T>(data));
 			pext.Reset(isolate, v8::External::New(isolate, this));
 			pext.SetWrapperClassId(external_data::class_id);
 			pext.SetWeak(this,
-				[](v8::WeakCallbackInfo<ext_value<T>> const& info)
+				[](v8::WeakCallbackInfo<value_holder> const& info)
 				{
 					delete info.GetParameter();
 				}, v8::WeakCallbackType::kParameter);
 		}
 
-		~ext_value()
+		~value_holder()
 		{
 			if (!pext.IsEmpty())
 			{
@@ -127,15 +128,15 @@ private:
 		{
 		}
 
-		virtual void VisitPersistentHandle(v8::Persistent<v8::Value>* value, uint16_t class_id) override
+		virtual void VisitPersistentHandle(v8::Persistent<v8::Value>* value, uint16_t value_class_id) override
 		{
-			if (class_id == external_data::class_id)
+			if (value_class_id == external_data::class_id)
 			{
 				v8::HandleScope scope(isolate);
 				v8::Local<v8::External> ext = value->Get(isolate).As<v8::External>();
 				if (!ext.IsEmpty())
 				{
-					delete static_cast<ext_value_base*>(ext->Value());
+					delete static_cast<value_holder_base*>(ext->Value());
 				}
 			}
 		}
