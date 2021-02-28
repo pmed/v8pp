@@ -96,6 +96,18 @@ void check_eq(std::string msg, T actual, U expected)
 	}
 }
 
+template <typename OS, typename T>
+bool tuple_to_ostream_impl(OS && ostream, T && value)
+{
+    ostream << value << " ";
+    return true;
+}
+
+template <typename OS, typename ... Ts, std::size_t ... Is>
+void tuple_to_ostream(OS && ostream, const std::tuple<Ts...> &tuple, std::index_sequence<Is...> &&)
+{
+    (void) std::initializer_list<bool>{tuple_to_ostream_impl(ostream, std::get<Is>(tuple))...};
+}
 
 template <typename ... Ts>
 void check_eq(std::string msg, const std::tuple<Ts...>& actual, const std::tuple<Ts...>& expected)
@@ -105,9 +117,10 @@ void check_eq(std::string msg, const std::tuple<Ts...>& actual, const std::tuple
         std::stringstream ss;
         ss << msg << " ";
         auto print = [&ss](const char * name, const std::tuple<Ts...>& tuple){
-            ss << name << ": { ";
-            ((ss << std::get<Ts>(tuple) << " "), ...);
-            ss << "}";
+            constexpr size_t N = sizeof ... (Ts);
+            ss << name << ": {";
+            tuple_to_ostream(ss, tuple, std::make_integer_sequence<std::size_t, N>{});
+            ss << "} ";
         };
         print("actual", actual);
         print("expected", expected);

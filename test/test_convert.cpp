@@ -179,7 +179,10 @@ void test_convert()
     std::tuple<size_t, bool, std::string> tuple_2{2, true, "test"};
     test_conv(isolate, tuple_2);
 
-    check_ex<std::runtime_error>("wrong array length", [isolate, &tuple_1]()
+    std::tuple<size_t, size_t, size_t> tuple_3{1, 2, 3};
+    test_conv(isolate, tuple_3);
+
+    check_ex<v8pp::invalid_argument>("Tuple", [isolate, &tuple_1]()
     {
         // incorrect number of elements
          v8::Local<v8::Array> tuple_1_ = v8pp::to_v8(isolate, tuple_1);

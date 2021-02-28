@@ -312,8 +312,9 @@ struct convert<std::tuple<Ts...>>
     static constexpr size_t N = sizeof ... (Ts);
     static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
     {
-        return !value.IsEmpty() && value->IsArray();
+        return !value.IsEmpty() && value->IsArray() && value.As<v8::Array>()->Length() == N;
     }
+
 
     static from_type from_v8(v8::Isolate * isolate, v8::Local<v8::Value> value)
     {
@@ -326,16 +327,7 @@ struct convert<std::tuple<Ts...>>
         v8::Local<v8::Context> context = isolate->GetCurrentContext();
         v8::Local<v8::Array> array = value.As<v8::Array>();
 
-        if (array->Length() != N)
-        {
-            throw std::runtime_error("Invalid array length: expected "
-                                     + std::to_string(N) + " actual "
-                                     + std::to_string(array->Length()));
-        }
-
-        return [isolate, &context, &array]<std::size_t ... Is>(std::index_sequence<Is...>&&) -> from_type{
-            return std::tuple<Ts...>{v8pp::convert<Ts>::from_v8(isolate, array->Get(context, Is).ToLocalChecked())...};
-        }(std::make_index_sequence<N>{});
+        return from_v8_impl(isolate, context, array, std::make_index_sequence<N>{});
     }
 
     static to_type to_v8(v8::Isolate * isolate, from_type const& value)
@@ -343,11 +335,19 @@ struct convert<std::tuple<Ts...>>
         v8::EscapableHandleScope scope(isolate);
         v8::Local<v8::Context> context = isolate->GetCurrentContext();
         v8::Local<v8::Array> result = v8::Array::New(isolate, N);
-        [isolate, &context, &result, &value]<std::size_t ... Is>(std::index_sequence<Is...> &&) -> void {
-            (result->Set(context, Is, convert<Ts>::to_v8(isolate, std::get<Is>(value))).FromJust(), ...);
-        }(std::make_index_sequence<N>{});
+        to_v8_impl(isolate, context, value, result, std::make_index_sequence<N>{});
 
         return scope.Escape(result);
+    }
+private:
+    template <std::size_t ... Is>
+    static from_type from_v8_impl(v8::Isolate * isolate, v8::Local<v8::Context> &context, v8::Local<v8::Array> &array, std::index_sequence<Is...> &&){
+        return std::tuple<Ts...>{v8pp::convert<Ts>::from_v8(isolate, array->Get(context, Is).ToLocalChecked())...};
+    }
+    template <std::size_t ... Is>
+    static to_type to_v8_impl(v8::Isolate* isolate, v8::Local<v8::Context> &context, const std::tuple<Ts...> &value, v8::Local<v8::Array>& result, std::index_sequence<Is...> &&){
+        std::initializer_list<bool>{result->Set(context, Is, convert<Ts>::to_v8(isolate, std::get<Is>(value))).FromJust()...};
+        return result;
     }
 };
 
