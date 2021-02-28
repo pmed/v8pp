@@ -96,6 +96,29 @@ void check_eq(std::string msg, T actual, U expected)
 	}
 }
 
+template <typename ... Ts>
+void check_eq(std::string msg, const std::tuple<Ts...>& actual, const std::tuple<Ts...>& expected)
+{
+    if (actual != expected)
+    {
+        std::stringstream ss;
+        auto get_string_item = []<typename T>(const T& item){
+            using U = std::decay_t<T>;
+            if constexpr (std::is_same_v<U, std::string>){
+                return item;
+            } else {
+                return std::to_string(item);
+            }
+        };
+        auto get_string = [&get_string_item](const std::tuple<Ts...> &value){
+            std::string out = (get_string_item(std::get<Ts>(value)).append(", ") + ... + "");
+            return out;
+        };
+        ss << msg << " expected: '" << get_string(expected) << "' actual: '" << get_string(actual) << "'";
+        check(ss.str(), false);
+    }
+}
+
 template<typename Ex, typename F>
 void check_ex(std::string msg, F&& f)
 {
