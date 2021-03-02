@@ -192,7 +192,7 @@ struct VariantCheck<std::variant<Ts...>> {
         return std::get<T>(in);
     }
 
-    template <typename T, typename From, typename To, bool get>
+    template <typename T, typename From, typename To>
     VariantCheck& check(const T &value)
     {
         From values = value;
@@ -206,9 +206,9 @@ struct VariantCheck<std::variant<Ts...>> {
     template <typename T>
     VariantCheck& checkValue(T value)
     {
-        check<T, Variant, Variant, true>(value); // variant to variant
-        check<T, Variant, T, false>(value); // variant to type
-        check<T, T, Variant, true>(value); // type to variant
+        check<T, Variant, Variant>(value); // variant to variant
+        check<T, Variant, T>(value); // variant to type
+        check<T, T, Variant>(value); // type to variant
         return *this;
     }
 
