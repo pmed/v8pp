@@ -700,7 +700,6 @@ v8::Local<v8::Array> to_v8(v8::Isolate* isolate, std::initializer_list<T> const&
 }
 
 
-
 template <typename ... Ts>
 struct convert<std::variant<Ts...>>
 {
@@ -741,7 +740,7 @@ struct convert<std::variant<Ts...>>
         v8::HandleScope scope(isolate);
         v8::Local<v8::Context> context = isolate->GetCurrentContext();
         std::optional<std::variant<Ts...>> out;
-        if (value->IsObject()){
+        if (value->IsObject() && !value->IsArray()){
             // todo: handle std::map
             out = getObject<isObj, Ts...>(isolate, value);
         } else if (value->IsArray()){
@@ -810,6 +809,19 @@ private:
         return containsObjectImpl<T, v8pp::shared_ptr_traits>(value);
     }
 
+
+    template <typename T>
+    static std::enable_if_t<std::is_integral_v<T> && !isBoolean<T>::value, bool> compatibleNumeric(v8::Isolate * isolate, v8::Local<v8::Value> value)
+    {
+        if (!value->IsNumber()) return false;
+        if constexpr (std::is_same_v<T, int64_t> || std::is_same_v<T, uint64_t>){
+            return true;
+        }
+        const double number = v8pp::from_v8<double>(isolate, value);
+        return number >= static_cast<double>(std::numeric_limits<T>::min()) &&
+               number <= static_cast<double>(std::numeric_limits<T>::max());
+    }
+
     template <typename T>
     static std::optional<T> getObjectImpl(v8::Isolate* isolate, v8::Local<v8::Value> value)
     {
@@ -827,6 +839,11 @@ private:
                     }
                 }
             } else {
+                if constexpr (std::is_integral_v<T> && !isBoolean<T>::value){
+                    if (!compatibleNumeric<T>(isolate, value)){
+                        return std::nullopt;
+                    }
+                }
                 T out = v8pp::convert<T>::from_v8(isolate, value);
                 return out;
             }

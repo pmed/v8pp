@@ -285,6 +285,7 @@ void test_convert()
     using Variant = std::variant<U, std::shared_ptr<V>, int, std::string, U2, std::shared_ptr<V2>>;
     using ArithmeticVariant = std::variant<bool, float, int32_t>;
     using ArithmeticVariantReversed = std::variant<int32_t, float, bool>;
+    using VariantVector = std::variant<std::vector<float>, float, std::string>;
 
     VariantCheck<Variant> check{isolate};
     check({U{2}, V_, -1, std::string("Hello"), U2{3.}, V2_});
@@ -294,4 +295,12 @@ void test_convert()
 
     VariantCheck<ArithmeticVariantReversed> checkArithmeticReversed(context.isolate());
     checkArithmeticReversed({int32_t{2}, float{5.5f}, bool{true}});
+
+    VariantCheck<VariantVector> checkVector(context.isolate());
+    checkVector({std::vector<float>{1.f, 2.f, 3.f}, float{4.f}, std::string{"testing"}});
+
+    // The order here matters
+    using ValueChecking = std::variant<int8_t, uint8_t, int32_t, uint32_t, double>;
+    const double largeNumber = static_cast<double>(std::numeric_limits<uint32_t>::max()) + 1.;
+    VariantCheck<ValueChecking>{context.isolate()}({-1, 254, std::numeric_limits<int32_t>::min(), std::numeric_limits<uint32_t>::max(), largeNumber});
 }
