@@ -193,26 +193,38 @@ struct VariantCheck<std::variant<Ts...>> {
     }
 
     template <typename T, typename From, typename To, bool get>
-    void check(const T &value)
+    VariantCheck& check(const T &value)
     {
         From values = value;
         auto local = v8pp::convert<From>::to_v8(isolate, values);
         auto back = v8pp::convert<To>::from_v8(isolate, local);
         T returned = VariantCheck::get<T>(back);
         ::check(v8pp::detail::type_id<Variant>().name(), returned == value);
+        return *this;
     }
 
     template <typename T>
-    void checkValue(T value)
+    VariantCheck& checkValue(T value)
     {
         check<T, Variant, Variant, true>(value); // variant to variant
         check<T, Variant, T, false>(value); // variant to type
         check<T, T, Variant, true>(value); // type to variant
+        return *this;
     }
 
-    void operator()(std::tuple<Ts...> && values)
+    template <typename T>
+    VariantCheck& checkThrow(T value){
+        auto local = v8pp::convert<T>::to_v8(isolate, value);
+        check_ex<std::exception>("variant", [&]{
+            v8pp::convert<Variant>::from_v8(isolate, local);
+        });
+        return *this;
+    }
+
+    VariantCheck& operator()(std::tuple<Ts...> && values)
     {
         (checkValue<Ts>(std::get<Ts>(values)),...);
+        return *this;
     }
 };
 
@@ -302,4 +314,17 @@ void test_convert()
     using ValueChecking = std::variant<int8_t, uint8_t, int32_t, uint32_t, double>;
     const double largeNumber = static_cast<double>(std::numeric_limits<uint32_t>::max()) + 1.;
     VariantCheck<ValueChecking>{context.isolate()}({-1, 254, std::numeric_limits<int32_t>::min(), std::numeric_limits<uint32_t>::max(), largeNumber});
+
+
+    using SimpleArithmetic = std::variant<bool, int8_t>;
+    VariantCheck<SimpleArithmetic> simpleArithmetic{context.isolate()};
+    simpleArithmetic.checkThrow(std::numeric_limits<uint32_t>::max()) // does not fit into int8_t
+                    .checkThrow(1.5) // is not integral
+                    .checkThrow(V_); // is not arithmetic
+
+    using ObjectsOnly = std::variant<U, std::shared_ptr<V>, std::vector<float>>;
+    VariantCheck<ObjectsOnly> objectsOnly{context.isolate()};
+    objectsOnly.checkThrow(true)
+        .checkThrow("test")
+        .checkThrow(1.);
 }
