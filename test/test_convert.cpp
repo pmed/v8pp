@@ -203,17 +203,16 @@ struct VariantCheck<std::variant<Ts...>> {
     }
 
     template <typename T>
-    void operator()(T && value)
+    void checkValue(T value)
     {
-        using T_ = std::decay_t<T>;
-        check<T_, Variant, Variant, true>(value); // variant to variant
-        check<T_, Variant, T_, false>(value); // variant to type
-        check<T_, T_, Variant, true>(value); // type to variant
+        check<T, Variant, Variant, true>(value); // variant to variant
+        check<T, Variant, T, false>(value); // variant to type
+        check<T, T, Variant, true>(value); // type to variant
     }
 
     void operator()(std::tuple<Ts...> && values)
     {
-        (operator()(std::get<Ts>(values)),...);
+        (checkValue<Ts>(std::get<Ts>(values)),...);
     }
 };
 
