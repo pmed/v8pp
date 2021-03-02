@@ -742,9 +742,9 @@ struct convert<std::variant<Ts...>>
         std::optional<std::variant<Ts...>> out;
         if (value->IsObject() && !value->IsArray()){
             // todo: handle std::map
-            out = getObject<isObj, Ts...>(isolate, value);
+            out = getObjectAlternate<isObj>(isolate, value);
         } else if (value->IsArray()){
-            out = getObject<isArray, Ts...>(isolate, value);
+            out = getObjectAlternate<isArray>(isolate, value);
         } else if (value->IsNumber()){
             // Note: 5.f will be converted to an integer type if available,
             // since internally v8 stores all values (including integer types) as double
@@ -757,9 +757,9 @@ struct convert<std::variant<Ts...>>
         } else if (value->IsBoolean()){
             out = getObjectAlternate<isBoolean, isIntegralNotBool>(isolate, value);
         } else if (value->IsString()){
-            out = getObject<isString, Ts...>(isolate, value);
+            out = getObjectAlternate<isString>(isolate, value);
         } else {
-            out = getObject<isAny, Ts...>(isolate, value);
+            out = getObjectAlternate<isAny>(isolate, value);
         }
         if (out){
             return *out;
@@ -854,7 +854,7 @@ private:
     template <template <typename T> typename condition, template <typename T> typename ... conditions>
     static std::optional<std::variant<Ts...>> getObjectAlternate(v8::Isolate* isolate, v8::Local<v8::Value> value)
     {
-        if (auto out = getObject<condition, Ts...>(isolate, value)){
+        if (auto out = getObject<Ts...>(isolate, value, {condition<Ts>::value...}, 0)){
             return out;
         }
         if constexpr (sizeof ... (conditions) > 0){
@@ -863,16 +863,16 @@ private:
         return std::nullopt;
     }
 
-    template <template <typename T> typename  condition, typename T, typename ... Ts_>
-    static std::optional<std::variant<Ts...>> getObject(v8::Isolate* isolate, v8::Local<v8::Value> value)
+    template <typename T, typename ... Ts_>
+    static std::optional<std::variant<Ts...>> getObject(v8::Isolate* isolate, v8::Local<v8::Value> value, const std::array<bool, N> &validType, size_t index)
     {
-        if constexpr (condition<T>::value){
+        if (validType[index]){
             if (auto out = getObjectImpl<T>(isolate, value)){
-                return *out;
+                return out;
             }
         }
         if constexpr ((sizeof ... (Ts_)) > 0) {
-            return getObject<condition, Ts_...>(isolate, value);
+            return getObject<Ts_...>(isolate, value, validType, index + 1);
         }
         return std::nullopt;
     }
