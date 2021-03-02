@@ -8,6 +8,7 @@
 //
 #include "v8pp/convert.hpp"
 #include "test.hpp"
+#include "v8pp/class.hpp"
 
 #include <list>
 #include <vector>
@@ -127,6 +128,95 @@ struct convert<person>
 
 } // v8pp
 
+namespace {
+struct U {
+    U(int value = 1) : value(value) {}
+    int value = 1;
+    bool operator==(const U& other) const {
+        return value == other.value;
+    }
+    friend std::ostream& operator<<(std::ostream& os, U const& val)
+    {
+        return os << val.value;
+    }
+};
+struct U2 {
+    U2(double value = 2.) : value(value) {}
+    double value = 2.;
+    bool operator==(const U2& other) const {
+        return value == other.value;
+    }
+    friend std::ostream& operator<<(std::ostream& os, U2 const& val)
+    {
+        return os << val.value;
+    }
+};
+struct V {
+    V(std::string value = "") : value(value) {}
+    std::string value = "test";
+    bool operator==(const V& other) const {
+        return value == other.value;
+    }
+    friend std::ostream& operator<<(std::ostream& os, V const& val)
+    {
+        return os << val.value;
+    }
+};
+struct V2 {
+    V2(std::string value = "") : value(value) {}
+    std::string value = "test";
+    bool operator==(const V2& other) const {
+        return value == other.value;
+    }
+    friend std::ostream& operator<<(std::ostream& os, V2 const& val)
+    {
+        return os << val.value;
+    }
+};
+} // namespace
+
+template <typename T> struct VariantCheck {};
+
+template <typename ... Ts>
+struct VariantCheck<std::variant<Ts...>> {
+    VariantCheck(v8::Isolate * isolate) : isolate(isolate) {}
+    v8::Isolate * isolate;
+    using Variant = std::variant<Ts...>;
+
+    template <typename T>
+    static T get(const T& in){
+        return in;
+    }
+    template <typename T>
+    static T get(const std::variant<Ts...> &in){
+        return std::get<T>(in);
+    }
+
+    template <typename T, typename From, typename To, bool get>
+    void check(const T &value)
+    {
+        From values = value;
+        auto local = v8pp::convert<From>::to_v8(isolate, values);
+        auto back = v8pp::convert<To>::from_v8(isolate, local);
+        T returned = VariantCheck::get<T>(back);
+        ::check(v8pp::detail::type_id<Variant>().name(), returned == value);
+    }
+
+    template <typename T>
+    void operator()(T && value)
+    {
+        using T_ = std::decay_t<T>;
+        check<T_, Variant, Variant, true>(value); // variant to variant
+        check<T_, Variant, T_, false>(value); // variant to type
+        check<T_, T_, Variant, true>(value); // type to variant
+    }
+
+    void operator()(std::tuple<Ts...> && values)
+    {
+        (operator()(std::get<Ts>(values)),...);
+    }
+};
+
 void test_convert()
 {
 	v8pp::context context;
@@ -177,4 +267,31 @@ void test_convert()
 	person p;
 	p.name = "Al"; p.age = 33;
 	test_conv(isolate, p);
+
+    // Variant check
+    v8pp::class_<U, v8pp::raw_ptr_traits> U_class(isolate);
+    U_class.template ctor<>().auto_wrap_objects(true);
+    v8pp::class_<U2, v8pp::raw_ptr_traits> U2_class(isolate);
+    U2_class.template ctor<>().auto_wrap_objects(true);
+    v8pp::class_<V, v8pp::shared_ptr_traits> V_class(isolate);
+    V_class.template ctor<>().auto_wrap_objects(true);
+    v8pp::class_<V2, v8pp::shared_ptr_traits> V2_class(isolate);
+    V2_class.template ctor<>().auto_wrap_objects(true);
+    auto V_ = std::make_shared<V>(V{"test" });
+    auto V2_ = std::make_shared<V2>(V2{"test2"});
+    V_class.reference_external(isolate, V_);
+    V2_class.reference_external(isolate, V2_);
+
+    using Variant = std::variant<U, std::shared_ptr<V>, int, std::string, U2, std::shared_ptr<V2>>;
+    using ArithmeticVariant = std::variant<bool, float, int32_t>;
+    using ArithmeticVariantReversed = std::variant<int32_t, float, bool>;
+
+    VariantCheck<Variant> check{isolate};
+    check({U{2}, V_, -1, std::string("Hello"), U2{3.}, V2_});
+
+    VariantCheck<ArithmeticVariant> checkArithmetic(context.isolate());
+    checkArithmetic({bool{true}, float{5.5f}, int32_t{2}});
+
+    VariantCheck<ArithmeticVariantReversed> checkArithmeticReversed(context.isolate());
+    checkArithmeticReversed({int32_t{2}, float{5.5f}, bool{true}});
 }
