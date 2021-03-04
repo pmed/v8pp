@@ -173,7 +173,7 @@ struct V2 {
         return os << val.value;
     }
 };
-} // namespace
+
 
 template <typename T> struct VariantCheck {};
 
@@ -226,7 +226,32 @@ struct VariantCheck<std::variant<Ts...>> {
         (checkValue<Ts>(std::get<Ts>(values)),...);
         return *this;
     }
+
 };
+
+template <typename T>
+void checkRange(v8::Isolate * isolate)
+{
+    using Variant = std::variant<T>;
+    VariantCheck<Variant> check{isolate};
+    if constexpr (sizeof (T) < sizeof(double)){
+        // we can't do this test directly for int64_t / uint64_t since their max and min aren't guaranteed to be double
+        check({std::numeric_limits<T>::max()});
+        check({std::numeric_limits<T>::min()});
+    }
+    check(T(0));
+    check({std::nextafter(std::numeric_limits<T>::max(), std::numeric_limits<double>::min())}); // like max - 1 (within range)
+    check({std::nextafter(std::numeric_limits<T>::min(), std::numeric_limits<double>::max())}); // like min + 1 (within range)
+    check.checkThrow(std::nextafter(std::numeric_limits<T>::max(), std::numeric_limits<double>::max())); // like max + 1 (out of range)
+    check.checkThrow(std::nextafter(std::numeric_limits<T>::min(), std::numeric_limits<double>::min())); // like min - 1 (out of range)
+}
+
+template <typename ... Ts>
+void checkRanges(v8::Isolate * isolate)
+{
+    (checkRange<Ts>(isolate),...);
+}
+} // namespace
 
 void test_convert()
 {
@@ -315,7 +340,6 @@ void test_convert()
     const double largeNumber = static_cast<double>(std::numeric_limits<uint32_t>::max()) + 1.;
     VariantCheck<ValueChecking>{context.isolate()}({-1, 254, std::numeric_limits<int32_t>::min(), std::numeric_limits<uint32_t>::max(), largeNumber});
 
-
     using SimpleArithmetic = std::variant<bool, int8_t>;
     VariantCheck<SimpleArithmetic> simpleArithmetic{context.isolate()};
     simpleArithmetic.checkThrow(std::numeric_limits<uint32_t>::max()) // does not fit into int8_t
@@ -327,4 +351,7 @@ void test_convert()
     objectsOnly.checkThrow(true)
         .checkThrow("test")
         .checkThrow(1.);
+
+    // Note: uint64_t is not guaranteed to work because V8's toInteger function returns an int64_t.
+    checkRanges<int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t>(isolate);
 }

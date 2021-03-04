@@ -811,15 +811,28 @@ private:
 
 
     template <typename T>
+    static std::enable_if_t<std::is_integral_v<T> && !isBoolean<T>::value, std::pair<double, double>> getLimitDouble()
+    {
+        std::pair<double, double> limits = {static_cast<double>(std::numeric_limits<T>::min()),
+                                                      static_cast<double>(std::numeric_limits<T>::max())};
+        if constexpr (sizeof(T) < sizeof(double))
+        {
+            return limits;
+        }
+        else
+        {
+            return {std::nextafter(limits.first, std::numeric_limits<double>::min()),
+                    std::nextafter(limits.second, std::numeric_limits<double>::max())};
+        }
+    }
+
+    template <typename T>
     static std::enable_if_t<std::is_integral_v<T> && !isBoolean<T>::value, bool> compatibleNumeric(v8::Isolate * isolate, v8::Local<v8::Value> value)
     {
         if (!value->IsNumber()) return false;
-        if constexpr (std::is_same_v<T, int64_t> || std::is_same_v<T, uint64_t>){
-            return true;
-        }
         const double number = v8pp::from_v8<double>(isolate, value);
-        return number >= static_cast<double>(std::numeric_limits<T>::min()) &&
-               number <= static_cast<double>(std::numeric_limits<T>::max());
+        const auto limits = getLimitDouble<T>();
+        return number >= limits.first && number <= limits.second;
     }
 
     template <typename T>
