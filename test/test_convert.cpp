@@ -240,10 +240,10 @@ void checkRange(v8::Isolate * isolate)
         check({std::numeric_limits<T>::min()});
     }
     check(T(0));
-    check({std::nextafter(std::numeric_limits<T>::max(), std::numeric_limits<double>::min())}); // like max - 1 (within range)
-    check({std::nextafter(std::numeric_limits<T>::min(), std::numeric_limits<double>::max())}); // like min + 1 (within range)
-    check.checkThrow(std::nextafter(std::numeric_limits<T>::max(), std::numeric_limits<double>::max())); // like max + 1 (out of range)
-    check.checkThrow(std::nextafter(std::numeric_limits<T>::min(), std::numeric_limits<double>::min())); // like min - 1 (out of range)
+    check(std::tuple<T>{T(std::nextafter(std::numeric_limits<T>::max(), std::numeric_limits<double>::min()))}); // like max - 1 (within range)
+    check(std::tuple<T>{T(std::nextafter(std::numeric_limits<T>::min(), std::numeric_limits<double>::max()))}); // like min + 1 (within range)
+    check.template checkThrow<T>(T(std::nextafter(std::numeric_limits<T>::max(), std::numeric_limits<double>::max()))); // like max + 1 (out of range)
+    check.template checkThrow<T>(T(std::nextafter(std::numeric_limits<T>::min(), std::numeric_limits<double>::min()))); // like min - 1 (out of range)
 }
 
 template <typename ... Ts>
