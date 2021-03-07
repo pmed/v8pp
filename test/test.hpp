@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <stdexcept>
+#include <tuple>
 
 #include "v8pp/context.hpp"
 #include "v8pp/convert.hpp"
@@ -75,6 +76,23 @@ std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& o
 	return os << static_cast<typename std::underlying_type<Enum>::type>(value);
 }
 
+template<typename Char, typename Traits, typename Tuple, size_t... Is>
+void print_tuple(std::basic_ostream<Char, Traits>& os, Tuple const& tuple,
+	std::index_sequence<Is...>)
+{
+	(void)std::initializer_list<bool>{ ((os << (Is == 0? "" : ", ") << std::get<Is>(tuple)),true)... };
+}
+
+template<typename Char, typename Traits, typename... Ts>
+std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& os,
+	std::tuple<Ts...> const& tuple)
+{
+	os << '{';
+	print_tuple(os, tuple, std::index_sequence_for<Ts...>{});
+	os << '}';
+	return os;
+}
+
 inline void check(std::string msg, bool condition)
 {
 	if (!condition)
@@ -95,39 +113,6 @@ void check_eq(std::string msg, T actual, U expected)
 		check(ss.str(), false);
 	}
 }
-
-template <typename OS, typename T>
-bool tuple_to_ostream_impl(OS && ostream, T && value)
-{
-    ostream << value << " ";
-    return true;
-}
-
-template <typename OS, typename ... Ts, std::size_t ... Is>
-void tuple_to_ostream(OS && ostream, const std::tuple<Ts...> &tuple, std::index_sequence<Is...> &&)
-{
-    (void) std::initializer_list<bool>{tuple_to_ostream_impl(ostream, std::get<Is>(tuple))...};
-}
-
-template <typename ... Ts>
-void check_eq(std::string msg, const std::tuple<Ts...>& actual, const std::tuple<Ts...>& expected)
-{
-    if (actual != expected)
-    {
-        std::stringstream ss;
-        ss << msg << " ";
-        auto print = [&ss](const char * name, const std::tuple<Ts...>& tuple){
-            constexpr size_t N = sizeof ... (Ts);
-            ss << name << ": {";
-            tuple_to_ostream(ss, tuple, std::make_integer_sequence<std::size_t, N>{});
-            ss << "} ";
-        };
-        print("actual", actual);
-        print("expected", expected);
-        check(ss.str(), false);
-    }
-}
-
 
 template<typename Ex, typename F>
 void check_ex(std::string msg, F&& f)
