@@ -5,9 +5,9 @@
 
 # v8pp
 
-Header-only library to expose C++ classes and functions into [V8](https://developers.google.com/v8/) to use them in JavaScript code. v8pp uses heavy template metaprogramming and variadic template parameters which requires modern compiler with C++11 support. The library has been tested on:
+Header-only library to expose C++ classes and functions into [V8](https://developers.google.com/v8/) to use them in JavaScript code. v8pp requires a compiler with C++14 support. The library has been tested on:
 
-  * Microsoft Visual C++ 2015/2017 (Windows 10)
+  * Microsoft Visual C++ 2019 (Windows 10)
   * GCC 5.4.0 (Ubuntu 16.04)
   * Clang 5.0.0 (Ubuntu 16.04)
 
