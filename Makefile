@@ -1,5 +1,5 @@
 CXX ?= c++
-CXXFLAGS += -Wall -Wextra -std=c++14 -fPIC -fno-rtti -DV8PP_ISOLATE_DATA_SLOT=0
+CXXFLAGS += -Wall -Wextra -Wno-return-type-c-linkage -Wno-unneeded-internal-declaration -std=c++14 -fPIC -fno-rtti -DV8PP_ISOLATE_DATA_SLOT=0
 LDFLAGS += -shared
 AR = ar
 ARFLAGS = rcs

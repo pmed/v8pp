@@ -130,11 +130,13 @@ void test_class_()
 	int extra_ctor_context = 1;
 	auto const X_ctor = [extra_ctor_context](v8::FunctionCallbackInfo<v8::Value> const& args)
 	{
+		(void)extra_ctor_context;
 		return create_X<Traits>(args);
 	};
 	Z extra_dtor_context;
 	auto const X_dtor = [extra_dtor_context](v8::Isolate*, typename Traits::template object_pointer_type<X> const& obj)
 	{
+		(void)extra_dtor_context;
 		Traits::destroy(obj);
 	};
 
