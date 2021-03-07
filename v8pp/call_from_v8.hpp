@@ -122,7 +122,7 @@ using select_call_traits = typename std::conditional<is_first_arg_isolate<F>::va
 template<typename Traits, typename F, typename CallTraits, size_t ...Indices>
 typename function_traits<F>::return_type
 call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
-	CallTraits, index_sequence<Indices...>)
+	CallTraits, std::index_sequence<Indices...>)
 {
 	return func(CallTraits::template arg_from_v8<Indices, Traits>(args)...);
 }
@@ -130,7 +130,7 @@ call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
 template<typename Traits, typename T, typename F, typename CallTraits, size_t ...Indices>
 typename function_traits<F>::return_type
 call_from_v8_impl(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
-	CallTraits, index_sequence<Indices...>)
+	CallTraits, std::index_sequence<Indices...>)
 {
 	return (obj.*func)(CallTraits::template arg_from_v8<Indices, Traits>(args)...);
 }
@@ -138,7 +138,7 @@ call_from_v8_impl(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& a
 template<typename Traits, typename F, size_t ...Indices>
 typename function_traits<F>::return_type
 call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
-	isolate_arg_call_traits<F>, index_sequence<Indices...>)
+	isolate_arg_call_traits<F>, std::index_sequence<Indices...>)
 {
 	return func(args.GetIsolate(),
 		isolate_arg_call_traits<F>::template arg_from_v8<Indices + 1, Traits>(args)...);
@@ -147,7 +147,7 @@ call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
 template<typename Traits, typename T, typename F, size_t ...Indices>
 typename function_traits<F>::return_type
 call_from_v8_impl(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
-	isolate_arg_call_traits<F>, index_sequence<Indices...>)
+	isolate_arg_call_traits<F>, std::index_sequence<Indices...>)
 {
 	return (obj.*func)(args.GetIsolate(),
 		isolate_arg_call_traits<F>::template arg_from_v8<Indices + 1, Traits>(args)...);
@@ -156,7 +156,7 @@ call_from_v8_impl(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& a
 template<typename Traits, typename F, size_t ...Indices>
 typename function_traits<F>::return_type
 call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
-	isolate_v8_args_call_traits<F>, index_sequence<Indices...>)
+	isolate_v8_args_call_traits<F>, std::index_sequence<Indices...>)
 {
 	return func(args.GetIsolate(), args);
 }
@@ -164,7 +164,7 @@ call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
 template<typename Traits, typename T, typename F, size_t ...Indices>
 typename function_traits<F>::return_type
 call_from_v8_impl(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
-	isolate_v8_args_call_traits<F>, index_sequence<Indices...>)
+	isolate_v8_args_call_traits<F>, std::index_sequence<Indices...>)
 {
 	return (obj.*func)(args.GetIsolate(), args);
 }
@@ -176,7 +176,7 @@ call_from_v8(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args)
 	using call_traits = select_call_traits<F>;
 	call_traits::check(args);
 	return call_from_v8_impl<Traits>(std::forward<F>(func), args,
-		call_traits(), make_index_sequence<call_traits::arg_count>());
+		call_traits(), std::make_index_sequence<call_traits::arg_count>());
 }
 
 template<typename Traits, typename T, typename F>
@@ -186,7 +186,7 @@ call_from_v8(T& obj, F&& func, v8::FunctionCallbackInfo<v8::Value> const& args)
 	using call_traits = select_call_traits<F>;
 	call_traits::check(args);
 	return call_from_v8_impl<Traits>(obj, std::forward<F>(func), args,
-		call_traits(), make_index_sequence<call_traits::arg_count>());
+		call_traits(), std::make_index_sequence<call_traits::arg_count>());
 }
 
 }} // v8pp::detail
