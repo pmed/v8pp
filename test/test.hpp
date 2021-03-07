@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <stdexcept>
+#include <tuple>
 
 #include "v8pp/context.hpp"
 #include "v8pp/convert.hpp"
@@ -73,6 +74,23 @@ template<typename Char, typename Traits,
 std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& os, Enum value)
 {
 	return os << static_cast<typename std::underlying_type<Enum>::type>(value);
+}
+
+template<typename Char, typename Traits, typename Tuple, size_t... Is>
+void print_tuple(std::basic_ostream<Char, Traits>& os, Tuple const& tuple,
+	std::index_sequence<Is...>)
+{
+	(void)std::initializer_list<bool>{ ((os << (Is == 0? "" : ", ") << std::get<Is>(tuple)),true)... };
+}
+
+template<typename Char, typename Traits, typename... Ts>
+std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& os,
+	std::tuple<Ts...> const& tuple)
+{
+	os << '{';
+	print_tuple(os, tuple, std::index_sequence_for<Ts...>{});
+	os << '}';
+	return os;
 }
 
 inline void check(std::string msg, bool condition)

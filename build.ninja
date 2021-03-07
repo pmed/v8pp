@@ -1,5 +1,5 @@
 cxx = c++
-cxxflags = -Wall -Wextra -Wno-return-type-c-linkage -std=c++11 -fPIC -fno-rtti -I. -I./v8pp -DV8PP_ISOLATE_DATA_SLOT=0
+cxxflags = -Wall -Wextra -Wno-return-type-c-linkage -Wno-unneeded-internal-declaration -std=c++14 -fPIC -fno-rtti -I. -I./v8pp -DV8PP_ISOLATE_DATA_SLOT=0
 ldflags = -lv8 -lv8_libplatform -lv8_libbase -L. -lv8pp -ldl -lpthread
 
 rule cxx

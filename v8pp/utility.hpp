@@ -172,48 +172,6 @@ template<typename F>
 using is_callable = std::integral_constant<bool,
 	is_callable_impl<F, std::is_class<F>::value>::value>;
 
-#if (__cplusplus > 201402L) || (defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 190023918)
-using std::index_sequence;
-using std::make_index_sequence;
-#else
-/////////////////////////////////////////////////////////////////////////////
-//
-// integer_sequence
-//
-template<typename T, T... I>
-struct integer_sequence
-{
-	using type = T;
-	static size_t size() { return sizeof...(I); }
-
-	template<T N>
-	using append = integer_sequence<T, I..., N>;
-
-	using next = append<sizeof...(I)>;
-};
-
-template<typename T, T Index, size_t N>
-struct sequence_generator
-{
-	using type = typename sequence_generator<T, Index - 1, N - 1>::type::next;
-};
-
-template<typename T, T Index>
-struct sequence_generator<T, Index, 0ul>
-{
-	using type = integer_sequence<T>;
-};
-
-template<size_t... I>
-using index_sequence = integer_sequence<size_t, I...>;
-
-template<typename T, T N>
-using make_integer_sequence = typename sequence_generator<T, N, N>::type;
-
-template<size_t N>
-using make_index_sequence = make_integer_sequence<size_t, N>;
-#endif
-
 /// Type information for custom RTTI
 class type_info
 {
