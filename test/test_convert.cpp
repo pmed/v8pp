@@ -230,21 +230,37 @@ struct VariantCheck<std::variant<Ts...>> {
 };
 
 template <typename T>
+constexpr std::pair<T, T> getLimits()
+{
+	return { std::numeric_limits<T>::min(), std::numeric_limits<T>::max() };
+}
+
+template <>
+constexpr std::pair<int64_t, int64_t> getLimits<int64_t>()
+{
+	constexpr int maxInt = 0x7FFFFFFF;
+	return { -maxInt - 1, maxInt };
+}
+
+template <>
+constexpr std::pair<uint64_t, uint64_t> getLimits<uint64_t>()
+{
+	return { 0, 0xFFFFFFFFu };
+}
+
+template <typename T>
 void checkRange(v8::Isolate * isolate)
 {
 	using Variant = std::variant<T>;
 	VariantCheck<Variant> check{isolate};
-	if constexpr (sizeof (T) < sizeof(double)){
-		// we can't do this test directly for int64_t / uint64_t since their max and min aren't guaranteed to be double
-		check({std::numeric_limits<T>::max()});
-		check({std::numeric_limits<T>::min()});
-	}
+	constexpr std::pair<T, T> limits = getLimits<T>();
 	check(T(0));
-	check(std::tuple<T>{T(std::nextafter(std::numeric_limits<T>::max(), std::numeric_limits<double>::min()))}); // like max - 1 (within range)
-	check(std::tuple<T>{T(std::nextafter(std::numeric_limits<T>::min(), std::numeric_limits<double>::max()))}); // like min + 1 (within range)
-	check.template checkThrow<T>(T(std::nextafter(std::numeric_limits<T>::max(), std::numeric_limits<double>::max()))); // like max + 1 (out of range)
-	check.template checkThrow<T>(T(std::nextafter(std::numeric_limits<T>::min(), std::numeric_limits<double>::min()))); // like min - 1 (out of range)
+	check(std::tuple<T>{limits.first});
+	check(std::tuple<T>{limits.second});
+	check.template checkThrow<double>(std::nextafter(double(limits.first), std::numeric_limits<double>::min())); // like min - 1 (out of range)
+	check.template checkThrow<double>(std::nextafter(double(limits.second), std::numeric_limits<double>::max())); // like max + 1 (out of range)
 }
+
 
 template <typename ... Ts>
 void checkRanges(v8::Isolate * isolate)
@@ -377,6 +393,6 @@ void test_convert()
 		.checkThrow(1.);
 
 	// Note: uint64_t is not guaranteed to work because V8's toInteger function returns an int64_t.
-	checkRanges<int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t>(isolate);
+	checkRanges<int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t, uint64_t>(isolate);
 
 }
