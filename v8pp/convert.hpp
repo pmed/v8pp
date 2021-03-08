@@ -274,6 +274,60 @@ struct convert<T, typename std::enable_if<std::is_floating_point<T>::value>::typ
 	}
 };
 
+// convert std::tuple <-> Array
+template<typename... Ts>
+struct convert<std::tuple<Ts...>>
+{
+	using from_type = std::tuple<Ts...>;
+	using to_type = v8::Local<v8::Array>;
+
+	static constexpr size_t N = sizeof...(Ts);
+
+	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
+	{
+		return !value.IsEmpty() && value->IsArray()
+			&& value.As<v8::Array>()->Length() == N;
+	}
+
+	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	{
+		if (!is_valid(isolate, value))
+		{
+			throw invalid_argument(isolate, value, "Tuple");
+		}
+		return from_v8_impl(isolate, value, std::make_index_sequence<N>{});
+	}
+
+	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
+	{
+		return to_v8_impl(isolate, value, std::make_index_sequence<N>{});
+	}
+
+private:
+	template<size_t... Is>
+	static from_type from_v8_impl(v8::Isolate* isolate, v8::Local<v8::Value> value,
+		std::index_sequence<Is...>)
+	{
+		v8::HandleScope scope(isolate);
+		v8::Local<v8::Context> context = isolate->GetCurrentContext();
+		v8::Local<v8::Array> array = value.As<v8::Array>();
+
+		return std::tuple<Ts...>{ v8pp::convert<Ts>::from_v8(isolate, array->Get(context, Is).ToLocalChecked())... };
+	}
+
+	template<size_t... Is>
+	static to_type to_v8_impl(v8::Isolate* isolate, std::tuple<Ts...> const& value, std::index_sequence<Is...>)
+	{
+		v8::EscapableHandleScope scope(isolate);
+		v8::Local<v8::Context> context = isolate->GetCurrentContext();
+		v8::Local<v8::Array> result = v8::Array::New(isolate, N);
+
+		(void)std::initializer_list<bool>{ result->Set(context, Is, convert<Ts>::to_v8(isolate, std::get<Is>(value))).FromJust()... };
+
+		return scope.Escape(result);
+	}
+};
+
 // convert Array <-> std::array
 template<typename T, size_t N>
 struct convert<std::array<T, N>>
@@ -459,6 +513,9 @@ struct is_wrapped_class<std::basic_string<Char, Traits, Alloc>> : std::false_typ
 
 template<typename Char, typename Traits>
 struct is_wrapped_class<std::basic_string_view<Char, Traits>> : std::false_type {};
+
+template<typename... Ts>
+struct is_wrapped_class<std::tuple<Ts...>> : std::false_type{};
 
 template<typename T, size_t N>
 struct is_wrapped_class<std::array<T, N>> : std::false_type{};
@@ -691,6 +748,12 @@ v8::Local<v8::Array> to_v8(v8::Isolate* isolate, Iterator begin, Iterator end)
 		result->Set(context, idx, to_v8(isolate, *begin)).FromJust();
 	}
 	return scope.Escape(result);
+}
+
+template<typename... Ts>
+v8::Local<v8::Array> to_v8(v8::Isolate* isolate, std::tuple<Ts...> const& value)
+{
+	return convert<std::tuple<Ts...>>::to_v8(isolate, value);
 }
 
 template<typename T>
