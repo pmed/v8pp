@@ -319,7 +319,7 @@ void test_convert()
 	person p;
 	p.name = "Al"; p.age = 33;
 	test_conv(isolate, p);
-	
+
 	std::tuple<size_t, bool> const tuple_1{ 2, true };
 	test_conv(isolate, tuple_1);
 
