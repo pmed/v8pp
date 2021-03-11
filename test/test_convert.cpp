@@ -392,7 +392,12 @@ void test_convert()
 		.checkThrow("test")
 		.checkThrow(1.);
 
-	// Note: uint64_t is not guaranteed to work because V8's toInteger function returns an int64_t.
+    // Note: Not all values of uint64_t/int64_t are possible since v8 stores numeric values as doubles
 	checkRanges<int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t, uint64_t>(isolate);
+
+    // test map
+    using MapVariant = std::variant<U, std::map<size_t, U>>;
+    VariantCheck<MapVariant> mapCheck{isolate};
+    mapCheck({U{3}, std::map<size_t, U>{{4, U{4}}}});
 
 }
