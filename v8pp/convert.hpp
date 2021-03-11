@@ -762,14 +762,8 @@ v8::Local<v8::Array> to_v8(v8::Isolate* isolate, std::initializer_list<T> const&
 	return to_v8(isolate, init.begin(), init.end());
 }
 
-
-template <typename ... Ts>
-struct convert<std::variant<Ts...>>
+namespace detail
 {
-	using from_type = std::variant<Ts...>;
-	using to_type = v8::Local<v8::Value>;
-	static constexpr std::size_t N = sizeof ... (Ts);
-
 	template <typename T> struct isArray : std::false_type {};
 	template <typename T, typename Alloc> struct isArray<std::vector<T, Alloc>> : std::true_type {};
 	template <typename T, std::size_t N> struct isArray<std::array<T, N>> : std::true_type {};
@@ -787,6 +781,14 @@ struct convert<std::variant<Ts...>>
 	template <> struct isString<char16_t const*> : std::true_type {};
 	template <> struct isString<wchar_t const*> : std::true_type {};
 	template <typename T> struct isAny : std::true_type {};
+}
+
+template <typename ... Ts>
+struct convert<std::variant<Ts...>>
+{
+	using from_type = std::variant<Ts...>;
+	using to_type = v8::Local<v8::Value>;
+	static constexpr std::size_t N = sizeof ... (Ts);
 
 
 	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
@@ -805,19 +807,19 @@ struct convert<std::variant<Ts...>>
 		std::optional<std::variant<Ts...>> out;
 		if (value->IsObject() && !value->IsArray()){
 			// todo: handle std::map
-			out = getObjectAlternate<isObj>(isolate, value);
+			out = getObjectAlternate<detail::isObj>(isolate, value);
 		} else if (value->IsArray()){
-			out = getObjectAlternate<isArray>(isolate, value);
+			out = getObjectAlternate<detail::isArray>(isolate, value);
 		} else if (value->IsInt32() || value->IsUint32()) {
-			out = getObjectAlternate<isIntegralNotBool, std::is_floating_point, isBoolean>(isolate, value);
+			out = getObjectAlternate<detail::isIntegralNotBool, std::is_floating_point, detail::isBoolean>(isolate, value);
 		} else if (value->IsNumber()){
 			out = getObjectAlternate<std::is_floating_point>(isolate, value);
 		} else if (value->IsBoolean()){
-			out = getObjectAlternate<isBoolean, isIntegralNotBool>(isolate, value);
+			out = getObjectAlternate<detail::isBoolean, detail::isIntegralNotBool>(isolate, value);
 		} else if (value->IsString()){
-			out = getObjectAlternate<isString>(isolate, value);
+			out = getObjectAlternate<detail::isString>(isolate, value);
 		} else {
-			out = getObjectAlternate<isAny>(isolate, value);
+			out = getObjectAlternate<detail::isAny>(isolate, value);
 		}
 		if (out){
 			return *out;
@@ -869,7 +871,7 @@ private:
 
 
 	template <typename T>
-	static std::enable_if_t<std::is_integral_v<T> && !isBoolean<T>::value, bool> compatibleNumeric(v8::Isolate * isolate, v8::Local<v8::Value> value)
+	static std::enable_if_t<std::is_integral_v<T> && !detail::isBoolean<T>::value, bool> compatibleNumeric(v8::Isolate * isolate, v8::Local<v8::Value> value)
 	{
 		if (!value->IsNumber()) return false;
 		const double number = v8pp::from_v8<double>(isolate, value);
@@ -886,7 +888,7 @@ private:
 				if (containsObjectImpl<T, v8pp::raw_ptr_traits>(value)){
 					return v8pp::convert<T>::from_v8(isolate, value);
 				}
-			} else if constexpr (isSharedPtr<T>::value){
+			} else if constexpr (detail::isSharedPtr<T>::value){
 				using U = std::remove_pointer_t<decltype(T{}.get())>;
 				if (containsObjectImpl<U, v8pp::shared_ptr_traits>(value)){
 					auto ptr = v8pp::convert<T>::from_v8(isolate, value);
@@ -895,7 +897,7 @@ private:
 					}
 				}
 			} else {
-				if constexpr (std::is_integral_v<T> && !isBoolean<T>::value){
+				if constexpr (std::is_integral_v<T> && !detail::isBoolean<T>::value){
 					if (!compatibleNumeric<T>(isolate, value)){
 						return std::nullopt;
 					}
