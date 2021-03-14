@@ -32,10 +32,8 @@ namespace v8pp {
 template<typename T, typename Traits>
 class class_;
 
-namespace detail {
-template<typename Traits>
-class object_registry;
-}
+template<typename T>
+struct is_wrapped_class;
 
 // Generic convertor
 /*
@@ -326,6 +324,183 @@ private:
 	}
 };
 
+// convert std::variant <-> Local
+template <typename ... Ts>
+struct convert<std::variant<Ts...>>
+{
+public:
+	using from_type = std::variant<Ts...>;
+	using to_type = v8::Local<v8::Value>;
+	static constexpr std::size_t N = sizeof... (Ts);
+
+	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
+	{
+		return !value.IsEmpty();
+	}
+
+	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	{
+		if (!is_valid(isolate, value)) {
+			throw invalid_argument(isolate, value, "Variant");
+		}
+
+		v8::HandleScope scope(isolate);
+		v8::Local<v8::Context> context = isolate->GetCurrentContext();
+		std::optional<std::variant<Ts...>> out;
+		if (isObjMap(context, value)) {
+			out = getObjectAlternate<isMap, isObj>(isolate, value);
+		}
+		else if (value->IsObject() && !value->IsArray()) {
+			out = getObjectAlternate<isObj>(isolate, value);
+		}
+		else if (value->IsArray()) {
+			out = getObjectAlternate<isArray>(isolate, value);
+		}
+		else if (value->IsInt32() || value->IsUint32()) {
+			out = getObjectAlternate<isIntegralNotBool, std::is_floating_point, isBoolean>(isolate, value);
+		}
+		else if (value->IsNumber()) {
+			out = getObjectAlternate<std::is_floating_point>(isolate, value);
+		}
+		else if (value->IsBoolean()) {
+			out = getObjectAlternate<isBoolean, isIntegralNotBool>(isolate, value);
+		}
+		else if (value->IsString()) {
+			out = getObjectAlternate<isString>(isolate, value);
+		}
+		else {
+			out = getObjectAlternate<isAny>(isolate, value);
+		}
+		if (out) {
+			return *out;
+		}
+		throw std::runtime_error("Unable to convert argument to variant.");
+	}
+
+	static to_type to_v8(v8::Isolate* isolate, std::variant<Ts...> const& value) {
+		return std::visit([isolate](auto&& value) {
+			using T = std::decay_t<decltype(value)>;
+			auto out = v8pp::convert<T>::to_v8(isolate, value);
+			return v8::Local<v8::Value>{out};
+			}, value);
+	}
+
+private:
+	template <typename T> struct isArray : std::false_type {};
+	template <typename T, typename Alloc> struct isArray<std::vector<T, Alloc>> : std::true_type {};
+	template <typename T, std::size_t N> struct isArray<std::array<T, N>> : std::true_type {};
+	template <typename... Ts> struct isArray<std::tuple<Ts...>> : std::true_type {};
+	template <typename T> struct isObj : v8pp::is_wrapped_class<T> {};
+	template <typename T> struct isObj<std::shared_ptr<T>> : std::true_type {};
+	template <typename T> struct isBoolean : std::false_type {};
+	template <> struct isBoolean<bool> : std::true_type {};
+	template <typename T> struct isIntegralNotBool : std::is_integral<T> {};
+	template <> struct isIntegralNotBool<bool> : std::false_type {};
+	template <typename T> struct isSharedPtr : std::false_type {};
+	template <typename T> struct isSharedPtr<std::shared_ptr<T>> : std::true_type {};
+	template <typename T> struct isString : std::false_type {};
+	template<typename Char, typename Traits, typename Alloc> struct isString<std::basic_string<Char, Traits, Alloc>> : std::true_type {};
+	template<typename Char, typename Traits> struct isString<std::basic_string_view<Char, Traits>> : std::true_type {};
+	template <> struct isString<char const*> : std::true_type {};
+	template <> struct isString<char16_t const*> : std::true_type {};
+	template <> struct isString<wchar_t const*> : std::true_type {};
+	template <typename T> struct isAny : std::true_type {};
+	template <typename T> struct isMap : std::false_type {};
+	template<typename Key, typename Value, typename Less, typename Alloc> struct isMap<std::map<Key, Value, Less, Alloc>> : std::true_type {};
+
+	static bool isObjMap(v8::Local<v8::Context> context, v8::Local<v8::Value> value) {
+		if (!value->IsObject() || value->IsArray()) {
+			return false;
+		}
+		auto obj = value.As<v8::Object>()->GetPropertyNames(context);
+		v8::Local<v8::Array> prop_names;
+		if (!obj.ToLocal(&prop_names)) return false;
+		return prop_names->Length() > 0;
+	}
+
+	template <typename T>
+	static std::optional<T> compatibleNumeric(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	{
+		if (value->IsNumber())
+		{
+			const double number = v8pp::convert<double>::from_v8(isolate, value);
+			if (std::isfinite(number)
+				&& number >= std::numeric_limits<T>::min()
+				&& number <= std::numeric_limits<T>::max()
+				&& static_cast<double>(static_cast<T>(number)) == number)
+			{
+				return static_cast<T>(number);
+			}
+		}
+		return std::nullopt;
+	}
+
+	template <typename T>
+	static std::optional<T> getObjectImpl(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	{
+		if constexpr (isSharedPtr<T>::value)
+		{
+			using U = typename T::element_type;
+			auto obj = v8pp::class_<U, v8pp::shared_ptr_traits>::unwrap_object(isolate, value);
+			if (obj) return obj;
+			else return std::nullopt;
+		}
+		else if constexpr (v8pp::is_wrapped_class<T>::value)
+		{
+			auto obj = v8pp::class_<T, v8pp::raw_ptr_traits>::unwrap_object(isolate, value);
+			if (obj) return *obj;
+			else return std::nullopt;
+		}
+		else if constexpr (std::is_integral_v<T> && !isBoolean<T>::value)
+		{
+			auto number = compatibleNumeric<T>(isolate, value);
+			if (number) return *number;
+			else return std::nullopt;
+		}
+		else
+		{
+			return v8pp::convert<T>::from_v8(isolate, value);
+		}
+	}
+
+	template <template <typename T> typename condition, template <typename T> typename ... conditions>
+	static std::optional<std::variant<Ts...>> getObjectAlternate(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	{
+		if (auto out = getObject<Ts...>(isolate, value, { condition<Ts>::value... }, 0))
+		{
+			return out;
+		}
+		if constexpr (sizeof... (conditions) > 0)
+		{
+			return getObjectAlternate<conditions...>(isolate, value);
+		}
+		else
+		{
+			return std::nullopt;
+		}
+	}
+
+	template <typename T, typename... Ts_>
+	static std::optional<std::variant<Ts...>> getObject(v8::Isolate* isolate, v8::Local<v8::Value> value, const std::array<bool, N>& validType, size_t index)
+	{
+		if (validType[index])
+		{
+			if (auto out = getObjectImpl<T>(isolate, value))
+			{
+				return out;
+			}
+		}
+		if constexpr ((sizeof ... (Ts_)) > 0)
+		{
+			return getObject<Ts_...>(isolate, value, validType, index + 1);
+		}
+		else
+		{
+			return std::nullopt;
+		}
+	}
+};
+
 // convert Array <-> std::array
 template<typename T, size_t N>
 struct convert<std::array<T, N>>
@@ -515,11 +690,11 @@ struct is_wrapped_class<std::basic_string_view<Char, Traits>> : std::false_type 
 template<typename... Ts>
 struct is_wrapped_class<std::tuple<Ts...>> : std::false_type{};
 
-template<typename T, size_t N>
-struct is_wrapped_class<std::array<T, N>> : std::false_type{};
-
 template <typename ... Ts>
 struct is_wrapped_class<std::variant<Ts...>> : std::false_type {};
+
+template<typename T, size_t N>
+struct is_wrapped_class<std::array<T, N>> : std::false_type{};
 
 template<typename T, typename Alloc>
 struct is_wrapped_class<std::vector<T, Alloc>> : std::false_type {};
@@ -730,7 +905,6 @@ v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 
 template<typename T>
 auto to_v8(v8::Isolate* isolate, T const& value)
-	-> decltype(convert<T>::to_v8(isolate, value))
 {
 	return convert<T>::to_v8(isolate, value);
 }
@@ -748,204 +922,11 @@ v8::Local<v8::Array> to_v8(v8::Isolate* isolate, Iterator begin, Iterator end)
 	return scope.Escape(result);
 }
 
-template<typename... Ts>
-v8::Local<v8::Array> to_v8(v8::Isolate* isolate, std::tuple<Ts...> const& value)
-{
-	return convert<std::tuple<Ts...>>::to_v8(isolate, value);
-}
-
 template<typename T>
 v8::Local<v8::Array> to_v8(v8::Isolate* isolate, std::initializer_list<T> const& init)
 {
 	return to_v8(isolate, init.begin(), init.end());
 }
-
-namespace detail
-{
-	template <typename T> struct isArray : std::false_type {};
-	template <typename T, typename Alloc> struct isArray<std::vector<T, Alloc>> : std::true_type {};
-	template <typename T, std::size_t N> struct isArray<std::array<T, N>> : std::true_type {};
-	template <typename... Ts> struct isArray<std::tuple<Ts...>> : std::true_type {};
-	template <typename T> struct isBoolean : std::false_type {};
-	template <> struct isBoolean<bool> : std::true_type {};
-	template <typename T> struct isIntegralNotBool : std::is_integral<T> {};
-	template <> struct isIntegralNotBool<bool> : std::false_type {};
-	template <typename T> struct isObj : v8pp::is_wrapped_class<T> {};
-	template <typename T> struct isObj<std::shared_ptr<T>> : std::true_type {};
-	template <typename T> struct isSharedPtr : std::false_type {};
-	template <typename T> struct isSharedPtr<std::shared_ptr<T>> : std::true_type {};
-	template <typename T> struct isString : std::false_type {};
-	template<typename Char, typename Traits, typename Alloc> struct isString<std::basic_string<Char, Traits, Alloc>> : std::true_type {};
-    template<typename Char, typename Traits> struct isString<std::basic_string_view<Char, Traits>> : std::true_type {};
-    template <> struct isString<char const*> : std::true_type {};
-	template <> struct isString<char16_t const*> : std::true_type {};
-	template <> struct isString<wchar_t const*> : std::true_type {};
-	template <typename T> struct isAny : std::true_type {};
-    template <typename T> struct isMap : std::false_type {};
-    template<typename Key, typename Value, typename Less, typename Alloc> struct isMap<std::map<Key, Value, Less, Alloc>> : std::true_type {};
-}
-
-template <typename ... Ts>
-struct convert<std::variant<Ts...>>
-{
-	using from_type = std::variant<Ts...>;
-	using to_type = v8::Local<v8::Value>;
-	static constexpr std::size_t N = sizeof ... (Ts);
-
-
-	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
-	{
-		return !value.IsEmpty();
-	}
-
-	static from_type from_v8(v8::Isolate * isolate, v8::Local<v8::Value> value)
-	{
-		if (!is_valid(isolate, value)){
-			throw invalid_argument(isolate, value, "Variant");
-		}
-
-		v8::HandleScope scope(isolate);
-		v8::Local<v8::Context> context = isolate->GetCurrentContext();
-		std::optional<std::variant<Ts...>> out;
-        if (isObjMap(context, value)){
-            out = getObjectAlternate<detail::isMap, detail::isObj>(isolate, value);
-        } else if (value->IsObject() && !value->IsArray()){
-             out = getObjectAlternate<detail::isObj>(isolate, value);
-		} else if (value->IsArray()){
-			out = getObjectAlternate<detail::isArray>(isolate, value);
-		} else if (value->IsInt32() || value->IsUint32()) {
-			out = getObjectAlternate<detail::isIntegralNotBool, std::is_floating_point, detail::isBoolean>(isolate, value);
-		} else if (value->IsNumber()){
-			out = getObjectAlternate<std::is_floating_point>(isolate, value);
-		} else if (value->IsBoolean()){
-			out = getObjectAlternate<detail::isBoolean, detail::isIntegralNotBool>(isolate, value);
-		} else if (value->IsString()){
-			out = getObjectAlternate<detail::isString>(isolate, value);
-		} else {
-			out = getObjectAlternate<detail::isAny>(isolate, value);
-		}
-		if (out){
-			return *out;
-		}
-		throw std::runtime_error("Unable to convert argument to variant.");
-	}
-
-	static to_type to_v8(v8::Isolate* isolate, std::variant<Ts...> const& value){
-		return std::visit([isolate](auto && value){
-			using T = std::decay_t<decltype(value)>;
-			auto out = v8pp::convert<T>::to_v8(isolate, value);
-			return v8::Local<v8::Value>{out};
-		}, value);
-	}
-
-private:
-    static bool isObjMap(v8::Local<v8::Context> context, v8::Local<v8::Value> value){
-        if (!value->IsObject() || value->IsArray()){
-            return false;
-        }
-        auto obj = value.As<v8::Object>()->GetPropertyNames(context);
-        v8::Local<v8::Array> prop_names;
-        if (!obj.ToLocal(&prop_names)) return false;
-        return prop_names->Length() > 0;
-    }
-
-	template <typename T>
-	bool containsObject(const T& object){ return false; }
-
-	template <typename T, typename Traits>
-	static bool containsObjectImpl(v8::Local<v8::Value> value){
-		while (value->IsObject())
-		{
-			v8::Local<v8::Object> obj = value.As<v8::Object>();
-			if (obj->InternalFieldCount() == 2)
-			{
-				auto id = obj->GetAlignedPointerFromInternalField(0);
-				if (id){
-					auto registry_pointer = static_cast<v8pp::detail::object_registry<Traits>*>(obj->GetAlignedPointerFromInternalField(1));
-					auto ptr = registry_pointer->find_object(id, v8pp::detail::type_id<T>());
-					return ptr != nullptr;
-				}
-				value = obj->GetPrototype();
-			}
-		}
-		return false;
-	}
-
-
-	template <typename T>
-	static std::enable_if_t<v8pp::is_wrapped_class<T>::value, bool> containsObject(v8::Local<v8::Value> value){
-		return containsObjectImpl<T, v8pp::raw_ptr_traits>(value);
-	}
-
-	template <typename T>
-	static bool containsObject(v8::Local<v8::Value> value){
-		return containsObjectImpl<T, v8pp::shared_ptr_traits>(value);
-	}
-
-
-	template <typename T>
-	static std::enable_if_t<std::is_integral_v<T> && !detail::isBoolean<T>::value, bool> compatibleNumeric(v8::Isolate * isolate, v8::Local<v8::Value> value)
-	{
-		if (!value->IsNumber()) return false;
-		const double number = v8pp::from_v8<double>(isolate, value);
-		constexpr double minValue = static_cast<double>(std::numeric_limits<T>::min()),
-						 maxValue = static_cast<double>(std::numeric_limits<T>::max());
-		return std::isfinite(number) && number >= minValue && number <= maxValue && static_cast<double>(static_cast<T>(number)) == number;
-	}
-
-	template <typename T>
-	static std::optional<T> getObjectImpl(v8::Isolate* isolate, v8::Local<v8::Value> value)
-	{
-        if (!v8pp::convert<T>::is_valid(isolate, value)) return std::nullopt;
-        if constexpr (v8pp::is_wrapped_class<T>::value){
-            if (containsObjectImpl<T, v8pp::raw_ptr_traits>(value)){
-                return v8pp::convert<T>::from_v8(isolate, value);
-            }
-        } else if constexpr (detail::isSharedPtr<T>::value){
-            using U = std::remove_pointer_t<decltype(T{}.get())>;
-            if (containsObjectImpl<U, v8pp::shared_ptr_traits>(value)){
-                if (auto ptr = v8pp::convert<T>::from_v8(isolate, value); ptr){
-                    return ptr;
-                }
-            }
-        } else {
-            if constexpr (std::is_integral_v<T> && !detail::isBoolean<T>::value){
-                if (!compatibleNumeric<T>(isolate, value)){
-                    return std::nullopt;
-                }
-            }
-            return v8pp::convert<T>::from_v8(isolate, value);
-        }
-        return std::nullopt;
-	}
-
-	template <template <typename T> typename condition, template <typename T> typename ... conditions>
-	static std::optional<std::variant<Ts...>> getObjectAlternate(v8::Isolate* isolate, v8::Local<v8::Value> value)
-	{
-		if (auto out = getObject<Ts...>(isolate, value, {condition<Ts>::value...}, 0)){
-			return out;
-		}
-        if constexpr (sizeof... (conditions) > 0){
-			return getObjectAlternate<conditions...>(isolate, value);
-		}
-		return std::nullopt;
-	}
-
-    template <typename T, typename... Ts_>
-	static std::optional<std::variant<Ts...>> getObject(v8::Isolate* isolate, v8::Local<v8::Value> value, const std::array<bool, N> &validType, size_t index)
-	{
-		if (validType[index]){
-			if (auto out = getObjectImpl<T>(isolate, value)){
-				return out;
-			}
-		}
-		if constexpr ((sizeof ... (Ts_)) > 0) {
-			return getObject<Ts_...>(isolate, value, validType, index + 1);
-		}
-		return std::nullopt;
-	}
-};
-
 
 template<typename T>
 v8::Local<T> to_local(v8::Isolate* isolate, v8::PersistentBase<T> const& handle)

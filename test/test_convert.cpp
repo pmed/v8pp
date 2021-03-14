@@ -7,8 +7,9 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 #include "v8pp/convert.hpp"
-#include "test.hpp"
 #include "v8pp/class.hpp"
+
+#include "test.hpp"
 
 #include <list>
 #include <vector>
@@ -64,7 +65,7 @@ struct person
 	std::string name;
 	int age;
 
-//for test framework
+	//for test framework
 	bool operator!=(person const& other) const
 	{
 		return name != other.name || age != other.age;
@@ -128,145 +129,211 @@ struct convert<person>
 
 } // v8pp
 
-namespace {
-struct U {
-	U(int value = 1) : value(value) {}
-	int value = 1;
-	bool operator==(const U& other) const {
-		return value == other.value;
-	}
-	friend std::ostream& operator<<(std::ostream& os, U const& val)
-	{
-		return os << val.value;
-	}
-};
-struct U2 {
-	U2(double value = 2.) : value(value) {}
-	double value = 2.;
-	bool operator==(const U2& other) const {
-		return value == other.value;
-	}
-	friend std::ostream& operator<<(std::ostream& os, U2 const& val)
-	{
-		return os << val.value;
-	}
-};
-struct V {
-	V(std::string value = "") : value(value) {}
-	std::string value = "test";
-	bool operator==(const V& other) const {
-		return value == other.value;
-	}
-	friend std::ostream& operator<<(std::ostream& os, V const& val)
-	{
-		return os << val.value;
-	}
-};
-struct V2 {
-	V2(std::string value = "") : value(value) {}
-	std::string value = "test";
-	bool operator==(const V2& other) const {
-		return value == other.value;
-	}
-	friend std::ostream& operator<<(std::ostream& os, V2 const& val)
-	{
-		return os << val.value;
-	}
-};
+void test_convert_user_type(v8::Isolate* isolate)
+{
+	person p;
+	p.name = "Al"; p.age = 33;
+	test_conv(isolate, p);
+}
 
-template <typename T> struct VariantCheck {};
+void test_convert_tuple(v8::Isolate* isolate)
+{
+	std::tuple<size_t, bool> const tuple_1{ 2, true };
+	test_conv(isolate, tuple_1);
 
-template <typename ... Ts>
-struct VariantCheck<std::variant<Ts...>> {
-	VariantCheck(v8::Isolate * isolate) : isolate(isolate) {}
-	v8::Isolate * isolate;
-	using Variant = std::variant<Ts...>;
+	std::tuple<size_t, bool, std::string> const tuple_2{ 2, true, "test" };
+	test_conv(isolate, tuple_2);
 
-	template <typename T>
-	static T get(const T& in){
-		return in;
-	}
-	template <typename T>
-	static T get(const std::variant<Ts...> &in){
-		return std::get<T>(in);
+	std::tuple<size_t, size_t, size_t> const tuple_3{ 1, 2, 3 };
+	test_conv(isolate, tuple_3);
+
+	check_ex<v8pp::invalid_argument>("Tuple", [isolate, &tuple_1]()
+	{
+		// incorrect number of elements
+		v8::Local<v8::Array> tuple_1_ = v8pp::to_v8(isolate, tuple_1);
+		v8pp::from_v8<std::tuple<size_t, bool, std::string>>(isolate, tuple_1_);
+	});
+
+	check_ex<v8pp::invalid_argument>("String", [isolate, &tuple_1]()
+	{
+		// wrong types
+		v8::Local<v8::Array> tuple_1_ = v8pp::to_v8(isolate, tuple_1);
+		v8pp::from_v8<std::tuple<size_t, std::string>>(isolate, tuple_1_);
+	});
+}
+
+template<typename... Ts>
+struct variant_check
+{
+	using variant = std::variant<Ts...>;
+
+	v8::Isolate* isolate;
+
+	explicit variant_check(v8::Isolate* isolate) : isolate(isolate) {}
+
+	template<typename T>
+	static T const& get(T const& in) { return in; }
+
+	template<typename T>
+	static T const& get(variant const& in) { return std::get<T>(in); }
+
+	template<typename T, typename From, typename To>
+	void check(T const& value)
+	{
+		v8::Local<v8::Value> v8_value = v8pp::convert<To>::to_v8(isolate, value);
+		auto const value2 = v8pp::convert<From>::from_v8(isolate, v8_value);
+		::check_eq(v8pp::detail::type_id<variant>().name(), variant_check::get<T>(value2), value);
 	}
 
-	template <typename T, typename From, typename To>
-	VariantCheck& check(const T &value)
+	template<typename T>
+	void check(T const& value)
 	{
-		From values = value;
-		auto local = v8pp::convert<From>::to_v8(isolate, values);
-		auto back = v8pp::convert<To>::from_v8(isolate, local);
-		T returned = VariantCheck::get<T>(back);
-		::check(v8pp::detail::type_id<Variant>().name(), returned == value);
-		return *this;
+		this->check<T, variant, variant>(value); // variant to variant
+		this->check<T, variant, T>(value); // variant to type
+		this->check<T, T, variant>(value); // type to variant
 	}
 
-	template <typename T>
-	VariantCheck& checkValue(T value)
+	template<typename T>
+	void check_ex(T const& value)
 	{
-		check<T, Variant, Variant>(value); // variant to variant
-		check<T, Variant, T>(value); // variant to type
-		check<T, T, Variant>(value); // type to variant
-		return *this;
-	}
-
-	template <typename T>
-	VariantCheck& checkThrow(T value){
-		auto local = v8pp::convert<T>::to_v8(isolate, value);
-		check_ex<std::exception>("variant", [&]{
-			v8pp::convert<Variant>::from_v8(isolate, local);
+		v8::Local<v8::Value> v8_value = v8pp::convert<T>::to_v8(isolate, value);
+		::check_ex<std::exception>("variant", [&]()
+		{
+			v8pp::convert<variant>::from_v8(isolate, v8_value);
 		});
-		return *this;
 	}
 
-	VariantCheck& operator()(std::tuple<Ts...> && values)
+	void operator()(Ts const&... values)
 	{
-		(checkValue<Ts>(std::get<Ts>(values)),...);
-		return *this;
+		(check(values), ...);
 	}
-
 };
 
-template <typename T>
-constexpr std::pair<T, T> getLimits()
+template<typename T>
+void check_range(v8::Isolate* isolate)
 {
-	return { std::numeric_limits<T>::min(), std::numeric_limits<T>::max() };
+	variant_check<T> check_range{ isolate };
+
+	T zero{ 0 };
+	T min, max;
+	if constexpr (std::is_same_v<T, int64_t>)
+	{
+		max = 0x7FFFFFFF;
+		min = -max - 1;
+	}
+	else if constexpr (std::is_same_v<T, uint64_t>)
+	{
+		min = 0;
+		max = 0xFFFFFFFF;
+	}
+	else
+	{
+		min = std::numeric_limits<T>::min();
+		max = std::numeric_limits<T>::max();
+	}
+
+	check_range(zero);
+	check_range(min);
+	check_range(max);
+	check_range.check_ex(std::nextafter(double(min), std::numeric_limits<double>::min())); // like min - 1 (out of range)
+	check_range.check_ex(std::nextafter(double(max), std::numeric_limits<double>::max())); // like max + 1 (out of range)
 }
 
-template <>
-constexpr std::pair<int64_t, int64_t> getLimits<int64_t>()
+template<typename... Ts>
+void check_ranges(v8::Isolate* isolate)
 {
-	constexpr int maxInt = 0x7FFFFFFF;
-	return { -maxInt - 1, maxInt };
+	(check_range<Ts>(isolate),...);
 }
 
-template <>
-constexpr std::pair<uint64_t, uint64_t> getLimits<uint64_t>()
+struct U
 {
-	return { 0, 0xFFFFFFFFu };
-}
+	int value = 1;
+	//for test framework
+	bool operator==(U const& other) const { return value == other.value; }
+	bool operator!=(U const& other) const { return value != other.value; }
+	friend std::ostream& operator<<(std::ostream& os, U const& val) { return os << val.value; }
+};
 
-template <typename T>
-void checkRange(v8::Isolate * isolate)
+struct U2
 {
-	using Variant = std::variant<T>;
-	VariantCheck<Variant> check{isolate};
-	constexpr std::pair<T, T> limits = getLimits<T>();
-	check(T(0));
-	check(std::tuple<T>{limits.first});
-	check(std::tuple<T>{limits.second});
-	check.template checkThrow<double>(std::nextafter(double(limits.first), std::numeric_limits<double>::min())); // like min - 1 (out of range)
-	check.template checkThrow<double>(std::nextafter(double(limits.second), std::numeric_limits<double>::max())); // like max + 1 (out of range)
-}
+	double value = 2.0;
+	//for test framework
+	bool operator==(U2 const& other) const { return value == other.value; }
+	bool operator!=(U2 const& other) const { return value != other.value; }
+	friend std::ostream& operator<<(std::ostream& os, U2 const& val) { return os << val.value; }
+};
 
-
-template <typename ... Ts>
-void checkRanges(v8::Isolate * isolate)
+struct V
 {
-	(checkRange<Ts>(isolate),...);
+	std::string value;
+	//for test framework
+	bool operator==(V const& other) const { return value == other.value; }
+	bool operator!=(V const& other) const { return value != other.value; }
+	friend std::ostream& operator<<(std::ostream& os, V const& val) { return os << val.value; }
+};
+
+struct V2
+{
+	std::string value;
+	//for test framework
+	bool operator==(V2 const& other) const { return value == other.value; }
+	bool operator!=(V2 const& other) const { return value != other.value; }
+	friend std::ostream& operator<<(std::ostream& os, V2 const& val) { return os << val.value; }
+};
+
+void test_convert_variant(v8::Isolate* isolate)
+{
+	v8pp::class_<U, v8pp::raw_ptr_traits> U_class(isolate);
+	U_class.template ctor<>().auto_wrap_objects(true);
+
+	v8pp::class_<U2, v8pp::raw_ptr_traits> U2_class(isolate);
+	U2_class.template ctor<>().auto_wrap_objects(true);
+
+	v8pp::class_<V, v8pp::shared_ptr_traits> V_class(isolate);
+	V_class.template ctor<>().auto_wrap_objects(true);
+
+	v8pp::class_<V2, v8pp::shared_ptr_traits> V2_class(isolate);
+	V2_class.template ctor<>().auto_wrap_objects(true);
+
+	auto const v = std::make_shared<V>(V{ "test" });
+	auto const v2 = std::make_shared<V2>(V2{ "test2" });
+
+	V_class.reference_external(isolate, v);
+	V2_class.reference_external(isolate, v2);
+
+	variant_check<U, std::shared_ptr<V>, int, std::string, U2, std::shared_ptr<V2>> check{ isolate };
+	check(U{2}, v, -1, "Hello", U2{3.}, v2);
+
+	variant_check<bool, float, int32_t> check_arithmetic{ isolate };
+	check_arithmetic(true, 5.5f, 2);
+
+	variant_check<int32_t, float, bool> check_arithmetic_reversed{ isolate };
+	check_arithmetic_reversed(2, 5.5f, true);
+
+	variant_check<std::vector<float>, float, std::string> check_vector{ isolate };
+	check_vector({1.f, 2.f, 3.f}, 4.f, "testing");
+
+	// The order here matters
+	variant_check<int8_t, uint8_t, int32_t, uint32_t, double> order_check{ isolate };
+	order_check( -1, 254, std::numeric_limits<int32_t>::min(), std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max() + 1.0);
+
+	variant_check<bool, int8_t> simple_arithmetic{ isolate };
+	simple_arithmetic.check_ex(std::numeric_limits<uint32_t>::max()); // does not fit into int8_t
+	simple_arithmetic.check_ex(1.5); // is not integral
+	simple_arithmetic.check_ex(v); // is not arithmetic
+
+	variant_check<U, std::shared_ptr<V>, std::vector<float>> objects_only{ isolate };
+	objects_only.check_ex(true);
+	objects_only.check_ex(std::string{ "test" });
+	objects_only.check_ex(1.);
+
+	// Note: Not all values of uint64_t/int64_t are possible since v8 stores numeric values as doubles
+	check_ranges<int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t, uint64_t>(isolate);
+
+	// test map
+	variant_check<U, std::map<size_t, U>> map_check{ isolate };
+	map_check(U{3}, std::map<size_t, U>{ { 4, U{4} }, { 2, U{2} } });
 }
-} // namespace
 
 void test_convert()
 {
@@ -308,94 +375,13 @@ void test_convert()
 	});
 
 	check_eq("initializer list to array",
-		v8pp::from_v8<int_vector>(isolate, v8pp::to_v8(isolate,
-		{ 1, 2, 3 })), vector);
+		v8pp::from_v8<int_vector>(isolate, v8pp::to_v8(isolate, int_vector{ 1, 2, 3 })), vector);
 
 	std::list<int> list = { 1, 2, 3 };
 	check_eq("pair of iterators to array", v8pp::from_v8<int_vector>(isolate,
 		v8pp::to_v8(isolate, list.begin(), list.end())), vector);
 
-	person p;
-	p.name = "Al"; p.age = 33;
-	test_conv(isolate, p);
-
-
-	std::tuple<size_t, bool> const tuple_1{ 2, true };
-	test_conv(isolate, tuple_1);
-
-	std::tuple<size_t, bool, std::string> const tuple_2{ 2, true, "test" };
-	test_conv(isolate, tuple_2);
-
-	std::tuple<size_t, size_t, size_t> const tuple_3{ 1, 2, 3 };
-	test_conv(isolate, tuple_3);
-
-	check_ex<v8pp::invalid_argument>("Tuple", [isolate, &tuple_1]()
-	{
-		// incorrect number of elements
-		v8::Local<v8::Array> tuple_1_ = v8pp::to_v8(isolate, tuple_1);
-		v8pp::from_v8<std::tuple<size_t, bool, std::string>>(isolate, tuple_1_);
-	});
-
-	check_ex<v8pp::invalid_argument>("String", [isolate, &tuple_1]()
-	{
-		// wrong types
-		v8::Local<v8::Array> tuple_1_ = v8pp::to_v8(isolate, tuple_1);
-		v8pp::from_v8<std::tuple<size_t, std::string>>(isolate, tuple_1_);
-	});
-
-	// Variant check
-	v8pp::class_<U, v8pp::raw_ptr_traits> U_class(isolate);
-	U_class.template ctor<>().auto_wrap_objects(true);
-	v8pp::class_<U2, v8pp::raw_ptr_traits> U2_class(isolate);
-	U2_class.template ctor<>().auto_wrap_objects(true);
-	v8pp::class_<V, v8pp::shared_ptr_traits> V_class(isolate);
-	V_class.template ctor<>().auto_wrap_objects(true);
-	v8pp::class_<V2, v8pp::shared_ptr_traits> V2_class(isolate);
-	V2_class.template ctor<>().auto_wrap_objects(true);
-	auto V_ = std::make_shared<V>(V{"test" });
-	auto V2_ = std::make_shared<V2>(V2{"test2"});
-	V_class.reference_external(isolate, V_);
-	V2_class.reference_external(isolate, V2_);
-
-	using Variant = std::variant<U, std::shared_ptr<V>, int, std::string, U2, std::shared_ptr<V2>>;
-	using ArithmeticVariant = std::variant<bool, float, int32_t>;
-	using ArithmeticVariantReversed = std::variant<int32_t, float, bool>;
-	using VariantVector = std::variant<std::vector<float>, float, std::string>;
-
-	VariantCheck<Variant> check{isolate};
-	check({U{2}, V_, -1, std::string("Hello"), U2{3.}, V2_});
-
-	VariantCheck<ArithmeticVariant> checkArithmetic(context.isolate());
-	checkArithmetic({bool{true}, float{5.5f}, int32_t{2}});
-
-	VariantCheck<ArithmeticVariantReversed> checkArithmeticReversed(context.isolate());
-	checkArithmeticReversed({int32_t{2}, float{5.5f}, bool{true}});
-
-	VariantCheck<VariantVector> checkVector(context.isolate());
-	checkVector({std::vector<float>{1.f, 2.f, 3.f}, float{4.f}, std::string{"testing"}});
-
-	// The order here matters
-	using ValueChecking = std::variant<int8_t, uint8_t, int32_t, uint32_t, double>;
-	const double largeNumber = static_cast<double>(std::numeric_limits<uint32_t>::max()) + 1.;
-	VariantCheck<ValueChecking>{context.isolate()}({-1, 254, std::numeric_limits<int32_t>::min(), std::numeric_limits<uint32_t>::max(), largeNumber});
-
-	using SimpleArithmetic = std::variant<bool, int8_t>;
-	VariantCheck<SimpleArithmetic> simpleArithmetic{context.isolate()};
-	simpleArithmetic.checkThrow(std::numeric_limits<uint32_t>::max()) // does not fit into int8_t
-					.checkThrow(1.5) // is not integral
-					.checkThrow(V_); // is not arithmetic
-
-	using ObjectsOnly = std::variant<U, std::shared_ptr<V>, std::vector<float>>;
-	VariantCheck<ObjectsOnly> objectsOnly{context.isolate()};
-	objectsOnly.checkThrow(true)
-		.checkThrow("test")
-		.checkThrow(1.);
-
-	// Note: Not all values of uint64_t/int64_t are possible since v8 stores numeric values as doubles
-	checkRanges<int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t, uint64_t>(isolate);
-
-	// test map
-	using MapVariant = std::variant<U, std::map<size_t, U>>;
-	VariantCheck<MapVariant> mapCheck{isolate};
-	mapCheck({U{3}, std::map<size_t, U>{{4, U{4}}}});
+	test_convert_user_type(isolate);
+	test_convert_tuple(isolate);
+	test_convert_variant(isolate);
 }
