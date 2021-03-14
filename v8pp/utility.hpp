@@ -214,7 +214,7 @@ private:
 template<typename T>
 type_info type_id()
 {
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && !defined(__clang__)
 	#define V8PP_PRETTY_FUNCTION __FUNCSIG__
 	#define V8PP_PRETTY_FUNCTION_PREFIX "class v8pp::detail::type_info __cdecl v8pp::detail::type_id<"
 	#define V8PP_PRETTY_FUNCTION_SUFFIX ">(void)"
