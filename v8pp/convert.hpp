@@ -51,9 +51,12 @@ struct invalid_argument : std::invalid_argument
 };
 
 // converter specializations for string types
-template<typename Char, typename Traits>
-struct convert<basic_string_view<Char, Traits>>
+template<typename String>
+struct convert<String, typename std::enable_if<detail::is_string<String>::value>::type>
 {
+	using Char = typename String::value_type;
+	using Traits = typename String::traits_type;
+
 	static_assert(sizeof(Char) <= sizeof(uint16_t),
 		"only UTF-8 and UTF-16 strings are supported");
 
@@ -109,15 +112,15 @@ struct convert<basic_string_view<Char, Traits>>
 	}
 };
 
-template<typename Char, typename Traits, typename Alloc>
-struct convert<std::basic_string<Char, Traits, Alloc>> : convert<basic_string_view<Char, Traits>>
-{
-};
-
-template<typename Char>
-struct convert<Char const*> : convert<basic_string_view<Char>>
-{
-};
+// converter specializations for null-terminated strings
+template<>
+struct convert<char const*> : convert<basic_string_view<char>> {};
+template<>
+struct convert<char16_t const*> : convert<basic_string_view<char16_t>> {};
+#ifdef WIN32
+template<>
+struct convert<wchar_t const*> : convert<basic_string_view<wchar_t>> {};
+#endif
 
 // converter specializations for primitive types
 template<>

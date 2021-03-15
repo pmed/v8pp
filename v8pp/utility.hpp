@@ -33,6 +33,7 @@ class basic_string_view
 {
 public:
 	using value_type = Char;
+	using traits_type = Traits;
 	using size_type = size_t;
 	using const_iterator = Char const*;
 
@@ -110,6 +111,7 @@ private:
 
 using string_view = basic_string_view<char>;
 using u16string_view = basic_string_view<char16_t>;
+using u32string_view = basic_string_view<char32_t>;
 using wstring_view = basic_string_view<wchar_t>;
 } // namespace v8pp {
 #endif
@@ -124,6 +126,27 @@ struct tuple_tail<std::tuple<Head, Tail...>>
 {
 	using type = std::tuple<Tail...>;
 };
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// is_string<T>
+//
+template<typename T> struct is_string : std::false_type {};
+
+template<typename Char, typename Traits, typename Alloc>
+struct is_string<std::basic_string<Char, Traits, Alloc>> : std::true_type {};
+
+template<typename Char, typename Traits>
+struct is_string<v8pp::basic_string_view<Char, Traits>> : std::true_type {};
+
+template<>
+struct is_string<char const*> : std::true_type {};
+template<>
+struct is_string<char16_t const*> : std::true_type {};
+template<>
+struct is_string<char32_t const*> : std::true_type {};
+template<>
+struct is_string<wchar_t const*> : std::true_type {};
 
 /////////////////////////////////////////////////////////////////////////////
 //
