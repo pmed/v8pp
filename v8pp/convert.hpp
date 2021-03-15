@@ -325,7 +325,7 @@ private:
 };
 
 // convert std::variant <-> Local
-template <typename ... Ts>
+template<typename ... Ts>
 struct convert<std::variant<Ts...>>
 {
 public:
@@ -340,35 +340,47 @@ public:
 
 	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
-		if (!is_valid(isolate, value)) {
+		if (!is_valid(isolate, value))
+		{
 			throw invalid_argument(isolate, value, "Variant");
 		}
 
 		v8::HandleScope scope(isolate);
-		v8::Local<v8::Context> context = isolate->GetCurrentContext();
-		std::optional<std::variant<Ts...>> out;
-		if (isObjMap(context, value)) {
-			out = getObjectAlternate<isMap, isObj>(isolate, value);
+
+		std::optional<from_type> out;
+		if (value->IsObject() && !value->IsArray())
+		{
+			if (is_map_object(isolate, value.As<v8::Object>()))
+			{
+				out = getObjectAlternate<detail::is_mapping, isObj>(isolate, value);
+			}
+			else
+			{
+				out = getObjectAlternate<isObj>(isolate, value);
+			}
 		}
-		else if (value->IsObject() && !value->IsArray()) {
-			out = getObjectAlternate<isObj>(isolate, value);
-		}
-		else if (value->IsArray()) {
+		else if (value->IsArray())
+		{
 			out = getObjectAlternate<isArray>(isolate, value);
 		}
-		else if (value->IsInt32() || value->IsUint32()) {
+		else if (value->IsInt32() || value->IsUint32())
+		{
 			out = getObjectAlternate<isIntegralNotBool, std::is_floating_point, isBoolean>(isolate, value);
 		}
-		else if (value->IsNumber()) {
+		else if (value->IsNumber())
+		{
 			out = getObjectAlternate<std::is_floating_point>(isolate, value);
 		}
-		else if (value->IsBoolean()) {
+		else if (value->IsBoolean())
+		{
 			out = getObjectAlternate<isBoolean, isIntegralNotBool>(isolate, value);
 		}
-		else if (value->IsString()) {
+		else if (value->IsString())
+		{
 			out = getObjectAlternate<isString>(isolate, value);
 		}
-		else {
+		else
+		{
 			out = getObjectAlternate<isAny>(isolate, value);
 		}
 		if (out) {
@@ -405,17 +417,12 @@ private:
 	template <> struct isString<char16_t const*> : std::true_type {};
 	template <> struct isString<wchar_t const*> : std::true_type {};
 	template <typename T> struct isAny : std::true_type {};
-	template <typename T> struct isMap : std::false_type {};
-	template<typename Key, typename Value, typename Less, typename Alloc> struct isMap<std::map<Key, Value, Less, Alloc>> : std::true_type {};
 
-	static bool isObjMap(v8::Local<v8::Context> context, v8::Local<v8::Value> value) {
-		if (!value->IsObject() || value->IsArray()) {
-			return false;
-		}
-		auto obj = value.As<v8::Object>()->GetPropertyNames(context);
+	static bool is_map_object(v8::Isolate* isolate, v8::Local<v8::Object> obj)
+	{
 		v8::Local<v8::Array> prop_names;
-		if (!obj.ToLocal(&prop_names)) return false;
-		return prop_names->Length() > 0;
+		return obj->GetPropertyNames(isolate->GetCurrentContext()).ToLocal(&prop_names)
+			&& prop_names->Length() > 0;
 	}
 
 	template <typename T>
@@ -464,7 +471,7 @@ private:
 	}
 
 	template <template <typename T> typename condition, template <typename T> typename ... conditions>
-	static std::optional<std::variant<Ts...>> getObjectAlternate(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	static std::optional<from_type> getObjectAlternate(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
 		if (auto out = getObject<Ts...>(isolate, value, { condition<Ts>::value... }, 0))
 		{
@@ -481,7 +488,7 @@ private:
 	}
 
 	template <typename T, typename... Ts_>
-	static std::optional<std::variant<Ts...>> getObject(v8::Isolate* isolate, v8::Local<v8::Value> value, const std::array<bool, N>& validType, size_t index)
+	static std::optional<from_type> getObject(v8::Isolate* isolate, v8::Local<v8::Value> value, const std::array<bool, N>& validType, size_t index)
 	{
 		if (validType[index])
 		{
@@ -610,7 +617,7 @@ struct convert<Mapping, typename std::enable_if<detail::is_mapping<Mapping>::val
 
 	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
 	{
-		return !value.IsEmpty() && value->IsObject();
+		return !value.IsEmpty() && value->IsObject() && !value->IsArray();
 	}
 
 	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
@@ -630,8 +637,9 @@ struct convert<Mapping, typename std::enable_if<detail::is_mapping<Mapping>::val
 		{
 			v8::Local<v8::Value> key = prop_names->Get(context, i).ToLocalChecked();
 			v8::Local<v8::Value> val = object->Get(context, key).ToLocalChecked();
-			result.emplace(convert<Key>::from_v8(isolate, key),
-				convert<Value>::from_v8(isolate, val));
+			const auto k = convert<Key>::from_v8(isolate, key);
+			const auto v = convert<Value>::from_v8(isolate, val);
+			result.emplace(k, v);
 		}
 		return result;
 	}
@@ -643,9 +651,9 @@ struct convert<Mapping, typename std::enable_if<detail::is_mapping<Mapping>::val
 		v8::Local<v8::Object> result = v8::Object::New(isolate);
 		for (auto const& item: value)
 		{
-			result->Set(context,
-				convert<Key>::to_v8(isolate, item.first),
-				convert<Value>::to_v8(isolate, item.second)).FromJust();
+			const auto k = convert<Key>::to_v8(isolate, item.first);
+			const auto v = convert<Value>::to_v8(isolate, item.second);
+			result->Set(context, k, v).FromJust();
 		}
 		return scope.Escape(result);
 	}

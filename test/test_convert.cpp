@@ -333,6 +333,15 @@ void test_convert_variant(v8::Isolate* isolate)
 	// test map
 	variant_check<U, std::map<size_t, U>> map_check{ isolate };
 	map_check(U{3}, std::map<size_t, U>{ { 4, U{4} }, { 2, U{2} } });
+
+	variant_check<U, std::unordered_map<int, U2>> unordered_map_check{ isolate };
+	unordered_map_check(U{1}, std::unordered_map<int, U2>{ { 1, U2{1.0} }, { 2, U2{2.0} } });
+
+	variant_check<U, std::multimap<std::string, U>> multimap_check{ isolate };
+	multimap_check(U{2}, std::multimap<std::string, U>{ { "x", U{0} }, { "y", U{1} } });
+
+	variant_check<U2, std::unordered_multimap<char, U>> unordered_multimap_check{ isolate };
+	unordered_multimap_check(U2{3.0}, std::unordered_multimap<char, U>{ { 'a', U{1} }, { 'b', U{2} } });
 }
 
 void test_convert()
