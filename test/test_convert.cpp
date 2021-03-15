@@ -357,29 +357,28 @@ void test_convert()
 	test_string_conv(isolate, L"qaz");
 #endif
 
-	using int_vector = std::vector<int>;
-
-	int_vector vector = { 1, 2, 3 };
+	const std::vector<int> vector{ 1, 2, 3 };
 	test_conv(isolate, vector);
 
-	std::map<char, int> map = { { 'a', 1 }, { 'b', 2 }, { 'c', 3 } };
-	test_conv(isolate, map);
-
-	std::array<int, 3> array = { { 1, 2, 3 } };
+	const std::array<int, 3> array{ 1, 2, 3 };
 	test_conv(isolate, array);
-
 	check_ex<std::runtime_error>("wrong array length", [isolate, &array]()
 	{
 		v8::Local<v8::Array> arr = v8pp::to_v8(isolate, array);
 		v8pp::from_v8<std::array<int, 2>>(isolate, arr);
 	});
 
+	test_conv(isolate, std::map<char, int>{ { 'a', 1 }, { 'b', 2 }, { 'c', 3 } });
+	test_conv(isolate, std::multimap<int, int>{ { 1, -1 }, { 2, -2 }});
+	test_conv(isolate, std::unordered_map<char, std::string>{ { 'x', "1" }, { 'y', "2" }});
+	test_conv(isolate, std::unordered_multimap<std::string, int>{ { "a", 1 }, { "b", 2 }});
+
 	check_eq("initializer list to array",
-		v8pp::from_v8<int_vector>(isolate, v8pp::to_v8(isolate, int_vector{ 1, 2, 3 })), vector);
+		v8pp::from_v8<std::vector<int>>(isolate, v8pp::to_v8(isolate, { 1, 2, 3 })), vector);
 
 	std::list<int> list = { 1, 2, 3 };
-	check_eq("pair of iterators to array", v8pp::from_v8<int_vector>(isolate,
-		v8pp::to_v8(isolate, list.begin(), list.end())), vector);
+	check_eq("pair of iterators to array",
+		v8pp::from_v8<std::vector<int>>(isolate, v8pp::to_v8(isolate, list.begin(), list.end())), vector);
 
 	test_convert_user_type(isolate);
 	test_convert_tuple(isolate);

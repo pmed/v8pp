@@ -29,6 +29,20 @@ struct none{};
 
 /////////////////////////////////////////////////////////////////////////////
 //
+// is_mapping<T>
+//
+template<typename T, typename U = void>
+struct is_mapping_impl : std::false_type {};
+
+template<typename T>
+struct is_mapping_impl<T, std::void_t<typename T::key_type, typename T::mapped_type>> : std::true_type {};
+
+template<typename T>
+struct is_mapping : is_mapping_impl<T>::type {};
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
 // Function traits
 //
 template<typename F>
