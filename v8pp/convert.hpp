@@ -413,12 +413,15 @@ struct convert<std::vector<T, Alloc>>
 	}
 };
 
-// convert Object <-> std::map
-template<typename Key, typename Value, typename Less, typename Alloc>
-struct convert<std::map<Key, Value, Less, Alloc>>
+// convert Object <-> std::{unordered_}{multi}map
+template<typename Mapping>
+struct convert<Mapping, typename std::enable_if<detail::is_mapping<Mapping>::value>::type>
 {
-	using from_type = std::map<Key, Value, Less, Alloc>;
+	using from_type = Mapping;
 	using to_type = v8::Local<v8::Object>;
+
+	using Key = typename Mapping::key_type;
+	using Value = typename Mapping::mapped_type;
 
 	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
 	{
@@ -487,7 +490,10 @@ struct convert<v8::Local<T>>
 
 
 template<typename T>
-struct is_wrapped_class : std::is_class<T> {};
+struct is_wrapped_class : std::conjunction<
+	std::is_class<T>,
+	std::negation<detail::is_mapping<T>>
+> {};
 
 // convert specialization for wrapped user classes
 template<typename T>
@@ -519,9 +525,6 @@ struct is_wrapped_class<std::array<T, N>> : std::false_type{};
 
 template<typename T, typename Alloc>
 struct is_wrapped_class<std::vector<T, Alloc>> : std::false_type {};
-
-template<typename Key, typename Value, typename Less, typename Alloc>
-struct is_wrapped_class<std::map<Key, Value, Less, Alloc>> : std::false_type {};
 
 template<typename T>
 struct is_wrapped_class<std::shared_ptr<T>> : std::false_type {};

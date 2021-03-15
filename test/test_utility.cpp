@@ -11,6 +11,9 @@
 #include "v8pp/utility.hpp"
 #include "test.hpp"
 
+#include <map>
+#include <unordered_map>
+
 template<typename Ret, typename F>
 void test_ret(F&&)
 {
@@ -182,6 +185,11 @@ namespace test { class some_class {}; }
 
 void test_utility()
 {
+	static_assert(v8pp::detail::is_mapping<std::map<int, float>>::value, "std::map");
+	static_assert(v8pp::detail::is_mapping<std::multimap<bool, std::string, std::greater<>>>::value, "std::multimap");
+	static_assert(v8pp::detail::is_mapping<std::unordered_map<std::string, std::string>>::value, "std::unordered_map");
+	static_assert(v8pp::detail::is_mapping<std::unordered_multimap<char, std::string>>::value, "std::unordered_multimap");
+
 	test_function_traits();
 	test_tuple_tail();
 	test_is_callable();
