@@ -375,7 +375,7 @@ public:
 		}
 		else if (value->IsString())
 		{
-			out = getObjectAlternate<isString>(isolate, value);
+			out = getObjectAlternate<detail::is_string>(isolate, value);
 		}
 		else
 		{
@@ -408,12 +408,6 @@ private:
 	template <> struct isIntegralNotBool<bool> : std::false_type {};
 	template <typename T> struct isSharedPtr : std::false_type {};
 	template <typename T> struct isSharedPtr<std::shared_ptr<T>> : std::true_type {};
-	template <typename T> struct isString : std::false_type {};
-	template<typename Char, typename Traits, typename Alloc> struct isString<std::basic_string<Char, Traits, Alloc>> : std::true_type {};
-	template<typename Char, typename Traits> struct isString<std::basic_string_view<Char, Traits>> : std::true_type {};
-	template <> struct isString<char const*> : std::true_type {};
-	template <> struct isString<char16_t const*> : std::true_type {};
-	template <> struct isString<wchar_t const*> : std::true_type {};
 	template <typename T> struct isAny : std::true_type {};
 
 	static bool is_map_object(v8::Isolate* isolate, v8::Local<v8::Object> obj)
