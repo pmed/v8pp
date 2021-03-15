@@ -29,6 +29,27 @@ struct none{};
 
 /////////////////////////////////////////////////////////////////////////////
 //
+// is_string<T>
+//
+template<typename T> struct is_string : std::false_type {};
+
+template<typename Char, typename Traits, typename Alloc>
+struct is_string<std::basic_string<Char, Traits, Alloc>> : std::true_type {};
+
+template<typename Char, typename Traits>
+struct is_string<std::basic_string_view<Char, Traits>> : std::true_type {};
+
+template<>
+struct is_string<char const*> : std::true_type {};
+template<>
+struct is_string<char16_t const*> : std::true_type {};
+template<>
+struct is_string<char32_t const*> : std::true_type {};
+template<>
+struct is_string<wchar_t const*> : std::true_type {};
+
+/////////////////////////////////////////////////////////////////////////////
+//
 // is_mapping<T>
 //
 template<typename T, typename U = void>

@@ -185,6 +185,19 @@ namespace test { class some_class {}; }
 
 void test_utility()
 {
+	static_assert(v8pp::detail::is_string<std::string>::value, "std::string");
+	static_assert(v8pp::detail::is_string<std::string_view>::value, "std::string_view");
+	static_assert(v8pp::detail::is_string<std::u16string>::value, "std::u16string");
+	static_assert(v8pp::detail::is_string<std::u16string_view>::value, "std::u16string_view");
+	static_assert(v8pp::detail::is_string<std::u32string>::value, "std::u32string");
+	static_assert(v8pp::detail::is_string<std::u32string_view>::value, "std::u32string_view");
+	static_assert(v8pp::detail::is_string<std::wstring>::value, "std::wstring");
+	static_assert(v8pp::detail::is_string<std::wstring_view>::value, "std::wstring_view");
+	static_assert(v8pp::detail::is_string<char const*>::value, "char const*");
+	static_assert(v8pp::detail::is_string<char16_t const*>::value, "char16_t const*");
+	static_assert(v8pp::detail::is_string<char32_t const*>::value, "char32_t const*");
+	static_assert(v8pp::detail::is_string<wchar_t const*>::value, "wchar_t const*");
+
 	static_assert(v8pp::detail::is_mapping<std::map<int, float>>::value, "std::map");
 	static_assert(v8pp::detail::is_mapping<std::multimap<bool, std::string, std::greater<>>>::value, "std::multimap");
 	static_assert(v8pp::detail::is_mapping<std::unordered_map<std::string, std::string>>::value, "std::unordered_map");

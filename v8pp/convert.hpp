@@ -56,9 +56,12 @@ struct invalid_argument : std::invalid_argument
 };
 
 // converter specializations for string types
-template<typename Char, typename Traits>
-struct convert<std::basic_string_view<Char, Traits>>
+template<typename String>
+struct convert<String, typename std::enable_if<detail::is_string<String>::value>::type>
 {
+	using Char = typename String::value_type;
+	using Traits = typename String::traits_type;
+
 	static_assert(sizeof(Char) <= sizeof(uint16_t),
 		"only UTF-8 and UTF-16 strings are supported");
 
@@ -112,11 +115,6 @@ struct convert<std::basic_string_view<Char, Traits>>
 				v8::NewStringType::kNormal, static_cast<int>(value.size())).ToLocalChecked();
 		}
 	}
-};
-
-template<typename Char, typename Traits, typename Alloc>
-struct convert<std::basic_string<Char, Traits, Alloc>> : convert<std::basic_string_view<Char, Traits>>
-{
 };
 
 // converter specializations for null-terminated strings
