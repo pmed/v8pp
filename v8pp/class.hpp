@@ -322,9 +322,65 @@ public:
 		return *this;
 	}
 
+	template<typename Attribute, typename GetMethod, typename SetMethod>
+	typename std::enable_if<std::is_member_pointer<Attribute>::value
+        && std::is_member_function_pointer<GetMethod>::value
+        && std::is_member_function_pointer<SetMethod>::value, class_&>::type
+     set(char const *name, member_property_<Attribute, GetMethod, SetMethod> &&property) {
+        using attribute_type = typename
+        detail::function_traits<Attribute>::template pointer_type<T>;
+
+        using property_type = member_property_<
+                Attribute,
+                GetMethod,
+                SetMethod
+                //typename detail::function_traits<GetMethod>::template pointer_type<>,
+                //typename detail::function_traits<SetMethod>::template pointer_type<>
+        >;
+        property_type prop(property);
+        v8::AccessorGetterCallback getter = property_type::template get<Traits>;
+        v8::AccessorSetterCallback setter = property_type::template set<Traits>;
+
+        if (prop.is_readonly)
+        {
+            setter = nullptr;
+        }
+
+        class_info_.class_function_template()->PrototypeTemplate()
+                ->SetAccessor(v8pp::to_v8(isolate(), name), getter, setter,
+                              detail::set_external_data(isolate(),
+                                                        std::forward<property_type>(prop)), v8::DEFAULT,
+                              v8::PropertyAttribute(v8::DontDelete | (setter ? 0 : v8::ReadOnly)));
+        return *this;
+
+	}
+
+    /// Set class member data
+    template<typename Attribute>
+    typename std::enable_if<
+            std::is_member_object_pointer<Attribute>::value, class_&>::type
+    set_const(char const *name, Attribute attribute)
+    {
+        v8::HandleScope scope(isolate());
+
+        using attribute_type = typename
+        detail::function_traits<Attribute>::template pointer_type<T>;
+        attribute_type attr(attribute);
+        v8::AccessorGetterCallback getter = &member_get<attribute_type>;
+
+        class_info_.class_function_template()->PrototypeTemplate()
+                ->SetAccessor(v8pp::to_v8(isolate(), name), getter, nullptr,
+                              detail::set_external_data(isolate(),
+                                                        std::forward<attribute_type>(attr)), v8::DEFAULT,
+                              v8::PropertyAttribute(v8::DontDelete |  v8::ReadOnly));
+        return *this;
+    }
+
 	/// Set value as a read-only property
 	template<typename Value>
-	class_& set_const(char const* name, Value const& value)
+    typename std::enable_if<
+            !std::is_member_object_pointer<Value>::value, class_&>::type
+	set_const(char const* name, Value const& value)
 	{
 		v8::HandleScope scope(isolate());
 

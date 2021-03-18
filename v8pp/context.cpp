@@ -279,4 +279,10 @@ v8::Local<v8::Value> context::run_script(std::string const& source,
 	return scope.Escape(result);
 }
 
+	v8::Local<v8::Context> context::impl() {
+		v8::EscapableHandleScope handleScope(isolate_);
+		v8::Local<v8::Context> ret = v8::Local<v8::Context>::New(isolate_, impl_);
+		return handleScope.Escape(ret);
+	}
+
 } // namespace v8pp

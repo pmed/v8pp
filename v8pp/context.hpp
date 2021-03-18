@@ -86,6 +86,8 @@ public:
 		return set(name, cl.js_function_template()->GetFunction(isolate_->GetCurrentContext()).ToLocalChecked());
 	}
 
+	v8::Local<v8::Context> impl();
+
 private:
 	bool own_isolate_;
 	bool enter_context_;
