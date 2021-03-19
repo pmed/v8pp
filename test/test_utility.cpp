@@ -249,6 +249,9 @@ void test_type_traits()
 	static_assert(v8pp::detail::is_mapping<std::unordered_multimap<char, std::string>>::value, "std::unordered_multimap");
 	static_assert(!v8pp::detail::is_sequence<std::unordered_multimap<int, char>>::value, "std::unordered_multimap");
 	static_assert(!v8pp::detail::is_array<std::unordered_multimap<int, char>>::value, "std::unordered_multimap");
+
+	static_assert(!v8pp::detail::is_shared_ptr<int>::value, "int");
+	static_assert(v8pp::detail::is_shared_ptr<std::shared_ptr<int>>::value, "int");
 }
 
 struct some_struct {};

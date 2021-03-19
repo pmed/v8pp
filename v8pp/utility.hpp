@@ -11,6 +11,7 @@
 
 #include <functional>
 #include <iterator>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -254,6 +255,16 @@ struct is_tuple : std::false_type {};
 
 template<typename... Ts>
 struct is_tuple<std::tuple<Ts...>> : std::true_type {};
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// is_shared_ptr<T>
+//
+template<typename T>
+struct is_shared_ptr : std::false_type {};
+
+template<typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
 
 /////////////////////////////////////////////////////////////////////////////
 //
