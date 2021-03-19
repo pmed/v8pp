@@ -15,12 +15,20 @@
 #include <vector>
 #include <map>
 
+template<typename T, typename U>
+void test_conv(v8::Isolate* isolate, T value, U expected)
+{
+	auto const obtained = v8pp::from_v8<U>(isolate, v8pp::to_v8(isolate, value));
+	check_eq(v8pp::detail::type_id<T>().name(), obtained, expected);
+
+	auto const obtained2 = v8pp::from_v8<T>(isolate, v8pp::to_v8(isolate, expected));
+	check_eq(v8pp::detail::type_id<U>().name(), obtained2, value);
+}
+
 template<typename T>
 void test_conv(v8::Isolate* isolate, T value)
 {
-	v8::Local<v8::Value> v8_value = v8pp::to_v8(isolate, value);
-	auto const value2 = v8pp::from_v8<T>(isolate, v8_value);
-	check_eq(v8pp::detail::type_id<T>().name(), value2, value);
+	test_conv(isolate, value, value);
 }
 
 template<typename Char, size_t N>
@@ -368,6 +376,8 @@ void test_convert()
 
 	const std::vector<int> vector{ 1, 2, 3 };
 	test_conv(isolate, vector);
+	test_conv(isolate, std::deque<unsigned>{ 1, 2, 3 }, vector);
+	test_conv(isolate, std::list<int>{ 1, 2, 3 }, vector);
 
 	const std::array<int, 3> array{ 1, 2, 3 };
 	test_conv(isolate, array);

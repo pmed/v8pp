@@ -500,12 +500,13 @@ private:
 	}
 };
 
-// convert Array <-> std::array
-template<typename T, size_t N>
-struct convert<std::array<T, N>>
+// convert Array <-> std::array, vector, deque, list
+template<typename Sequence>
+struct convert<Sequence, typename std::enable_if<detail::is_sequence<Sequence>::value || detail::is_array<Sequence>::value>::type>
 {
-	using from_type = std::array<T, N>;
+	using from_type = Sequence;
 	using to_type = v8::Local<v8::Array>;
+	using item_type = typename Sequence::value_type;
 
 	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
 	{
@@ -523,75 +524,56 @@ struct convert<std::array<T, N>>
 		v8::Local<v8::Context> context = isolate->GetCurrentContext();
 		v8::Local<v8::Array> array = value.As<v8::Array>();
 
-		if (array->Length() != N)
+		from_type result{};
+
+		constexpr bool is_array = detail::is_array<Sequence>::value;
+		if constexpr (is_array)
 		{
-			throw std::runtime_error("Invalid array length: expected "
-				+ std::to_string(N) + " actual "
-				+ std::to_string(array->Length()));
+			constexpr size_t length = detail::is_array<Sequence>::length;
+			if (array->Length() != length)
+			{
+				throw std::runtime_error("Invalid array length: expected "
+					+ std::to_string(length) + " actual "
+					+ std::to_string(array->Length()));
+			}
+		}
+		else if constexpr (detail::has_reserve<Sequence>::value)
+		{
+			result.reserve(array->Length());
 		}
 
-		from_type result = {};
-		for (uint32_t i = 0; i < N; ++i)
-		{
-			result[i] = convert<T>::from_v8(isolate, array->Get(context, i).ToLocalChecked());
-		}
-		return result;
-	}
-
-	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
-	{
-		v8::EscapableHandleScope scope(isolate);
-		v8::Local<v8::Context> context = isolate->GetCurrentContext();
-		v8::Local<v8::Array> result = v8::Array::New(isolate, N);
-		for (uint32_t i = 0; i < N; ++i)
-		{
-			result->Set(context, i, convert<T>::to_v8(isolate, value[i])).FromJust();
-		}
-		return scope.Escape(result);
-	}
-};
-
-// convert Array <-> std::vector
-template<typename T, typename Alloc>
-struct convert<std::vector<T, Alloc>>
-{
-	using from_type = std::vector<T, Alloc>;
-	using to_type = v8::Local<v8::Array>;
-
-	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
-	{
-		return !value.IsEmpty() && value->IsArray();
-	}
-
-	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
-	{
-		if (!is_valid(isolate, value))
-		{
-			throw invalid_argument(isolate, value, "Array");
-		}
-
-		v8::HandleScope scope(isolate);
-		v8::Local<v8::Context> context = isolate->GetCurrentContext();
-		v8::Local<v8::Array> array = value.As<v8::Array>();
-
-		from_type result;
-		result.reserve(array->Length());
 		for (uint32_t i = 0, count = array->Length(); i < count; ++i)
 		{
-			result.emplace_back(convert<T>::from_v8(isolate, array->Get(context, i).ToLocalChecked()));
+			v8::Local<v8::Value> item = array->Get(context, i).ToLocalChecked();
+			if constexpr (is_array)
+			{
+				result[i] = convert<item_type>::from_v8(isolate, item);
+			}
+			else
+			{
+				result.emplace_back(convert<item_type>::from_v8(isolate, item));
+			}
 		}
 		return result;
 	}
 
 	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
 	{
+		constexpr int max_size = std::numeric_limits<int>::max();
+		if (value.size() > max_size)
+		{
+			throw std::runtime_error("Invalid array length: actual "
+				+ std::to_string(value.size()) + " exceeds maximal "
+				+ std::to_string(max_size));
+		}
+
 		v8::EscapableHandleScope scope(isolate);
 		v8::Local<v8::Context> context = isolate->GetCurrentContext();
-		uint32_t const size = static_cast<uint32_t>(value.size());
-		v8::Local<v8::Array> result = v8::Array::New(isolate, size);
-		for (uint32_t i = 0; i < size; ++i)
+		v8::Local<v8::Array> result = v8::Array::New(isolate, static_cast<int>(value.size()));
+		uint32_t i = 0;
+		for (item_type const& item : value)
 		{
-			result->Set(context, i, convert<T>::to_v8(isolate, value[i])).FromJust();
+			result->Set(context, i++, convert<item_type>::to_v8(isolate, item)).FromJust();
 		}
 		return scope.Escape(result);
 	}
@@ -677,7 +659,11 @@ struct convert<v8::Local<T>>
 template<typename T>
 struct is_wrapped_class : std::conjunction<
 	std::is_class<T>,
-	std::negation<detail::is_mapping<T>>
+	std::negation<detail::is_string<T>>,
+	std::negation<detail::is_mapping<T>>,
+	std::negation<detail::is_sequence<T>>,
+	std::negation<detail::is_array<T>>,
+	std::negation<detail::is_tuple<T>>
 > {};
 
 // convert specialization for wrapped user classes
@@ -687,23 +673,8 @@ struct is_wrapped_class<v8::Local<T>> : std::false_type {};
 template<typename T>
 struct is_wrapped_class<v8::Global<T>> : std::false_type {};
 
-template<typename Char, typename Traits, typename Alloc>
-struct is_wrapped_class<std::basic_string<Char, Traits, Alloc>> : std::false_type {};
-
-template<typename Char, typename Traits>
-struct is_wrapped_class<std::basic_string_view<Char, Traits>> : std::false_type {};
-
-template<typename... Ts>
-struct is_wrapped_class<std::tuple<Ts...>> : std::false_type{};
-
 template <typename ... Ts>
 struct is_wrapped_class<std::variant<Ts...>> : std::false_type {};
-
-template<typename T, size_t N>
-struct is_wrapped_class<std::array<T, N>> : std::false_type{};
-
-template<typename T, typename Alloc>
-struct is_wrapped_class<std::vector<T, Alloc>> : std::false_type {};
 
 template<typename T>
 struct is_wrapped_class<std::shared_ptr<T>> : std::false_type {};
