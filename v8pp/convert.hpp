@@ -350,11 +350,11 @@ public:
 		{
 			if (is_map_object(isolate, value.As<v8::Object>()))
 			{
-				out = getObjectAlternate<detail::is_mapping, isObj>(isolate, value);
+				out = getObjectAlternate<detail::is_mapping, is_wrapped_class, detail::is_shared_ptr>(isolate, value);
 			}
 			else
 			{
-				out = getObjectAlternate<isObj>(isolate, value);
+				out = getObjectAlternate<is_wrapped_class, detail::is_shared_ptr>(isolate, value);
 			}
 		}
 		else if (value->IsArray())
@@ -363,7 +363,7 @@ public:
 		}
 		else if (value->IsInt32() || value->IsUint32())
 		{
-			out = getObjectAlternate<isIntegralNotBool, std::is_floating_point, isBoolean>(isolate, value);
+			out = getObjectAlternate<is_integral_not_bool, std::is_floating_point, is_bool>(isolate, value);
 		}
 		else if (value->IsNumber())
 		{
@@ -371,7 +371,7 @@ public:
 		}
 		else if (value->IsBoolean())
 		{
-			out = getObjectAlternate<isBoolean, isIntegralNotBool>(isolate, value);
+			out = getObjectAlternate<is_bool, is_integral_not_bool>(isolate, value);
 		}
 		else if (value->IsString())
 		{
@@ -379,7 +379,7 @@ public:
 		}
 		else
 		{
-			out = getObjectAlternate<isAny>(isolate, value);
+			out = getObjectAlternate<is_any>(isolate, value);
 		}
 		if (out) {
 			return *out;
@@ -396,15 +396,14 @@ public:
 	}
 
 private:
-	template <typename T> struct isObj : v8pp::is_wrapped_class<T> {};
-	template <typename T> struct isObj<std::shared_ptr<T>> : std::true_type {};
-	template <typename T> struct isBoolean : std::false_type {};
-	template <> struct isBoolean<bool> : std::true_type {};
-	template <typename T> struct isIntegralNotBool : std::is_integral<T> {};
-	template <> struct isIntegralNotBool<bool> : std::false_type {};
-	template <typename T> struct isSharedPtr : std::false_type {};
-	template <typename T> struct isSharedPtr<std::shared_ptr<T>> : std::true_type {};
-	template <typename T> struct isAny : std::true_type {};
+	template<typename T>
+	using is_bool = std::is_same<T, bool>;
+
+	template<typename T>
+	using is_integral_not_bool = std::bool_constant<std::is_integral<T>::value && !is_bool<T>::value>;
+
+	template<typename T>
+	struct is_any : std::true_type {};
 
 	static bool is_map_object(v8::Isolate* isolate, v8::Local<v8::Object> obj)
 	{
@@ -433,7 +432,7 @@ private:
 	template <typename T>
 	static std::optional<T> getObjectImpl(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
-		if constexpr (isSharedPtr<T>::value)
+		if constexpr (detail::is_shared_ptr<T>::value)
 		{
 			using U = typename T::element_type;
 			auto obj = v8pp::class_<U, v8pp::shared_ptr_traits>::unwrap_object(isolate, value);
@@ -446,7 +445,7 @@ private:
 			if (obj) return *obj;
 			else return std::nullopt;
 		}
-		else if constexpr (std::is_integral_v<T> && !isBoolean<T>::value)
+		else if constexpr (is_integral_not_bool<T>::value)
 		{
 			auto number = compatibleNumeric<T>(isolate, value);
 			if (number) return *number;
