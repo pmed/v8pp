@@ -359,7 +359,7 @@ public:
 		}
 		else if (value->IsArray())
 		{
-			out = getObjectAlternate<isArray>(isolate, value);
+			out = getObjectAlternate<detail::is_sequence, detail::is_array, detail::is_tuple>(isolate, value);
 		}
 		else if (value->IsInt32() || value->IsUint32())
 		{
@@ -396,10 +396,6 @@ public:
 	}
 
 private:
-	template <typename T> struct isArray : std::false_type {};
-	template <typename T, typename Alloc> struct isArray<std::vector<T, Alloc>> : std::true_type {};
-	template <typename T, std::size_t N> struct isArray<std::array<T, N>> : std::true_type {};
-	template <typename... Ts> struct isArray<std::tuple<Ts...>> : std::true_type {};
 	template <typename T> struct isObj : v8pp::is_wrapped_class<T> {};
 	template <typename T> struct isObj<std::shared_ptr<T>> : std::true_type {};
 	template <typename T> struct isBoolean : std::false_type {};
