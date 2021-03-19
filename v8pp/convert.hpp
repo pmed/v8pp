@@ -387,11 +387,12 @@ public:
 		throw std::runtime_error("Unable to convert argument to variant.");
 	}
 
-	static to_type to_v8(v8::Isolate* isolate, std::variant<Ts...> const& value) {
-		return std::visit([isolate](auto&& value) {
-			using T = std::decay_t<decltype(value)>;
-			auto out = v8pp::convert<T>::to_v8(isolate, value);
-			return v8::Local<v8::Value>{out};
+	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
+	{
+		return std::visit([isolate](auto&& v) -> v8::Local<v8::Value>
+			{
+				using T = std::decay_t<decltype(v)>;
+				return v8pp::convert<T>::to_v8(isolate, v);
 			}, value);
 	}
 
