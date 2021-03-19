@@ -10,6 +10,7 @@
 #define V8PP_UTILITY_HPP_INCLUDED
 
 #include <functional>
+#include <iterator>
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -156,11 +157,103 @@ template<typename T, typename U = void>
 struct is_mapping_impl : std::false_type {};
 
 template<typename T>
-struct is_mapping_impl<T, std::void_t<typename T::key_type, typename T::mapped_type>> : std::true_type {};
+struct is_mapping_impl<T, std::void_t<typename T::key_type, typename T::mapped_type,
+	decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> : std::true_type {};
 
 template<typename T>
 struct is_mapping : is_mapping_impl<T>::type {};
 
+/////////////////////////////////////////////////////////////////////////////
+//
+// is_sequence<T>
+//
+template<typename T, typename U = void>
+struct is_sequence_impl : std::false_type {};
+
+template<typename T>
+struct is_sequence_impl<T, std::void_t<typename T::value_type,
+	decltype(std::declval<T>().begin()), decltype(std::declval<T>().end()),
+	decltype(std::declval<T>().emplace_back(std::declval<typename T::value_type>()))>>
+	: std::negation<is_string<T>>
+{
+};
+
+template<typename T>
+struct is_sequence : is_sequence_impl<T> {};
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// has_reserve<T>
+//
+template<typename T, typename U = void>
+struct has_reserve_impl : std::false_type
+{
+	static void reserve(T& container, size_t capacity) {} // no-op
+};
+
+template<typename T>
+struct has_reserve_impl<T, std::void_t<decltype(std::declval<T>().reserve(0))>> : std::true_type
+{
+	static void reserve(T& container, size_t capacity)
+	{
+		container.reserve(capacity);
+	}
+};
+
+template<typename T>
+struct has_reserve : has_reserve_impl<T>::type
+{
+	static void reserve(T& container, size_t capacity)
+	{
+		has_reserve_impl<T>::reserve(container, capacity);
+	}
+};
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// is_array<T>
+//
+template<typename T>
+struct is_array : std::false_type
+{
+	static void check_length(size_t length) {} // no-op for non-arrays
+
+	template<typename U>
+	static void set_element_at(T& container, size_t index, U&& item)
+	{
+		container.emplace_back(std::forward<U>(item));
+	}
+};
+
+template<typename T, std::size_t N>
+struct is_array<std::array<T, N>> : std::true_type
+{
+	static void check_length(size_t length)
+	{
+		if (length != N)
+		{
+			throw std::runtime_error("Invalid array length: expected "
+				+ std::to_string(N) + " actual "
+				+ std::to_string(length));
+		}
+	}
+
+	template<typename U>
+	static void set_element_at(std::array<T, N>& array, size_t index, U&& item)
+	{
+		array[index] = std::forward<U>(item);
+	}
+};
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// is_tuple<T>
+//
+template<typename T>
+struct is_tuple : std::false_type {};
+
+template<typename... Ts>
+struct is_tuple<std::tuple<Ts...>> : std::true_type {};
 
 /////////////////////////////////////////////////////////////////////////////
 //
