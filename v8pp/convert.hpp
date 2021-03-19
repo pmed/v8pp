@@ -414,23 +414,6 @@ private:
 	}
 
 	template <typename T>
-	static std::optional<T> compatibleNumeric(v8::Isolate* isolate, v8::Local<v8::Value> value)
-	{
-		if (value->IsNumber())
-		{
-			const double number = v8pp::convert<double>::from_v8(isolate, value);
-			if (std::isfinite(number)
-				&& number >= std::numeric_limits<T>::min()
-				&& number <= std::numeric_limits<T>::max()
-				&& static_cast<double>(static_cast<T>(number)) == number)
-			{
-				return static_cast<T>(number);
-			}
-		}
-		return std::nullopt;
-	}
-
-	template <typename T>
 	static std::optional<T> getObjectImpl(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
 		if constexpr (detail::is_shared_ptr<T>::value)
@@ -448,9 +431,18 @@ private:
 		}
 		else if constexpr (is_integral_not_bool<T>::value)
 		{
-			auto number = compatibleNumeric<T>(isolate, value);
-			if (number) return *number;
-			else return std::nullopt;
+			if (value->IsNumber())
+			{
+				double const number = v8pp::convert<double>::from_v8(isolate, value);
+				if (std::isfinite(number)
+					&& number >= std::numeric_limits<T>::min()
+					&& number <= std::numeric_limits<T>::max()
+					&& static_cast<double>(static_cast<T>(number)) == number)
+				{
+					return static_cast<T>(number);
+				}
+			}
+			return std::nullopt;
 		}
 		else
 		{
