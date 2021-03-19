@@ -119,6 +119,16 @@ struct is_tuple<std::tuple<Ts...>> : std::true_type {};
 
 /////////////////////////////////////////////////////////////////////////////
 //
+// is_shared_ptr<T>
+//
+template<typename T>
+struct is_shared_ptr : std::false_type {};
+
+template<typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
+
+/////////////////////////////////////////////////////////////////////////////
+//
 // Function traits
 //
 template<typename F>

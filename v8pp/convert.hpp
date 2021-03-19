@@ -659,7 +659,8 @@ struct is_wrapped_class : std::conjunction<
 	std::negation<detail::is_mapping<T>>,
 	std::negation<detail::is_sequence<T>>,
 	std::negation<detail::is_array<T>>,
-	std::negation<detail::is_tuple<T>>
+	std::negation<detail::is_tuple<T>>,
+	std::negation<detail::is_shared_ptr<T>>
 > {};
 
 // convert specialization for wrapped user classes
@@ -671,9 +672,6 @@ struct is_wrapped_class<v8::Global<T>> : std::false_type {};
 
 template <typename ... Ts>
 struct is_wrapped_class<std::variant<Ts...>> : std::false_type {};
-
-template<typename T>
-struct is_wrapped_class<std::shared_ptr<T>> : std::false_type {};
 
 template<typename T>
 struct convert<T*, typename std::enable_if<is_wrapped_class<T>::value>::type>
