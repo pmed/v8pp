@@ -11,14 +11,11 @@
 
 #include <v8.h>
 
-#include <climits>
-#include <string>
-#include <array>
-#include <vector>
-#include <map>
+#include <algorithm>
+#include <limits>
 #include <memory>
-#include <iterator>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <typeinfo>
 #include <variant>
@@ -195,7 +192,7 @@ struct convert<T, typename std::enable_if<std::is_integral<T>::value>::type>
 
 	static to_type to_v8(v8::Isolate* isolate, T value)
 	{
-		if constexpr (sizeof(T) <= sizeof(uint32_t)) 
+		if constexpr (sizeof(T) <= sizeof(uint32_t))
 		{
 			if constexpr (std::is_signed_v<T>)
 			{
@@ -210,7 +207,7 @@ struct convert<T, typename std::enable_if<std::is_integral<T>::value>::type>
 		}
 		else
 		{
-			//TODO: check value < (1<<57) to fit in double?
+			//TODO: check value < (1<<std::numeric_limits<double>::digits)-1 to fit in double?
 			return v8::Number::New(isolate, static_cast<double>(value));
 		}
 	}
@@ -345,46 +342,42 @@ public:
 
 		v8::HandleScope scope(isolate);
 
-		std::optional<from_type> out;
-		if (value->IsObject() && !value->IsArray())
+		if (value->IsBoolean())
 		{
-			if (is_map_object(isolate, value.As<v8::Object>()))
-			{
-				out = getObjectAlternate<detail::is_mapping, is_wrapped_class, detail::is_shared_ptr>(isolate, value);
-			}
-			else
-			{
-				out = getObjectAlternate<is_wrapped_class, detail::is_shared_ptr>(isolate, value);
-			}
-		}
-		else if (value->IsArray())
-		{
-			out = getObjectAlternate<detail::is_sequence, detail::is_array, detail::is_tuple>(isolate, value);
+			return getObjectAlternate<is_bool>(isolate, value);
 		}
 		else if (value->IsInt32() || value->IsUint32())
 		{
-			out = getObjectAlternate<is_integral_not_bool, std::is_floating_point, is_bool>(isolate, value);
+			return getObjectAlternate<is_integral_not_bool, std::is_floating_point>(isolate, value);
 		}
 		else if (value->IsNumber())
 		{
-			out = getObjectAlternate<std::is_floating_point>(isolate, value);
-		}
-		else if (value->IsBoolean())
-		{
-			out = getObjectAlternate<is_bool, is_integral_not_bool>(isolate, value);
+			//TODO: 64-bit integers
+			return getObjectAlternate<std::is_floating_point, is_integral_not_bool>(isolate, value);
 		}
 		else if (value->IsString())
 		{
-			out = getObjectAlternate<detail::is_string>(isolate, value);
+			return getObjectAlternate<detail::is_string>(isolate, value);
+		}
+		else if (value->IsArray())
+		{
+			return getObjectAlternate<detail::is_sequence, detail::is_array, detail::is_tuple>(isolate, value);
+		}
+		else if (value->IsObject())
+		{
+			if (is_map_object(isolate, value.As<v8::Object>()))
+			{
+				return getObjectAlternate<detail::is_mapping, is_wrapped_class, detail::is_shared_ptr>(isolate, value);
+			}
+			else
+			{
+				return getObjectAlternate<is_wrapped_class, detail::is_shared_ptr>(isolate, value);
+			}
 		}
 		else
 		{
-			out = getObjectAlternate<is_any>(isolate, value);
+			return getObjectAlternate<is_any>(isolate, value);
 		}
-		if (out) {
-			return *out;
-		}
-		throw std::runtime_error("Unable to convert argument to variant.");
 	}
 
 	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
@@ -413,6 +406,26 @@ private:
 			&& prop_names->Length() > 0;
 	}
 
+	template<typename T, typename Number>
+	static std::optional<T> get_number(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	{
+		Number const number = v8pp::convert<Number>::from_v8(isolate, value);
+		if constexpr (std::is_same_v<T, uint64_t>)
+		{
+			return static_cast<T>(number);
+		}
+		else
+		{
+			Number const min = std::numeric_limits<T>::min();
+			Number const max = std::numeric_limits<T>::max();
+			if (number >= min && number <= max)
+			{
+				return static_cast<T>(number);
+			}
+			return std::nullopt;
+		}
+	}
+
 	template <typename T>
 	static std::optional<T> getObjectImpl(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
@@ -431,18 +444,11 @@ private:
 		}
 		else if constexpr (is_integral_not_bool<T>::value)
 		{
-			if (value->IsNumber())
-			{
-				double const number = v8pp::convert<double>::from_v8(isolate, value);
-				if (std::isfinite(number)
-					&& number >= std::numeric_limits<T>::min()
-					&& number <= std::numeric_limits<T>::max()
-					&& static_cast<double>(static_cast<T>(number)) == number)
-				{
-					return static_cast<T>(number);
-				}
-			}
-			return std::nullopt;
+			return get_number<T, int64_t>(isolate, value);
+		}
+		else if constexpr (std::is_floating_point_v<T>)
+		{
+			return get_number<T, double>(isolate, value);
 		}
 		else
 		{
@@ -450,12 +456,13 @@ private:
 		}
 	}
 
-	template <template <typename T> typename condition, template <typename T> typename ... conditions>
-	static std::optional<from_type> getObjectAlternate(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	template<template <typename T> typename condition, template <typename T> typename ... conditions>
+	static from_type getObjectAlternate(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
-		if (auto out = getObject<Ts...>(isolate, value, { condition<Ts>::value... }, 0))
+		constexpr std::array<bool, N> valid_type{ condition<Ts>::value... };
+		if (auto out = getObject<Ts...>(isolate, value, valid_type, 0))
 		{
-			return out;
+			return *out;
 		}
 		if constexpr (sizeof... (conditions) > 0)
 		{
@@ -463,7 +470,7 @@ private:
 		}
 		else
 		{
-			return std::nullopt;
+			throw std::runtime_error("Unable to convert argument to variant.");
 		}
 	}
 
@@ -594,7 +601,7 @@ struct convert<Mapping, typename std::enable_if<detail::is_mapping<Mapping>::val
 		v8::Local<v8::Object> object = value.As<v8::Object>();
 		v8::Local<v8::Array> prop_names = object->GetPropertyNames(context).ToLocalChecked();
 
-		from_type result;
+		from_type result{};
 		for (uint32_t i = 0, count = prop_names->Length(); i < count; ++i)
 		{
 			v8::Local<v8::Value> key = prop_names->Get(context, i).ToLocalChecked();

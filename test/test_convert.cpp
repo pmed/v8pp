@@ -217,6 +217,9 @@ struct variant_check
 	}
 };
 
+static int64_t const V8_MAX_INT = (uint64_t{1} << std::numeric_limits<double>::digits) - 1;
+static int64_t const V8_MIN_INT = -V8_MAX_INT - 1;
+
 template<typename T>
 void check_range(v8::Isolate* isolate)
 {
@@ -226,13 +229,13 @@ void check_range(v8::Isolate* isolate)
 	T min, max;
 	if constexpr (std::is_same_v<T, int64_t>)
 	{
-		max = 0x7FFFFFFF;
-		min = -max - 1;
+		min = V8_MIN_INT;
+		max = V8_MAX_INT;
 	}
 	else if constexpr (std::is_same_v<T, uint64_t>)
 	{
 		min = 0;
-		max = 0xFFFFFFFF;
+		max = V8_MAX_INT;
 	}
 	else
 	{
@@ -322,8 +325,13 @@ void test_convert_variant(v8::Isolate* isolate)
 	check_vector({1.f, 2.f, 3.f}, 4.f, "testing");
 
 	// The order here matters
-	variant_check<int8_t, uint8_t, int32_t, uint32_t, double> order_check{ isolate };
-	order_check( -1, 254, std::numeric_limits<int32_t>::min(), std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max() + 1.0);
+	variant_check<int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t, /*uint64_t,*/ float, double> order_check{ isolate };
+	order_check(
+		std::numeric_limits<int8_t>::min(), std::numeric_limits<uint8_t>::max(),
+		std::numeric_limits<int16_t>::min(), std::numeric_limits<uint16_t>::max(),
+		std::numeric_limits<int32_t>::min(), std::numeric_limits<uint32_t>::max(),
+		V8_MIN_INT, //TODO: V8_MAX_INT,
+		std::numeric_limits<float>::min(), std::numeric_limits<double>::max());
 
 	variant_check<bool, int8_t> simple_arithmetic{ isolate };
 	simple_arithmetic.check_ex(std::numeric_limits<uint32_t>::max()); // does not fit into int8_t
