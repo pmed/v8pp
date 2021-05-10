@@ -11,6 +11,19 @@ Header-only library to expose C++ classes and functions into [V8](https://develo
   * GCC 5.4.0 (Ubuntu 16.04)
   * Clang 5.0.0 (Ubuntu 16.04)
 
+## Building
+For example build v8pp on Linux.
+
+#### Linux(use ninja):
+1. First compile V8 and generate libv8.a
+2. Modify build.ninja:
+    - 2.1 cxxflags:add v8 Header, and add -DV8_COMPRESS_POINTERS if you build v8 with it.
+    - 2.2 ldflags:add/modify/delete static library
+3. Build:use ninja to build v8pp
+```
+> ninja
+```
+
 ## Binding example
 
 v8pp supports V8 versions after 6.3 with `v8::Isolate` usage in API. There are 2 targets for binding:
