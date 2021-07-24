@@ -29,6 +29,93 @@ struct none{};
 
 /////////////////////////////////////////////////////////////////////////////
 //
+// is_string<T>
+//
+template<typename T> struct is_string : std::false_type {};
+
+template<typename Char, typename Traits, typename Alloc>
+struct is_string<std::basic_string<Char, Traits, Alloc>> : std::true_type {};
+
+template<typename Char, typename Traits>
+struct is_string<std::basic_string_view<Char, Traits>> : std::true_type {};
+
+template<>
+struct is_string<char const*> : std::true_type {};
+template<>
+struct is_string<char16_t const*> : std::true_type {};
+template<>
+struct is_string<char32_t const*> : std::true_type {};
+template<>
+struct is_string<wchar_t const*> : std::true_type {};
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// is_mapping<T>
+//
+template<typename T, typename U = void>
+struct is_mapping : std::false_type {};
+
+template<typename T>
+struct is_mapping<T, std::void_t<typename T::key_type, typename T::mapped_type,
+	decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> : std::true_type {};
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// is_sequence<T>
+//
+template<typename T, typename U = void>
+struct is_sequence : std::false_type {};
+
+template<typename T>
+struct is_sequence<T, std::void_t<typename T::value_type,
+	decltype(std::declval<T>().begin()), decltype(std::declval<T>().end()),
+	decltype(std::declval<T>().emplace_back(std::declval<typename T::value_type>()))>> : std::negation<is_string<T>> {};
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// has_reserve<T>
+//
+template<typename T, typename U = void>
+struct has_reserve : std::false_type {};
+
+template<typename T>
+struct has_reserve<T, std::void_t<decltype(std::declval<T>().reserve(0))>> : std::true_type {};
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// is_array<T>
+//
+template<typename T>
+struct is_array : std::false_type {};
+
+template<typename T, std::size_t N>
+struct is_array<std::array<T, N>> : std::true_type
+{
+	static constexpr size_t length = N;
+};
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// is_tuple<T>
+//
+template<typename T>
+struct is_tuple : std::false_type {};
+
+template<typename... Ts>
+struct is_tuple<std::tuple<Ts...>> : std::true_type {};
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// is_shared_ptr<T>
+//
+template<typename T>
+struct is_shared_ptr : std::false_type {};
+
+template<typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
+
+/////////////////////////////////////////////////////////////////////////////
+//
 // Function traits
 //
 template<typename F>

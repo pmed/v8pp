@@ -134,9 +134,8 @@ std::ostream& operator<<(std::ostream& os, Enum value)
 	return os << static_cast<typename std::underlying_type<Enum>::type>(value);
 }
 
-template<typename Char, typename Traits, typename... Ts>
-std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& os,
-	std::tuple<Ts...> const& tuple)
+template<typename... Ts>
+std::ostream& operator<<(std::ostream& os, std::tuple<Ts...> const& tuple)
 {
 	std::apply([&os](auto&&... elems) mutable
 	{
