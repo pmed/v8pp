@@ -181,6 +181,18 @@ void check_eq(v8pp::string_view msg, T actual, U expected)
 	}
 }
 
+template<typename T>
+void check_eq(v8pp::string_view msg, T actual, v8pp::u16string_view expected)
+{
+	check(msg, actual == expected);
+}
+
+template<typename T>
+void check_eq(v8pp::string_view msg, T actual, v8pp::wstring_view expected)
+{
+	check(msg, actual == expected);
+}
+
 template<typename Ex, typename F>
 void check_ex(v8pp::string_view msg, F&& f)
 {
