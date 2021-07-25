@@ -18,7 +18,7 @@ void test_conv(v8::Isolate* isolate, T value)
 {
 	v8::Local<v8::Value> v8_value = v8pp::to_v8(isolate, value);
 	auto const value2 = v8pp::from_v8<T>(isolate, v8_value);
-	check_eq(v8pp::detail::type_id<T>().name(), value2, value);
+	check(v8pp::detail::type_id<T>().name(), value2 == value);
 }
 
 template<typename Char, size_t N>
@@ -26,13 +26,19 @@ void test_string_conv(v8::Isolate* isolate, Char const (&str)[N])
 {
 	std::basic_string<Char> const str2(str, 2);
 
+	v8pp::basic_string_view<Char> const sv(str);
+	v8pp::basic_string_view<Char> const sv2(str, 2);
+
 	test_conv(isolate, str[0]);
 	test_conv(isolate, str);
+	test_conv(isolate, sv2);
 
 	check_eq("string literal",
 		v8pp::from_v8<Char const*>(isolate, v8pp::to_v8(isolate, str)), str);
 	check_eq("string literal2",
 		v8pp::from_v8<Char const*>(isolate, v8pp::to_v8(isolate, str, 2)), str2);
+	check("string view",
+		v8pp::from_v8<v8pp::basic_string_view<Char>>(isolate, v8pp::to_v8(isolate, sv)) == sv);
 
 	Char const* ptr = str;
 	check_eq("string pointer",
@@ -58,9 +64,14 @@ struct person
 	int age;
 
 //for test framework
+	bool operator==(person const& other) const
+	{
+		return name == other.name && age == other.age;
+	}
+
 	bool operator!=(person const& other) const
 	{
-		return name != other.name || age != other.age;
+		return !(*this == other);
 	}
 
 	friend std::ostream& operator<<(std::ostream& os, person const& p)

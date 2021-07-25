@@ -22,15 +22,14 @@ namespace v8pp {
 /// return false if the value doesn't exist in the options object
 template<typename T>
 bool get_option(v8::Isolate* isolate, v8::Local<v8::Object> options,
-	char const* name, T& value)
+	string_view name, T& value)
 {
-	char const* dot = strchr(name, '.');
-	if (dot)
+	string_view::size_type const dot_pos = name.find('.');
+	if (dot_pos != name.npos)
 	{
-		std::string const subname(name, dot);
 		v8::Local<v8::Object> suboptions;
-		return get_option(isolate, options, subname.c_str(), suboptions)
-			&& get_option(isolate, suboptions, dot + 1, value);
+		return get_option(isolate, options, name.substr(0, dot_pos), suboptions)
+			&& get_option(isolate, suboptions, name.substr(dot_pos + 1), value);
 	}
 	v8::Local<v8::Value> val;
 	if (!options->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, name)).ToLocal(&val)
@@ -47,16 +46,14 @@ bool get_option(v8::Isolate* isolate, v8::Local<v8::Object> options,
 /// return false if the value doesn't exists in the options subobject
 template<typename T>
 bool set_option(v8::Isolate* isolate, v8::Local<v8::Object> options,
-	char const* name, T const& value)
+	string_view name, T const& value)
 {
-	char const* dot = strchr(name, '.');
-	if (dot)
+	string_view::size_type const dot_pos = name.find('.');
+	if (dot_pos != name.npos)
 	{
-		std::string const subname(name, dot);
-		v8::HandleScope scope(isolate);
 		v8::Local<v8::Object> suboptions;
-		return get_option(isolate, options, subname.c_str(), suboptions)
-			&& set_option(isolate, suboptions, dot + 1, value);
+		return get_option(isolate, options, name.substr(0, dot_pos), suboptions)
+			&& set_option(isolate, suboptions, name.substr(dot_pos + 1), value);
 	}
 	return options->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, name), to_v8(isolate, value)).FromJust();
 }
@@ -65,7 +62,7 @@ bool set_option(v8::Isolate* isolate, v8::Local<v8::Object> options,
 /// Subobject names are not supported
 template<typename T>
 void set_const(v8::Isolate* isolate, v8::Local<v8::Object> options,
-	char const* name, T const& value)
+	string_view name, T const& value)
 {
 	options->DefineOwnProperty(isolate->GetCurrentContext(),
 		v8pp::to_v8(isolate, name), to_v8(isolate, value),

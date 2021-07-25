@@ -23,6 +23,7 @@
 #include <typeinfo>
 
 #include "v8pp/ptr_traits.hpp"
+#include "v8pp/utility.hpp"
 
 namespace v8pp {
 
@@ -50,70 +51,17 @@ struct invalid_argument : std::invalid_argument
 };
 
 // converter specializations for string types
-template<typename Char, typename Traits, typename Alloc>
-struct convert<std::basic_string<Char, Traits, Alloc>>
+template<typename Char, typename Traits>
+struct convert<basic_string_view<Char, Traits>>
 {
 	static_assert(sizeof(Char) <= sizeof(uint16_t),
 		"only UTF-8 and UTF-16 strings are supported");
 
-	using from_type = std::basic_string<Char, Traits, Alloc>;
-	using to_type = v8::Local<v8::String>;
-
-	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
+	// A string that converts to Char const*
+	struct convertible_string : std::basic_string<Char, Traits>
 	{
-		return !value.IsEmpty() && value->IsString();
-	}
-
-	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
-	{
-		if (!is_valid(isolate, value))
-		{
-			throw invalid_argument(isolate, value, "String");
-		}
-
-		if (sizeof(Char) == 1)
-		{
-			v8::String::Utf8Value const str(isolate, value);
-			return from_type(reinterpret_cast<Char const*>(*str), str.length());
-		}
-		else
-		{
-			v8::String::Value const str(isolate, value);
-			return from_type(reinterpret_cast<Char const*>(*str), str.length());
-		}
-	}
-
-	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
-	{
-		if (sizeof(Char) == 1)
-		{
-			return v8::String::NewFromUtf8(isolate,
-				reinterpret_cast<char const*>(value.data()),
-				v8::NewStringType::kNormal, static_cast<int>(value.length())).ToLocalChecked();
-		}
-		else
-		{
-			return v8::String::NewFromTwoByte(isolate,
-				reinterpret_cast<uint16_t const*>(value.data()),
-				v8::NewStringType::kNormal, static_cast<int>(value.length())).ToLocalChecked();
-		}
-	}
-};
-
-template<typename Char>
-struct convert<Char const*, typename std::enable_if<
-	std::is_same<Char, char>::value ||
-	std::is_same<Char, char16_t>::value ||
-	std::is_same<Char, wchar_t>::value>::type>
-{
-	static_assert(sizeof(Char) <= sizeof(uint16_t),
-		"only UTF-8 and UTF-16 strings are supported");
-
-	// A string that converts to Char const *
-	struct convertible_string : std::basic_string<Char>
-	{
-		convertible_string(Char const* str, size_t len)
-			: std::basic_string<Char>(str, len) {}
+		using base_class = std::basic_string<Char, Traits>;
+		using base_class::base_class;
 		operator Char const*() const { return this->c_str(); }
 	};
 
@@ -144,21 +92,31 @@ struct convert<Char const*, typename std::enable_if<
 		}
 	}
 
-	static to_type to_v8(v8::Isolate* isolate, Char const* value, size_t len = ~0)
+	static to_type to_v8(v8::Isolate* isolate, basic_string_view<Char, Traits> value)
 	{
 		if (sizeof(Char) == 1)
 		{
 			return v8::String::NewFromUtf8(isolate,
-				reinterpret_cast<char const*>(value),
-				v8::NewStringType::kNormal, static_cast<int>(len)).ToLocalChecked();
+				reinterpret_cast<char const*>(value.data()),
+				v8::NewStringType::kNormal, static_cast<int>(value.size())).ToLocalChecked();
 		}
 		else
 		{
 			return v8::String::NewFromTwoByte(isolate,
-				reinterpret_cast<uint16_t const*>(value),
-				v8::NewStringType::kNormal, static_cast<int>(len)).ToLocalChecked();
+				reinterpret_cast<uint16_t const*>(value.data()),
+				v8::NewStringType::kNormal, static_cast<int>(value.size())).ToLocalChecked();
 		}
 	}
+};
+
+template<typename Char, typename Traits, typename Alloc>
+struct convert<std::basic_string<Char, Traits, Alloc>> : convert<basic_string_view<Char, Traits>>
+{
+};
+
+template<typename Char>
+struct convert<Char const*> : convert<basic_string_view<Char>>
+{
 };
 
 // converter specializations for primitive types
@@ -541,6 +499,18 @@ struct is_wrapped_class<v8::Global<T>> : std::false_type {};
 template<typename Char, typename Traits, typename Alloc>
 struct is_wrapped_class<std::basic_string<Char, Traits, Alloc>> : std::false_type {};
 
+template<typename Char, typename Traits>
+struct is_wrapped_class<basic_string_view<Char, Traits>> : std::false_type {};
+
+template<>
+struct is_wrapped_class<char const*> : std::false_type {};
+
+template<>
+struct is_wrapped_class<char16_t const*> : std::false_type {};
+
+template<>
+struct is_wrapped_class<wchar_t const*> : std::false_type {};
+
 template<typename... Ts>
 struct is_wrapped_class<std::tuple<Ts...>> : std::false_type{};
 
@@ -702,39 +672,39 @@ auto from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value,U const& default_v
 
 inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, char const* str, size_t len)
 {
-	return convert<char const*>::to_v8(isolate, str, len);
+	return convert<string_view>::to_v8(isolate, string_view(str, len));
 }
 
 template<size_t N>
 v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 	char const (&str)[N], size_t len = N - 1)
 {
-	return convert<char const*>::to_v8(isolate, str, len);
+	return convert<string_view>::to_v8(isolate, string_view(str, len));
 }
 
 inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str, size_t len)
 {
-	return convert<char16_t const*>::to_v8(isolate, str, len);
+	return convert<u16string_view>::to_v8(isolate, u16string_view(str, len));
 }
 
 template<size_t N>
 v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 	char16_t const (&str)[N], size_t len = N - 1)
 {
-	return convert<char16_t const*>::to_v8(isolate, str, len);
+	return convert<u16string_view>::to_v8(isolate, u16string_view(str, len));
 }
 
 #ifdef WIN32
 inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, wchar_t const* str, size_t len)
 {
-	return convert<wchar_t const*>::to_v8(isolate, str, len);
+	return convert<wstring_view>::to_v8(isolate, wstring_view(str, len));
 }
 
 template<size_t N>
 v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 	wchar_t const (&str)[N], size_t len = N - 1)
 {
-	return convert<wchar_t const*>::to_v8(isolate, str, len);
+	return convert<wstring_view>::to_v8(isolate, wstring_view(str, len));
 }
 #endif
 
