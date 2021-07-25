@@ -16,7 +16,7 @@
 
 #include <fstream>
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #include <windows.h>
 static char const path_sep = '\\';
 #else

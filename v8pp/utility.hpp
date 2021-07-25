@@ -38,7 +38,7 @@ public:
 	using size_type = size_t;
 	using const_iterator = Char const*;
 
-	static const size_type npos = ~0;
+	static const size_type npos = ~size_type{0};
 
 	basic_string_view(Char const* data, size_t size)
 		: data_(data)
@@ -213,7 +213,11 @@ struct is_sequence<T, void_t<typename T::value_type,
 template<typename T, typename U = void>
 struct has_reserve : std::false_type
 {
-	static void reserve(T& container, size_t capacity) {} // no-op
+	static void reserve(T& container, size_t capacity)
+	{
+		// no-op
+		(void)container; (void)capacity;
+	}
 };
 
 template<typename T>
@@ -232,11 +236,16 @@ struct has_reserve<T, void_t<decltype(std::declval<T>().reserve(0))>> : std::tru
 template<typename T>
 struct is_array : std::false_type
 {
-	static void check_length(size_t length) {} // no-op for non-arrays
+	static void check_length(size_t length)
+	{
+		// no-op for non-arrays
+		(void)length;
+	}
 
 	template<typename U>
 	static void set_element_at(T& container, size_t index, U&& item)
 	{
+		(void)index;
 		container.emplace_back(std::forward<U>(item));
 	}
 };

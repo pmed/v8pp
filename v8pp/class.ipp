@@ -375,6 +375,7 @@ V8PP_IMPL classes* classes::instance(operation op, v8::Isolate* isolate)
 			delete info;
 			isolate->SetData(V8PP_ISOLATE_DATA_SLOT, nullptr);
 		}
+		// fallthrough
 	default:
 		return nullptr;
 	}

@@ -83,7 +83,7 @@ static_assert(std::is_same<call_from_v8_traits<decltype(z)>::arg_convert<1, raw_
 static_assert(std::is_same<call_from_v8_traits<decltype(z)>::arg_convert<1, shared_ptr_traits>, v8pp::convert<int>>::value, "y(int)");
 
 // cv arg converters
-static void s(std::string, std::vector<int>&, std::shared_ptr<int> const&, std::string*, std::string const*);
+static void s(std::string, std::vector<int>&, std::shared_ptr<int> const&, std::string*, std::string const*) {}
 
 static_assert(std::is_same<call_from_v8_traits<decltype(s)>::arg_convert<0, raw_ptr_traits>, v8pp::convert<std::string>>::value, "s(string)");
 static_assert(std::is_same<call_from_v8_traits<decltype(s)>::arg_convert<0, shared_ptr_traits>, v8pp::convert<std::string>>::value, "s(string)");
@@ -101,7 +101,7 @@ static_assert(std::is_same<call_from_v8_traits<decltype(s)>::arg_convert<4, raw_
 static_assert(std::is_same<call_from_v8_traits<decltype(s)>::arg_convert<4, shared_ptr_traits>, v8pp::convert<std::string const*>>::value, "s(std::string const*)");
 
 // fundamental types cv arg converters
-static void t(int, char&, bool const&, float*, char const*);
+static void t(int, char&, bool const&, float*, char const*) {}
 
 static_assert(std::is_same<call_from_v8_traits<decltype(t)>::arg_convert<0, raw_ptr_traits>, v8pp::convert<int>>::value, "t(int)");
 static_assert(std::is_same<call_from_v8_traits<decltype(t)>::arg_convert<0, shared_ptr_traits>, v8pp::convert<int>>::value, "t(int)");
