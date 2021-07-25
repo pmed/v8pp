@@ -112,10 +112,44 @@ private:
 
 using string_view = basic_string_view<char>;
 using u16string_view = basic_string_view<char16_t>;
-using u32string_view = basic_string_view<char32_t>;
 using wstring_view = basic_string_view<wchar_t>;
+
 } // namespace v8pp {
 #endif
+
+namespace v8pp
+{
+/////////////////////////////////////////////////////////////////////////////
+//
+// void_t
+//
+#ifdef __cpp_lib_void_t
+using std::void_t;
+#else
+template<typename...> using void_t = void;
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// conjunction, disjunction, negation
+//
+#ifdef __cpp_lib_logical_traits
+using std::conjunction;
+using std::disjunction;
+using std::negation;
+#else
+template<bool...> struct bool_pack {};
+
+template<typename... Bs>
+using conjunction = std::is_same<bool_pack<true, Bs::value...>, bool_pack<Bs::value..., true>>;
+
+template<typename... Bs>
+using disjunction = std::integral_constant<bool, !conjunction<Bs...>::value>;
+
+template<typename B>
+using negation = std::integral_constant<bool, !B::value>;
+#endif
+} // namespace v8pp {
 
 namespace v8pp { namespace detail {
 
@@ -157,7 +191,7 @@ template<typename T, typename U = void>
 struct is_mapping : std::false_type {};
 
 template<typename T>
-struct is_mapping<T, std::void_t<typename T::key_type, typename T::mapped_type,
+struct is_mapping<T, void_t<typename T::key_type, typename T::mapped_type,
 	decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> : std::true_type {};
 
 /////////////////////////////////////////////////////////////////////////////
@@ -168,9 +202,9 @@ template<typename T, typename U = void>
 struct is_sequence : std::false_type {};
 
 template<typename T>
-struct is_sequence<T, std::void_t<typename T::value_type,
+struct is_sequence<T, void_t<typename T::value_type,
 	decltype(std::declval<T>().begin()), decltype(std::declval<T>().end()),
-	decltype(std::declval<T>().emplace_back(std::declval<typename T::value_type>()))>> : std::negation<is_string<T>> {};
+	decltype(std::declval<T>().emplace_back(std::declval<typename T::value_type>()))>> : negation<is_string<T>> {};
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -183,7 +217,7 @@ struct has_reserve : std::false_type
 };
 
 template<typename T>
-struct has_reserve<T, std::void_t<decltype(std::declval<T>().reserve(0))>> : std::true_type
+struct has_reserve<T, void_t<decltype(std::declval<T>().reserve(0))>> : std::true_type
 {
 	static void reserve(T& container, size_t capacity)
 	{

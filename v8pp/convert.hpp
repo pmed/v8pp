@@ -12,15 +12,10 @@
 #include <v8.h>
 
 #include <climits>
-#include <string>
-#include <array>
-#include <vector>
-#include <map>
+#include <limits>
 #include <memory>
-#include <iterator>
 #include <stdexcept>
 #include <type_traits>
-#include <typeinfo>
 
 #include "v8pp/ptr_traits.hpp"
 #include "v8pp/utility.hpp"
@@ -456,14 +451,14 @@ struct convert<v8::Local<T>>
 
 
 template<typename T>
-struct is_wrapped_class : std::conjunction<
+struct is_wrapped_class : conjunction<
 	std::is_class<T>,
-	std::negation<detail::is_string<T>>,
-	std::negation<detail::is_mapping<T>>,
-	std::negation<detail::is_sequence<T>>,
-	std::negation<detail::is_array<T>>,
-	std::negation<detail::is_tuple<T>>,
-	std::negation<detail::is_shared_ptr<T>>
+	negation<detail::is_string<T>>,
+	negation<detail::is_mapping<T>>,
+	negation<detail::is_sequence<T>>,
+	negation<detail::is_array<T>>,
+	negation<detail::is_tuple<T>>,
+	negation<detail::is_shared_ptr<T>>
 > {};
 
 // convert specialization for wrapped user classes

@@ -190,8 +190,8 @@ void test_type_traits()
 	static_assert(v8pp::detail::is_string<v8pp::string_view>::value, "std::string_view");
 	static_assert(v8pp::detail::is_string<std::u16string>::value, "std::u16string");
 	static_assert(v8pp::detail::is_string<v8pp::u16string_view>::value, "std::u16string_view");
-	static_assert(v8pp::detail::is_string<std::u32string>::value, "std::u32string");
-	static_assert(v8pp::detail::is_string<v8pp::u32string_view>::value, "std::u32string_view");
+	//static_assert(v8pp::detail::is_string<std::u32string>::value, "std::u32string");
+	//static_assert(v8pp::detail::is_string<v8pp::u32string_view>::value, "std::u32string_view");
 	static_assert(v8pp::detail::is_string<std::wstring>::value, "std::wstring");
 	static_assert(v8pp::detail::is_string<v8pp::wstring_view>::value, "std::wstring_view");
 	static_assert(v8pp::detail::is_string<char const*>::value, "char const*");
