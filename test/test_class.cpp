@@ -445,6 +445,28 @@ void test_auto_wrap_objects()
 	check_eq("return X object", run_script<int>(context, "obj = f(123); obj.x"), 123);
 }
 
+template<typename Traits>
+void test_class_with_const_member()
+{
+    struct X
+    {
+        explicit X(const int id) : id(id) {}
+        const int id;
+    };
+
+	v8pp::context context;
+	v8::Isolate* isolate = context.isolate();
+	v8::HandleScope scope(isolate);
+
+	v8pp::class_<X, Traits> X_class(isolate);
+	X_class
+	    .template ctor<int>()
+		.set("id", &X::id);
+
+	context.set("X", X_class);
+	check_eq("x.id", run_script<int>(context, "x = new X(777);x.id"), 777);
+}
+
 void test_class()
 {
 	test_class_<v8pp::raw_ptr_traits>();
@@ -458,4 +480,7 @@ void test_class()
 
 	test_auto_wrap_objects<v8pp::raw_ptr_traits>();
 	test_auto_wrap_objects<v8pp::shared_ptr_traits>();
+	
+	test_class_with_const_member<v8pp::raw_ptr_traits>();
+	test_class_with_const_member<v8pp::shared_ptr_traits>();
 }
