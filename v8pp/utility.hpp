@@ -213,7 +213,7 @@ struct is_sequence<T, void_t<typename T::value_type,
 template<typename T, typename U = void>
 struct has_reserve : std::false_type
 {
-	static void reserve(T& container, size_t capacity) {} // no-op
+	static void reserve(T& /*container*/, size_t /*capacity*/) {} // no-op
 };
 
 template<typename T>
@@ -232,10 +232,10 @@ struct has_reserve<T, void_t<decltype(std::declval<T>().reserve(0))>> : std::tru
 template<typename T>
 struct is_array : std::false_type
 {
-	static void check_length(size_t length) {} // no-op for non-arrays
+	static void check_length(size_t /*length*/) {} // no-op for non-arrays
 
 	template<typename U>
-	static void set_element_at(T& container, size_t index, U&& item)
+	static void set_element_at(T& container, size_t /*index*/, U&& item)
 	{
 		container.emplace_back(std::forward<U>(item));
 	}

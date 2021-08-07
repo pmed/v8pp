@@ -64,7 +64,8 @@ V8PP_IMPL v8::Local<v8::Object> json_object(v8::Isolate* isolate, v8::Local<v8::
 			{
 				value = v8::JSON::Stringify(context, value).FromMaybe(v8::String::Empty(isolate));
 			}
-			result->Set(context, name, value);
+			v8::Maybe<bool> res = result->Set(context, name, value);
+			(void)res;
 		}
 	}
 	return scope.Escape(result);
