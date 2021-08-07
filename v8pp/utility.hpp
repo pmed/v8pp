@@ -437,6 +437,12 @@ template<typename F>
 using is_callable = std::integral_constant<bool,
 	is_callable_impl<F, std::is_class<F>::value>::value>;
 
+template<class T>
+struct is_const_member_pointer : std::false_type {};
+
+template<class R, class C>
+struct is_const_member_pointer<R const C::*> : std::true_type {};
+
 /// Type information for custom RTTI
 class type_info
 {

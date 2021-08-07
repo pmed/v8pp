@@ -277,7 +277,8 @@ public:
 	/// Set class member data
 	template<typename Attribute>
 	typename std::enable_if<
-		std::is_member_object_pointer<Attribute>::value, class_&>::type
+		std::is_member_object_pointer<Attribute>::value &&
+		!detail::is_const_member_pointer<Attribute>::value, class_&>::type
 	set(string_view name, Attribute attribute, bool readonly = false)
 	{
 		v8::HandleScope scope(isolate());
@@ -297,6 +298,28 @@ public:
 				detail::external_data::set(isolate(), std::forward<attribute_type>(attr)),
 				v8::DEFAULT,
 				v8::PropertyAttribute(v8::DontDelete | (setter? 0 : v8::ReadOnly)));
+		return *this;
+	}
+
+	/// Set class member data
+	template<typename Attribute>
+	typename std::enable_if<
+		std::is_member_object_pointer<Attribute>::value &&
+		detail::is_const_member_pointer<Attribute>::value, class_&>::type
+	set(string_view name, Attribute attribute)
+	{
+		v8::HandleScope scope(isolate());
+
+		using attribute_type = typename
+			detail::function_traits<Attribute>::template pointer_type<T>;
+		attribute_type attr(attribute);
+		v8::AccessorGetterCallback getter = &member_get<attribute_type>;
+
+		class_info_.class_function_template()->PrototypeTemplate()
+			->SetAccessor(v8pp::to_v8(isolate(), name), getter, nullptr,
+				detail::external_data::set(isolate(), std::forward<attribute_type>(attr)),
+				v8::DEFAULT,
+				v8::PropertyAttribute(v8::DontDelete | v8::ReadOnly));
 		return *this;
 	}
 
