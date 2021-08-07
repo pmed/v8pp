@@ -138,7 +138,16 @@ int main(int argc, char const * argv[])
 		for (std::string const& script : scripts)
 		{
 			v8::HandleScope scope(context.isolate());
+			v8::TryCatch try_catch(context.isolate());
+
 			context.run_file(script);
+
+			auto stackTraceOpt = try_catch.StackTrace(context.impl());
+			if (!stackTraceOpt.IsEmpty())
+			{
+				const auto stackTrace = stackTraceOpt.ToLocalChecked();
+				std::cerr << *v8::String::Utf8Value(stackTrace) << std::endl;
+			}
 		}
 	}
 	catch (std::exception & ex)
