@@ -45,6 +45,8 @@ struct context::dynamic_module
 	dynamic_module(dynamic_module const&) = delete;
 };
 
+context::context(context&&) = default;
+
 void context::load_module(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	v8::Isolate* isolate = args.GetIsolate();
