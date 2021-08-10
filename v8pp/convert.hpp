@@ -427,6 +427,85 @@ struct convert<Mapping, typename std::enable_if<detail::is_mapping<Mapping>::val
 	}
 };
 
+template<typename ...Args>
+v8::Local<v8::Value> call_v8(v8::Isolate* isolate, v8::Local<v8::Function> func,
+	v8::Local<v8::Value> recv, Args&&... args);
+
+template<typename F, typename Traits = raw_ptr_traits>
+v8::Local<v8::Function> wrap_function(v8::Isolate* isolate, string_view name, F&& func);
+
+namespace detail {
+
+template<typename R, typename ...Args>
+struct function_from_v8_helper
+{
+	function_from_v8_helper(v8::Isolate* isolate, std::shared_ptr<v8::Global<v8::Function>> function)
+		: isolate_(isolate)
+		, function_(std::move(function))
+	{
+	}
+	
+	R operator()( Args... args )
+	{
+		v8::Local<v8::Value> ret = call_v8(isolate_, function_->Get(isolate_), v8::Undefined(isolate_), std::forward<Args>(args)...);
+		return convert<R>::from_v8(ret);
+	}
+	
+private:
+	v8::Isolate* isolate_;
+    std::shared_ptr<v8::Global<v8::Function>> function_;
+};
+
+template<typename ...Args>
+struct function_from_v8_helper<void, Args...>
+{
+	function_from_v8_helper(v8::Isolate* isolate, std::shared_ptr<v8::Global<v8::Function>> function)
+		: isolate_(isolate)
+		, function_(std::move(function))
+	{
+	}
+    
+	void operator()( Args... args )
+	{
+		call_v8(isolate_, function_->Get(isolate_), v8::Undefined(isolate_), std::forward<Args>(args)...);
+	}
+	
+private:
+	v8::Isolate* isolate_;
+    std::shared_ptr<v8::Global<v8::Function>> function_;
+};
+
+} // namespace detail
+
+template<typename R, typename ...Args>
+struct convert<std::function<R(Args...)>>
+{
+	using from_type = std::function<R(Args...)>;
+	using to_type = v8::Local<v8::Function>;
+ 
+	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
+	{
+		return !value.IsEmpty() && value->IsFunction();
+	}
+
+	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	{
+		if (!is_valid(isolate, value))
+		{
+			throw invalid_argument(isolate, value, "Function");
+		}
+  
+		v8::HandleScope scope(isolate);
+        v8::Global<v8::Function> function(isolate, value.As<v8::Function>());
+		return from_type( detail::function_from_v8_helper<R, Args...>(isolate, std::make_shared<v8::Global<v8::Function>>( function.Pass() )) );
+	}
+	
+	static to_type to_v8(v8::Isolate* isolate, from_type&& value)
+	{
+		return wrap_function(isolate, "", std::forward<from_type>(value));
+	}
+};
+
 template<typename T>
 struct convert<v8::Local<T>>
 {
@@ -458,7 +537,8 @@ struct is_wrapped_class : conjunction<
 	negation<detail::is_sequence<T>>,
 	negation<detail::is_array<T>>,
 	negation<detail::is_tuple<T>>,
-	negation<detail::is_shared_ptr<T>>
+	negation<detail::is_shared_ptr<T>>,
+	negation<detail::is_function<T>>
 > {};
 
 // convert specialization for wrapped user classes

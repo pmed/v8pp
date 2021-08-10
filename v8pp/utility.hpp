@@ -283,6 +283,16 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
 
 /////////////////////////////////////////////////////////////////////////////
 //
+// is_function<T>
+//
+template<typename T>
+struct is_function : std::false_type {};
+
+template<typename R, typename ...Args>
+struct is_function<std::function<R(Args...)>> : std::true_type {};
+
+/////////////////////////////////////////////////////////////////////////////
+//
 // Function traits
 //
 template<typename F>
