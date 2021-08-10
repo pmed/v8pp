@@ -28,12 +28,15 @@ class class_;
 class context
 {
 public:
+	using global_factory_function = std::function<v8::Local<v8::ObjectTemplate>(v8::Isolate*)>;
+
 	struct options
 	{
 		v8::Isolate* isolate = nullptr;
 		v8::ArrayBuffer::Allocator* allocator = nullptr;
 		bool add_default_global_methods = true;
 		bool enter_context = true;
+		global_factory_function global_factory {};
 	};
 
 	/// Create context with optional existing v8::Isolate
@@ -43,10 +46,11 @@ public:
 	explicit context(v8::Isolate* isolate = nullptr,
 		v8::ArrayBuffer::Allocator* allocator = nullptr,
 		bool add_default_global_methods = true,
-		bool enter_context = true);
+		bool enter_context = true,
+		global_factory_function global_factory = {});
 
 	explicit context(options const& opts)
-		: context(opts.isolate, opts.allocator, opts.add_default_global_methods, opts.enter_context)
+		: context(opts.isolate, opts.allocator, opts.add_default_global_methods, opts.enter_context, opts.global_factory)
 	{
 	}
 
