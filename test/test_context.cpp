@@ -8,8 +8,20 @@
 //
 #include "v8pp/context.hpp"
 #include "v8pp/object.hpp"
+#include "v8pp/module.hpp"
 
 #include "test.hpp"
+
+namespace
+{
+	v8pp::module init_global_module( v8::Isolate* isolate )
+	{
+		v8pp::module m( isolate );
+		m.set_const( "value", 40 );
+		m.set( "func", [](){ return 2; } );
+		return m;
+	}
+}
 
 void test_context()
 {
@@ -61,5 +73,24 @@ void test_context()
 		int const r = context.run_script("'4' + 2")->Int32Value(context.isolate()->GetCurrentContext()).FromJust();
 
 		check_eq("run_script with explicit context", r, 42);
+	}
+	
+	{
+		v8pp::context::options opt;
+		opt.add_default_global_methods = false;
+		opt.global_factory = []( v8::Isolate* isolate ) {
+			// module allows to setup global object in user friendly manner
+			v8pp::module global = init_global_module( isolate );
+			return global.impl();
+		};
+	 
+		v8pp::context context(opt);
+		
+		v8::HandleScope scope(context.isolate());
+		v8::Context::Scope context_scope(context.impl());
+
+		int const r = context.run_script("value + func()")->Int32Value(context.isolate()->GetCurrentContext()).FromJust();
+
+		check_eq("run_script with customized global", r, 42);
 	}
 }
