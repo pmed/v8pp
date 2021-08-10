@@ -37,6 +37,8 @@ struct context::dynamic_module
 	v8::Global<v8::Value> exports;
 };
 
+context::context(context&&) = default;
+
 void context::load_module(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	v8::Isolate* isolate = args.GetIsolate();

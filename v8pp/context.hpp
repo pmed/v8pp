@@ -50,6 +50,8 @@ public:
 	{
 	}
 
+	context(context&&);
+
 	~context();
 
 	/// V8 isolate associated with this context
