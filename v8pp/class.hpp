@@ -199,6 +199,11 @@ private:
 			-static_cast<int64_t>(Traits::object_size(object)));
 	}
 
+	explicit class_(v8::Isolate* isolate, detail::type_info const& existing)
+		: class_info_(detail::classes::find<Traits>(isolate, existing))
+	{
+	}
+
 public:
 	explicit class_(v8::Isolate* isolate, dtor_function destroy = &object_destroy)
 		: class_info_(detail::classes::add<Traits>(isolate, detail::type_id<T>(),
@@ -207,6 +212,12 @@ public:
 				destroy(isolate, Traits::template static_pointer_cast<T>(obj));
 			}))
 	{
+	}
+
+	/// Find existing class_ to extend bindings
+	static class_ extend(v8::Isolate* isolate)
+	{
+		return class_(isolate, detail::type_id<T>());
 	}
 
 	/// Set class constructor signature
@@ -262,7 +273,7 @@ public:
 		if constexpr (is_mem_fun)
 		{
 			using mem_func_type = typename detail::function_traits<Function>::template pointer_type<T>;
-			wrapped_fun = wrap_function_template<mem_func_type, Traits>(isolate(), mem_func_type(func));
+			wrapped_fun = wrap_function_template<mem_func_type, Traits>(isolate(), mem_func_type(std::forward<Function>(func)));
 		}
 		else
 		{

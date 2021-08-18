@@ -28,19 +28,38 @@ class class_;
 class context
 {
 public:
+	struct options
+	{
+		v8::Isolate* isolate = nullptr;
+		v8::ArrayBuffer::Allocator* allocator = nullptr;
+		bool add_default_global_methods = true;
+		bool enter_context = true;
+	};
+
 	/// Create context with optional existing v8::Isolate
 	/// and v8::ArrayBuffer::Allocator,
-	//  and add default global methods (`require()`, `run()`)
+	/// and add default global methods (`require()`, `run()`)
+	/// and enter the created v8 context
 	explicit context(v8::Isolate* isolate = nullptr,
 		v8::ArrayBuffer::Allocator* allocator = nullptr,
-		bool add_default_global_methods = true);
+		bool add_default_global_methods = true,
+		bool enter_context = true);
+
+	explicit context(options const& opts)
+		: context(opts.isolate, opts.allocator, opts.add_default_global_methods, opts.enter_context)
+	{
+	}
+
 	~context();
 
 	/// V8 isolate associated with this context
 	v8::Isolate* isolate() { return isolate_; }
 
+	/// V8 context implementation
+	v8::Local<v8::Context> impl() { return to_local(isolate_, impl_); }
+
 	/// Global object in this context
-	v8::Local<v8::Object> global() { return to_local(isolate_, impl_)->Global(); }
+	v8::Local<v8::Object> global() { return impl()->Global(); }
 
 	/// Library search path
 	std::string const& lib_path() const { return lib_path_; }
@@ -82,6 +101,7 @@ public:
 
 private:
 	bool own_isolate_;
+	bool enter_context_;
 	v8::Isolate* isolate_;
 	v8::Global<v8::Context> impl_;
 

@@ -199,12 +199,14 @@ void test_class_()
 		.template ctor<int>()
 		.function("useX", &Y::useX)
 		.function("useX_ptr", &Y::useX_ptr<Traits>)
-		.function("toJSON", [](const v8::FunctionCallbackInfo<v8::Value>& args)
+		;
+
+	auto Y_class_find = v8pp::class_<Y, Traits>::extend(isolate);
+	Y_class_find.function("toJSON", [](const v8::FunctionCallbackInfo<v8::Value>& args)
 			{
 				bool const with_functions = true;
 				args.GetReturnValue().Set(v8pp::json_object(args.GetIsolate(), args.This(), with_functions));
-			})
-		;
+			});
 
 	check_ex<std::runtime_error>("already wrapped class X", [isolate]()
 	{

@@ -11,16 +11,15 @@
 
 #include <v8.h>
 
-#include <climits>
-#include <string>
-#include <array>
-#include <vector>
-#include <map>
+#include <algorithm>
+#include <limits>
 #include <memory>
-#include <iterator>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <typeinfo>
+#include <variant>
+#include <optional>
 
 #include "v8pp/ptr_traits.hpp"
 #include "v8pp/utility.hpp"
@@ -29,6 +28,9 @@ namespace v8pp {
 
 template<typename T, typename Traits>
 class class_;
+
+template<typename T>
+struct is_wrapped_class;
 
 // Generic convertor
 /*
@@ -51,9 +53,12 @@ struct invalid_argument : std::invalid_argument
 };
 
 // converter specializations for string types
-template<typename Char, typename Traits>
-struct convert<std::basic_string_view<Char, Traits>>
+template<typename String>
+struct convert<String, typename std::enable_if<detail::is_string<String>::value>::type>
 {
+	using Char = typename String::value_type;
+	using Traits = typename String::traits_type;
+
 	static_assert(sizeof(Char) <= sizeof(uint16_t),
 		"only UTF-8 and UTF-16 strings are supported");
 
@@ -107,11 +112,6 @@ struct convert<std::basic_string_view<Char, Traits>>
 				v8::NewStringType::kNormal, static_cast<int>(value.size())).ToLocalChecked();
 		}
 	}
-};
-
-template<typename Char, typename Traits, typename Alloc>
-struct convert<std::basic_string<Char, Traits, Alloc>> : convert<std::basic_string_view<Char, Traits>>
-{
 };
 
 // converter specializations for null-terminated strings
@@ -192,7 +192,7 @@ struct convert<T, typename std::enable_if<std::is_integral<T>::value>::type>
 
 	static to_type to_v8(v8::Isolate* isolate, T value)
 	{
-		if constexpr (sizeof(T) <= sizeof(uint32_t)) 
+		if constexpr (sizeof(T) <= sizeof(uint32_t))
 		{
 			if constexpr (std::is_signed_v<T>)
 			{
@@ -207,7 +207,7 @@ struct convert<T, typename std::enable_if<std::is_integral<T>::value>::type>
 		}
 		else
 		{
-			//TODO: check value < (1<<57) to fit in double?
+			//TODO: check value < (1<<std::numeric_limits<double>::digits)-1 to fit in double?
 			return v8::Number::New(isolate, static_cast<double>(value));
 		}
 	}
@@ -265,63 +265,220 @@ struct convert<T, typename std::enable_if<std::is_floating_point<T>::value>::typ
 	}
 };
 
-// convert Array <-> std::array
-template<typename T, size_t N>
-struct convert<std::array<T, N>>
+// convert std::tuple <-> Array
+template<typename... Ts>
+struct convert<std::tuple<Ts...>>
 {
-	using from_type = std::array<T, N>;
+	using from_type = std::tuple<Ts...>;
 	using to_type = v8::Local<v8::Array>;
+
+	static constexpr size_t N = sizeof...(Ts);
 
 	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
 	{
-		return !value.IsEmpty() && value->IsArray();
+		return !value.IsEmpty() && value->IsArray()
+			&& value.As<v8::Array>()->Length() == N;
 	}
 
 	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
 		if (!is_valid(isolate, value))
 		{
-			throw invalid_argument(isolate, value, "Array");
+			throw invalid_argument(isolate, value, "Tuple");
 		}
+		return from_v8_impl(isolate, value, std::make_index_sequence<N>{});
+	}
 
+	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
+	{
+		return to_v8_impl(isolate, value, std::make_index_sequence<N>{});
+	}
+
+private:
+	template<size_t... Is>
+	static from_type from_v8_impl(v8::Isolate* isolate, v8::Local<v8::Value> value,
+		std::index_sequence<Is...>)
+	{
 		v8::HandleScope scope(isolate);
 		v8::Local<v8::Context> context = isolate->GetCurrentContext();
 		v8::Local<v8::Array> array = value.As<v8::Array>();
 
-		if (array->Length() != N)
-		{
-			throw std::runtime_error("Invalid array length: expected "
-				+ std::to_string(N) + " actual "
-				+ std::to_string(array->Length()));
-		}
-
-		from_type result = {};
-		for (uint32_t i = 0; i < N; ++i)
-		{
-			result[i] = convert<T>::from_v8(isolate, array->Get(context, i).ToLocalChecked());
-		}
-		return result;
+		return std::tuple<Ts...>{ v8pp::convert<Ts>::from_v8(isolate, array->Get(context, Is).ToLocalChecked())... };
 	}
 
-	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
+	template<size_t... Is>
+	static to_type to_v8_impl(v8::Isolate* isolate, std::tuple<Ts...> const& value, std::index_sequence<Is...>)
 	{
 		v8::EscapableHandleScope scope(isolate);
 		v8::Local<v8::Context> context = isolate->GetCurrentContext();
 		v8::Local<v8::Array> result = v8::Array::New(isolate, N);
-		for (uint32_t i = 0; i < N; ++i)
-		{
-			result->Set(context, i, convert<T>::to_v8(isolate, value[i])).FromJust();
-		}
+
+		(void)std::initializer_list<bool>{ result->Set(context, Is, convert<Ts>::to_v8(isolate, std::get<Is>(value))).FromJust()... };
+
 		return scope.Escape(result);
 	}
 };
 
-// convert Array <-> std::vector
-template<typename T, typename Alloc>
-struct convert<std::vector<T, Alloc>>
+// convert std::variant <-> Local
+template<typename ... Ts>
+struct convert<std::variant<Ts...>>
 {
-	using from_type = std::vector<T, Alloc>;
+public:
+	using from_type = std::variant<Ts...>;
+	using to_type = v8::Local<v8::Value>;
+
+	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
+	{
+		return !value.IsEmpty();
+	}
+
+	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	{
+		if (!is_valid(isolate, value))
+		{
+			throw invalid_argument(isolate, value, "Variant");
+		}
+
+		v8::HandleScope scope(isolate);
+
+		if (value->IsBoolean())
+		{
+			return alternate<is_bool>(isolate, value);
+		}
+		else if (value->IsInt32() || value->IsUint32())
+		{
+			return alternate<is_integral_not_bool, std::is_floating_point>(isolate, value);
+		}
+		else if (value->IsNumber())
+		{
+			//TODO: 64-bit integers
+			return alternate<std::is_floating_point, is_integral_not_bool>(isolate, value);
+		}
+		else if (value->IsString())
+		{
+			return alternate<detail::is_string>(isolate, value);
+		}
+		else if (value->IsArray())
+		{
+			return alternate<detail::is_sequence, detail::is_array, detail::is_tuple>(isolate, value);
+		}
+		else if (value->IsObject())
+		{
+			if (is_map_object(isolate, value.As<v8::Object>()))
+			{
+				return alternate<detail::is_mapping, is_wrapped_class, detail::is_shared_ptr>(isolate, value);
+			}
+			else
+			{
+				return alternate<is_wrapped_class, detail::is_shared_ptr>(isolate, value);
+			}
+		}
+		else
+		{
+			return alternate<is_any>(isolate, value);
+		}
+	}
+
+	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
+	{
+		return std::visit([isolate](auto&& v) -> v8::Local<v8::Value>
+			{
+				using T = std::decay_t<decltype(v)>;
+				return v8pp::convert<T>::to_v8(isolate, v);
+			}, value);
+	}
+
+private:
+	template<typename T>
+	using is_bool = std::is_same<T, bool>;
+
+	template<typename T>
+	using is_integral_not_bool = std::bool_constant<std::is_integral<T>::value && !is_bool<T>::value>;
+
+	template<typename T>
+	struct is_any : std::true_type {};
+
+	static bool is_map_object(v8::Isolate* isolate, v8::Local<v8::Object> obj)
+	{
+		v8::Local<v8::Array> prop_names;
+		return obj->GetPropertyNames(isolate->GetCurrentContext()).ToLocal(&prop_names)
+			&& prop_names->Length() > 0;
+	}
+
+	template<typename T, typename Number>
+	static void get_number(v8::Isolate* isolate, v8::Local<v8::Value> value, std::optional<from_type>& result)
+	{
+		Number const number = v8pp::convert<Number>::from_v8(isolate, value);
+		if constexpr (std::is_same_v<T, uint64_t>)
+		{
+			result = static_cast<T>(number);
+		}
+		else
+		{
+			Number const min = std::numeric_limits<T>::min();
+			Number const max = std::numeric_limits<T>::max();
+			if (number >= min && number <= max)
+			{
+				result = static_cast<T>(number);
+			}
+		}
+	}
+
+	template <typename T>
+	static bool try_as(v8::Isolate* isolate, v8::Local<v8::Value> value, std::optional<from_type>& result)
+	{
+		if constexpr (detail::is_shared_ptr<T>::value)
+		{
+			using U = typename T::element_type;
+			if (auto obj = v8pp::class_<U, v8pp::shared_ptr_traits>::unwrap_object(isolate, value))
+			{
+				result = obj;
+			}
+		}
+		else if constexpr (v8pp::is_wrapped_class<T>::value)
+		{
+			if (auto obj = v8pp::class_<T, v8pp::raw_ptr_traits>::unwrap_object(isolate, value))
+			{
+				result = *obj;
+			}
+		}
+		else if constexpr (is_integral_not_bool<T>::value)
+		{
+			get_number<T, int64_t>(isolate, value, result);
+		}
+		else if constexpr (std::is_floating_point_v<T>)
+		{
+			get_number<T, double>(isolate, value, result);
+		}
+		else // if constexpr
+		{
+			result = v8pp::convert<T>::from_v8(isolate, value);
+		}
+		return result != std::nullopt;
+	}
+
+	template<template<typename T> typename... Conditions>
+	static from_type alternate(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	{
+		std::optional<from_type> result;
+		(get_object<Conditions>(isolate, value, result) || ...);
+		return result ? *result : throw std::runtime_error("Unable to convert argument to variant.");
+	}
+
+	template<template<typename T> typename Condition>
+	static bool get_object(v8::Isolate* isolate, v8::Local<v8::Value> value, std::optional<from_type>& result)
+	{
+		return ((Condition<Ts>::value && try_as<Ts>(isolate, value, result)) || ...);
+	}
+};
+
+// convert Array <-> std::array, vector, deque, list
+template<typename Sequence>
+struct convert<Sequence, typename std::enable_if<detail::is_sequence<Sequence>::value || detail::is_array<Sequence>::value>::type>
+{
+	using from_type = Sequence;
 	using to_type = v8::Local<v8::Array>;
+	using item_type = typename Sequence::value_type;
 
 	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
 	{
@@ -339,39 +496,74 @@ struct convert<std::vector<T, Alloc>>
 		v8::Local<v8::Context> context = isolate->GetCurrentContext();
 		v8::Local<v8::Array> array = value.As<v8::Array>();
 
-		from_type result;
-		result.reserve(array->Length());
+		from_type result{};
+
+		constexpr bool is_array = detail::is_array<Sequence>::value;
+		if constexpr (is_array)
+		{
+			constexpr size_t length = detail::is_array<Sequence>::length;
+			if (array->Length() != length)
+			{
+				throw std::runtime_error("Invalid array length: expected "
+					+ std::to_string(length) + " actual "
+					+ std::to_string(array->Length()));
+			}
+		}
+		else if constexpr (detail::has_reserve<Sequence>::value)
+		{
+			result.reserve(array->Length());
+		}
+
 		for (uint32_t i = 0, count = array->Length(); i < count; ++i)
 		{
-			result.emplace_back(convert<T>::from_v8(isolate, array->Get(context, i).ToLocalChecked()));
+			v8::Local<v8::Value> item = array->Get(context, i).ToLocalChecked();
+			if constexpr (is_array)
+			{
+				result[i] = convert<item_type>::from_v8(isolate, item);
+			}
+			else
+			{
+				result.emplace_back(convert<item_type>::from_v8(isolate, item));
+			}
 		}
 		return result;
 	}
 
 	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
 	{
+		constexpr int max_size = std::numeric_limits<int>::max();
+		if (value.size() > max_size)
+		{
+			throw std::runtime_error("Invalid array length: actual "
+				+ std::to_string(value.size()) + " exceeds maximal "
+				+ std::to_string(max_size));
+		}
+
 		v8::EscapableHandleScope scope(isolate);
 		v8::Local<v8::Context> context = isolate->GetCurrentContext();
-		uint32_t const size = static_cast<uint32_t>(value.size());
-		v8::Local<v8::Array> result = v8::Array::New(isolate, size);
-		for (uint32_t i = 0; i < size; ++i)
+		v8::Local<v8::Array> result = v8::Array::New(isolate, static_cast<int>(value.size()));
+		uint32_t i = 0;
+		for (item_type const& item : value)
 		{
-			result->Set(context, i, convert<T>::to_v8(isolate, value[i])).FromJust();
+			result->Set(context, i++, convert<item_type>::to_v8(isolate, item)).FromJust();
 		}
 		return scope.Escape(result);
 	}
 };
 
-// convert Object <-> std::map
-template<typename Key, typename Value, typename Less, typename Alloc>
-struct convert<std::map<Key, Value, Less, Alloc>>
+// convert Object <-> std::{unordered_}{multi}map
+template<typename Mapping>
+struct convert<Mapping, typename std::enable_if<detail::is_mapping<Mapping>::value>::type>
 {
-	using from_type = std::map<Key, Value, Less, Alloc>;
+	using from_type = Mapping;
 	using to_type = v8::Local<v8::Object>;
+
+	using Key = typename Mapping::key_type;
+	using Value = typename Mapping::mapped_type;
 
 	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
 	{
-		return !value.IsEmpty() && value->IsObject();
+		return !value.IsEmpty() && value->IsObject() && !value->IsArray();
 	}
 
 	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
@@ -386,13 +578,14 @@ struct convert<std::map<Key, Value, Less, Alloc>>
 		v8::Local<v8::Object> object = value.As<v8::Object>();
 		v8::Local<v8::Array> prop_names = object->GetPropertyNames(context).ToLocalChecked();
 
-		from_type result;
+		from_type result{};
 		for (uint32_t i = 0, count = prop_names->Length(); i < count; ++i)
 		{
 			v8::Local<v8::Value> key = prop_names->Get(context, i).ToLocalChecked();
 			v8::Local<v8::Value> val = object->Get(context, key).ToLocalChecked();
-			result.emplace(convert<Key>::from_v8(isolate, key),
-				convert<Value>::from_v8(isolate, val));
+			const auto k = convert<Key>::from_v8(isolate, key);
+			const auto v = convert<Value>::from_v8(isolate, val);
+			result.emplace(k, v);
 		}
 		return result;
 	}
@@ -404,9 +597,9 @@ struct convert<std::map<Key, Value, Less, Alloc>>
 		v8::Local<v8::Object> result = v8::Object::New(isolate);
 		for (auto const& item: value)
 		{
-			result->Set(context,
-				convert<Key>::to_v8(isolate, item.first),
-				convert<Value>::to_v8(isolate, item.second)).FromJust();
+			const auto k = convert<Key>::to_v8(isolate, item.first);
+			const auto v = convert<Value>::to_v8(isolate, item.second);
+			result->Set(context, k, v).FromJust();
 		}
 		return scope.Escape(result);
 	}
@@ -436,7 +629,15 @@ struct convert<v8::Local<T>>
 
 
 template<typename T>
-struct is_wrapped_class : std::is_class<T> {};
+struct is_wrapped_class : std::conjunction<
+	std::is_class<T>,
+	std::negation<detail::is_string<T>>,
+	std::negation<detail::is_mapping<T>>,
+	std::negation<detail::is_sequence<T>>,
+	std::negation<detail::is_array<T>>,
+	std::negation<detail::is_tuple<T>>,
+	std::negation<detail::is_shared_ptr<T>>
+> {};
 
 // convert specialization for wrapped user classes
 template<typename T>
@@ -445,23 +646,8 @@ struct is_wrapped_class<v8::Local<T>> : std::false_type {};
 template<typename T>
 struct is_wrapped_class<v8::Global<T>> : std::false_type {};
 
-template<typename Char, typename Traits, typename Alloc>
-struct is_wrapped_class<std::basic_string<Char, Traits, Alloc>> : std::false_type {};
-
-template<typename Char, typename Traits>
-struct is_wrapped_class<std::basic_string_view<Char, Traits>> : std::false_type {};
-
-template<typename T, size_t N>
-struct is_wrapped_class<std::array<T, N>> : std::false_type{};
-
-template<typename T, typename Alloc>
-struct is_wrapped_class<std::vector<T, Alloc>> : std::false_type {};
-
-template<typename Key, typename Value, typename Less, typename Alloc>
-struct is_wrapped_class<std::map<Key, Value, Less, Alloc>> : std::false_type {};
-
-template<typename T>
-struct is_wrapped_class<std::shared_ptr<T>> : std::false_type {};
+template <typename ... Ts>
+struct is_wrapped_class<std::variant<Ts...>> : std::false_type {};
 
 template<typename T>
 struct convert<T*, typename std::enable_if<is_wrapped_class<T>::value>::type>
@@ -625,7 +811,7 @@ v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 	return convert<std::string_view>::to_v8(isolate, std::string_view(str, len));
 }
 
-inline v8::Handle<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str)
+inline v8::Local<v8::String> to_v8(v8::Isolate* isolate, char16_t const* str)
 {
 	return convert<std::u16string_view>::to_v8(isolate, std::u16string_view(str));
 }
@@ -663,7 +849,6 @@ v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 
 template<typename T>
 auto to_v8(v8::Isolate* isolate, T const& value)
-	-> decltype(convert<T>::to_v8(isolate, value))
 {
 	return convert<T>::to_v8(isolate, value);
 }

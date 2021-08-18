@@ -20,7 +20,7 @@ Local<Function> CreateFunction(Isolate* isolate) {
   EscapableHandleScope scope(isolate);
 
   Local<FunctionTemplate> tpl = v8pp::wrap_function_template(isolate, &MyFunction);
-  Local<Function> fn = tpl->GetFunction();
+  Local<Function> fn = tpl->GetFunction(isolate->GetCurrentContext()).ToLocalChecked();
 
   // omit this to make it anonymous
   fn->SetName(v8pp::to_v8(isolate, "theFunction"));

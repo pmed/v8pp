@@ -404,6 +404,7 @@ V8PP_IMPL classes* classes::instance(operation op, v8::Isolate* isolate)
 V8PP_IMPL void cleanup(v8::Isolate* isolate)
 {
 	detail::classes::remove_all(isolate);
+	detail::external_data::destroy_all(isolate);
 }
 
 } // namespace v8pp
