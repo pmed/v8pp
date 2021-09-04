@@ -155,26 +155,32 @@ struct array_buffer_allocator : v8::ArrayBuffer::Allocator
 };
 static array_buffer_allocator array_buffer_allocator_;
 
-context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
-	bool add_default_global_methods, bool enter_context,
-	global_factory_function global_factory)
+v8::Isolate* context::create_isolate(v8::ArrayBuffer::Allocator* allocator)
 {
-	own_isolate_ = (isolate == nullptr);
+	v8::Isolate::CreateParams create_params;
+	create_params.array_buffer_allocator = allocator ? allocator : &array_buffer_allocator_;
+
+	return v8::Isolate::New(create_params);
+}
+
+context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
+		bool add_default_global_methods, bool enter_context,
+		v8::Local<v8::ObjectTemplate> global)
+	: own_isolate_(isolate == nullptr)
+	, enter_context_(enter_context)
+	, isolate_(isolate? isolate : create_isolate(allocator))
+{
 	if (own_isolate_)
 	{
-		v8::Isolate::CreateParams create_params;
-		create_params.array_buffer_allocator =
-			allocator ? allocator : &array_buffer_allocator_;
-
-		isolate = v8::Isolate::New(create_params);
-		isolate->Enter();
+		isolate_->Enter();
 	}
-	isolate_ = isolate;
 
 	v8::HandleScope scope(isolate_);
 
-	v8::Local<v8::ObjectTemplate> global = global_factory ? global_factory(isolate_)
-														  : v8::ObjectTemplate::New(isolate_);
+	if (global.IsEmpty())
+	{
+		global = v8::ObjectTemplate::New(isolate_);
+	}
 
 	if (add_default_global_methods)
 	{
@@ -186,7 +192,6 @@ context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
 	}
 
 	v8::Local<v8::Context> impl = v8::Context::New(isolate_, nullptr, global);
-	enter_context_ = enter_context;
 	if (enter_context_)
 	{
 		impl->Enter();
