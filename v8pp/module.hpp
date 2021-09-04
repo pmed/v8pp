@@ -46,6 +46,9 @@ public:
 	/// v8::Isolate where the module belongs
 	v8::Isolate* isolate() { return isolate_; }
 
+	/// V8 ObjectTemplate implementation
+	v8::Local<v8::ObjectTemplate> impl() { return obj_; }
+
 	/// Set a V8 value in the module with specified name
 	template<typename Data>
 	module& set(string_view name, v8::Local<Data> value)

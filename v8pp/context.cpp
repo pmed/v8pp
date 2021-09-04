@@ -156,7 +156,8 @@ struct array_buffer_allocator : v8::ArrayBuffer::Allocator
 static array_buffer_allocator array_buffer_allocator_;
 
 context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
-	bool add_default_global_methods, bool enter_context)
+	bool add_default_global_methods, bool enter_context,
+	global_factory_function global_factory)
 {
 	own_isolate_ = (isolate == nullptr);
 	if (own_isolate_)
@@ -172,7 +173,8 @@ context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
 
 	v8::HandleScope scope(isolate_);
 
-	v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate_);
+	v8::Local<v8::ObjectTemplate> global = global_factory ? global_factory(isolate_)
+														  : v8::ObjectTemplate::New(isolate_);
 
 	if (add_default_global_methods)
 	{

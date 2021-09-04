@@ -8,6 +8,7 @@
 //
 #include "v8pp/context.hpp"
 #include "v8pp/object.hpp"
+#include "v8pp/module.hpp"
 
 #include "test.hpp"
 
@@ -17,6 +18,17 @@ static_assert(std::is_move_constructible<v8pp::context>::value, "");
 static_assert(std::is_move_assignable<v8pp::context>::value, "");
 static_assert(!std::is_copy_assignable<v8pp::context>::value, "");
 static_assert(!std::is_copy_constructible<v8pp::context>::value, "");
+
+namespace
+{
+	v8pp::module init_global_module( v8::Isolate* isolate )
+	{
+		v8pp::module m( isolate );
+		m.set_const( "value", 40 );
+		m.set( "func", [](){ return 2; } );
+		return m;
+	}
+}
 
 void test_context()
 {
@@ -81,12 +93,12 @@ void test_context()
 			v8pp::context context(options);
 			return context;
 		};
-		
+
 		v8pp::context context0 = setup_context();
 		check("returned context", context0.isolate() != nullptr && !context0.impl().IsEmpty());
 
 		v8pp::context context = std::move(context0);
-		check("moved from context", context0.isolate()== nullptr && context0.impl().IsEmpty());
+		check("moved from context", context0.isolate() == nullptr && context0.impl().IsEmpty());
 		check("moved context", context.isolate() != nullptr && !context.impl().IsEmpty());
 
 		v8::HandleScope scope(context.isolate());
@@ -100,5 +112,24 @@ void test_context()
 		int const r = context.run_script("'4' + 2")->Int32Value(context.isolate()->GetCurrentContext()).FromJust();
 
 		check_eq("run_script with externally set up context", r, 42);
+	}
+
+	{
+		v8pp::context::options opt;
+		opt.add_default_global_methods = false;
+		opt.global_factory = []( v8::Isolate* isolate ) {
+			// module allows to setup global object in user friendly manner
+			v8pp::module global = init_global_module( isolate );
+			return global.impl();
+		};
+	 
+		v8pp::context context(opt);
+		
+		v8::HandleScope scope(context.isolate());
+		v8::Context::Scope context_scope(context.impl());
+
+		int const r = context.run_script("value + func()")->Int32Value(context.isolate()->GetCurrentContext()).FromJust();
+
+		check_eq("run_script with customized global", r, 42);
 	}
 }
