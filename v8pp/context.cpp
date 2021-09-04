@@ -15,6 +15,7 @@
 #include "v8pp/throw_ex.hpp"
 
 #include <fstream>
+#include <utility>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -33,16 +34,6 @@ struct context::dynamic_module
 {
 	void* handle;
 	v8::Global<v8::Value> exports;
-
-	dynamic_module() = default;
-	dynamic_module(dynamic_module&& other)
-		: handle(other.handle)
-		, exports(std::move(other.exports))
-	{
-		other.handle = nullptr;
-	}
-
-	dynamic_module(dynamic_module const&) = delete;
 };
 
 void context::load_module(v8::FunctionCallbackInfo<v8::Value> const& args)
@@ -201,8 +192,45 @@ context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
 	impl_.Reset(isolate_, impl);
 }
 
+context::context(context&& src) noexcept
+	: own_isolate_(std::exchange(src.own_isolate_, false))
+	, enter_context_(std::exchange(src.enter_context_, false))
+	, isolate_(std::exchange(src.isolate_, nullptr))
+	, impl_(std::move(src.impl_))
+	, modules_(std::move(src.modules_))
+	, lib_path_(std::move(src.lib_path_))
+{
+}
+
+context& context::operator=(context&& src) noexcept
+{
+	if (&src != this)
+	{
+		destroy();
+
+		own_isolate_ = std::exchange(src.own_isolate_, false);
+		enter_context_ = std::exchange(src.enter_context_, false);
+		isolate_ = std::exchange(src.isolate_, nullptr);
+		impl_ = std::move(src.impl_);
+		modules_ = std::move(src.modules_);
+		lib_path_ = std::move(src.lib_path_);
+	}
+	return *this;
+}
+
 context::~context()
 {
+	destroy();
+}
+
+void context::destroy()
+{
+	if (isolate_ == nullptr && impl_.IsEmpty())
+	{
+		// moved out state
+		return;
+	}
+
 	// remove all class singletons and external data before modules unload
 	cleanup(isolate_);
 
@@ -232,6 +260,7 @@ context::~context()
 		isolate_->Exit();
 		isolate_->Dispose();
 	}
+	isolate_ = nullptr;
 }
 
 context& context::set(string_view name, v8::Local<v8::Value> value)
