@@ -47,7 +47,7 @@ public:
 	v8::Isolate* isolate() { return isolate_; }
 
 	/// V8 ObjectTemplate implementation
-	v8::Local<v8::ObjectTemplate> impl() { return obj_; }
+	v8::Local<v8::ObjectTemplate> impl() const { return obj_; }
 
 	/// Set a V8 value in the module with specified name
 	template<typename Data>
