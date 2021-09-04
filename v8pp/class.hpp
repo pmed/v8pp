@@ -214,6 +214,12 @@ public:
 	{
 	}
 
+	class_(class_ const&) = delete;
+	class_& operator=(class_ const&) = delete;
+
+	class_(class_&&) = default;
+	class_& operator=(class_&&) = delete;
+
 	/// Find existing class_ to extend bindings
 	static class_ extend(v8::Isolate* isolate)
 	{

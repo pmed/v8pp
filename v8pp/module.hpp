@@ -37,6 +37,12 @@ public:
 	{
 	}
 
+	module(module const&) = delete;
+	module& operator=(module const&) = delete;
+
+	module(module&&) = default;
+	module& operator=(module&&) = default;
+
 	/// v8::Isolate where the module belongs
 	v8::Isolate* isolate() { return isolate_; }
 

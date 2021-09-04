@@ -11,6 +11,13 @@
 
 #include "test.hpp"
 
+#include <type_traits>
+
+static_assert(std::is_move_constructible<v8pp::context>::value, "");
+static_assert(std::is_move_assignable<v8pp::context>::value, "");
+static_assert(!std::is_copy_assignable<v8pp::context>::value, "");
+static_assert(!std::is_copy_constructible<v8pp::context>::value, "");
+
 void test_context()
 {
 	{
@@ -67,15 +74,20 @@ void test_context()
 		// Move constuctor allows to set up context inside function
 		// also it allows to move class with v8pp::context as a member value
 		auto setup_context = []()
-			{
-				v8pp::context::options options;
-				options.add_default_global_methods = false;
-				options.enter_context = false;
-				v8pp::context context(options);
-				return context;
-			};
+		{
+			v8pp::context::options options;
+			options.add_default_global_methods = false;
+			options.enter_context = false;
+			v8pp::context context(options);
+			return context;
+		};
 		
-		v8pp::context context = setup_context();
+		v8pp::context context0 = setup_context();
+		check("returned context", context0.isolate() != nullptr && !context0.impl().IsEmpty());
+
+		v8pp::context context = std::move(context0);
+		check("moved from context", context0.isolate()== nullptr && context0.impl().IsEmpty());
+		check("moved context", context.isolate() != nullptr && !context.impl().IsEmpty());
 
 		v8::HandleScope scope(context.isolate());
 		v8::Context::Scope context_scope(context.impl());

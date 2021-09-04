@@ -12,6 +12,8 @@
 
 #include "test.hpp"
 
+#include <type_traits>
+
 static std::string var;
 
 static int fun(int x) { return x + 1; }
@@ -19,6 +21,11 @@ static int fun(int x) { return x + 1; }
 static int x = 1;
 static int get_x() { return x + 1; }
 static void set_x(int v) { x = v - 1; }
+
+static_assert(std::is_move_constructible<v8pp::module>::value, "");
+static_assert(std::is_move_assignable<v8pp::module>::value, "");
+static_assert(!std::is_copy_assignable<v8pp::module>::value, "");
+static_assert(!std::is_copy_constructible<v8pp::module>::value, "");
 
 void test_module()
 {

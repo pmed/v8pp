@@ -14,6 +14,8 @@
 
 #include "test.hpp"
 
+#include <type_traits>
+
 struct Xbase
 {
 	int var = 1;
@@ -192,6 +194,11 @@ void test_class_()
 		.static_("my_static_var", 1)
 		.static_("my_static_const_var", 42, true)
 		;
+
+	static_assert(std::is_move_constructible<decltype(X_class)>::value, "");
+	static_assert(!std::is_move_assignable<decltype(X_class)>::value, "");
+	static_assert(!std::is_copy_assignable<decltype(X_class)>::value, "");
+	static_assert(!std::is_copy_constructible<decltype(X_class)>::value, "");
 
 	v8pp::class_<Y, Traits> Y_class(isolate);
 	Y_class

@@ -50,7 +50,11 @@ public:
 	{
 	}
 
-	context(context&&);
+	context(context const&) = delete;
+	context& operator=(context const&) = delete;
+
+	context(context&&) noexcept;
+	context& operator=(context&&) noexcept;
 
 	~context();
 
@@ -102,6 +106,8 @@ public:
 	}
 
 private:
+	void destroy();
+
 	bool own_isolate_;
 	bool enter_context_;
 	v8::Isolate* isolate_;
