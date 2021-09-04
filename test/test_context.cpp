@@ -8,6 +8,7 @@
 //
 #include "v8pp/context.hpp"
 #include "v8pp/object.hpp"
+#include "v8pp/module.hpp"
 
 #include "test.hpp"
 
@@ -81,12 +82,12 @@ void test_context()
 			v8pp::context context(options);
 			return context;
 		};
-		
+
 		v8pp::context context0 = setup_context();
 		check("returned context", context0.isolate() != nullptr && !context0.impl().IsEmpty());
 
 		v8pp::context context = std::move(context0);
-		check("moved from context", context0.isolate()== nullptr && context0.impl().IsEmpty());
+		check("moved from context", context0.isolate() == nullptr && context0.impl().IsEmpty());
 		check("moved context", context.isolate() != nullptr && !context.impl().IsEmpty());
 
 		v8::HandleScope scope(context.isolate());
@@ -100,5 +101,30 @@ void test_context()
 		int const r = context.run_script("'4' + 2")->Int32Value(context.isolate()->GetCurrentContext()).FromJust();
 
 		check_eq("run_script with externally set up context", r, 42);
+	}
+
+	{
+		const auto init_global  = [](v8::Isolate* isolate)
+		{
+			v8pp::module m(isolate);
+			m.set_const("value", 40);
+			m.set("func", []() { return 2; });
+			return m.impl();
+		};
+
+		// Isolate and HandleScope shall exist before init_global
+		v8::Isolate* isolate = v8pp::context::create_isolate();
+		v8::HandleScope scope(isolate);
+
+		v8pp::context::options opt;
+		opt.isolate = isolate; // use existing one
+		opt.add_default_global_methods = false;
+		opt.global = init_global(isolate);
+	 
+		v8pp::context context(opt);
+
+		int const r = context.run_script("value + func()")->Int32Value(context.isolate()->GetCurrentContext()).FromJust();
+
+		check_eq("run_script with customized global", r, 42);
 	}
 }

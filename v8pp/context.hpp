@@ -27,10 +27,13 @@ class class_;
 class context
 {
 public:
+	static v8::Isolate* create_isolate(v8::ArrayBuffer::Allocator* allocator = nullptr);
+
 	struct options
 	{
 		v8::Isolate* isolate = nullptr;
 		v8::ArrayBuffer::Allocator* allocator = nullptr;
+		v8::Local<v8::ObjectTemplate> global = {};
 		bool add_default_global_methods = true;
 		bool enter_context = true;
 	};
@@ -41,10 +44,11 @@ public:
 	explicit context(v8::Isolate* isolate = nullptr,
 		v8::ArrayBuffer::Allocator* allocator = nullptr,
 		bool add_default_global_methods = true,
-		bool enter_context = true);
+		bool enter_context = true,
+		v8::Local<v8::ObjectTemplate> global = {});
 
 	explicit context(options const& opts)
-		: context(opts.isolate, opts.allocator, opts.add_default_global_methods, opts.enter_context)
+		: context(opts.isolate, opts.allocator, opts.add_default_global_methods, opts.enter_context, opts.global)
 	{
 	}
 
@@ -57,10 +61,10 @@ public:
 	~context();
 
 	/// V8 isolate associated with this context
-	v8::Isolate* isolate() { return isolate_; }
+	v8::Isolate* isolate() const { return isolate_; }
 
 	/// V8 context implementation
-	v8::Local<v8::Context> impl() { return to_local(isolate_, impl_); }
+	v8::Local<v8::Context> impl() const { return to_local(isolate_, impl_); }
 
 	/// Library search path
 	std::string const& lib_path() const { return lib_path_; }
