@@ -1,6 +1,6 @@
 # v8pp target
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR})
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(V8 REQUIRED)
 
 configure_file(config.hpp.in config.hpp)
@@ -83,7 +83,7 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 write_basic_package_version_file("${PROJECT_BINARY_DIR}/ConfigVersion.cmake" COMPATIBILITY SameMajorVersion)
-configure_package_config_file("${PROJECT_SOURCE_DIR}/Config.cmake.in" "${PROJECT_BINARY_DIR}/Config.cmake"
+configure_package_config_file("${PROJECT_SOURCE_DIR}/cmake/Config.cmake.in" "${PROJECT_BINARY_DIR}/Config.cmake"
 	INSTALL_DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/v8pp/cmake)
 
 install(TARGETS v8pp EXPORT v8pp_Targets)
