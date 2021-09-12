@@ -12,6 +12,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(BUILD_SHARED_LIBS "Build shared library" ON)
+option(BUILD_TESTING "Build and run tests" OFF)
 
 # Custom project options
 set(V8PP_HEADER_ONLY 0 CACHE BOOL "Header-only library")
@@ -20,8 +21,9 @@ set(V8PP_PLUGIN_INIT_PROC_NAME "v8pp_module_init" CACHE STRING "v8pp plugin init
 set(V8PP_PLUGIN_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX} CACHE STRING "v8pp plugin filename suffix")
 
 add_subdirectory(v8pp)
-add_subdirectory(plugins)
+
 if(BUILD_TESTING)
 	enable_testing()
+	add_subdirectory(plugins)
 	add_subdirectory(test)
 endif()
