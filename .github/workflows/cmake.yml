@@ -1,0 +1,44 @@
+name: CMake
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ macOS-latest ]
+        build_type: [ Release, Debug ]
+        shared_lib: [ BUILD_SHARED_LIBS=TRUE, BUILD_SHARED_LIBS=FALSE ]
+        header_only: [ V8PP_HEADER_ONLY=TRUE, V8PP_HEADER_ONLY=FALSE ]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install V8 PPA
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        sudo add-apt-repository ppa:pinepain/libv8 -y
+        sudo apt-get update -q
+        sudo apt-get install libv8-6.6-dev -y
+
+    - name: Install V8 brew
+      if: startsWith(matrix.os, 'macOS')
+      run: brew install v8
+
+    - name: Install ninja-build tool
+      uses: seanmiddleditch/gha-setup-ninja@v3
+
+    - name: Configure CMake
+      run: cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBUILD_TESTING=TRUE -D${{matrix.shared_lib}} -D${{matrix.header_only}}
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{matrix.build_type}}
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      run: ctest -C ${{matrix.build_type}} -V
