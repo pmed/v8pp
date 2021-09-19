@@ -5,7 +5,9 @@ find_package(V8 REQUIRED)
 
 configure_file(config.hpp.in config.hpp)
 
-set(V8PP_DEFINES V8_COMPRESS_POINTERS V8_31BIT_SMIS_ON_64BIT_ARCH)
+if(V8_COMPRESS_POINTERS)
+	set(V8PP_DEFINES V8_COMPRESS_POINTERS V8_31BIT_SMIS_ON_64BIT_ARCH)
+endif()
 
 set(V8PP_HEADERS
 	config.hpp
