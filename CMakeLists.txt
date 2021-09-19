@@ -13,6 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(BUILD_SHARED_LIBS "Build shared library" ON)
 option(BUILD_TESTING "Build and run tests" OFF)
+option(BUILD_DOCUMENTATION "Build documentation" OFF)
 
 # Custom project options
 set(V8PP_HEADER_ONLY 0 CACHE BOOL "Header-only library")
@@ -27,4 +28,8 @@ if(BUILD_TESTING)
 	enable_testing()
 	add_subdirectory(plugins)
 	add_subdirectory(test)
+endif()
+
+if(BUILD_DOCUMENTATION)
+	add_subdirectory(docs)
 endif()
