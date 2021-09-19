@@ -1,18 +1,13 @@
 # Based on https://raw.githubusercontent.com/nicehash/cpp-ethereum/master/cmake/Findv8.cmake
 #
-# Find v8
-#
 # Find the v8 includes and library
-# 
-# if you nee to add a custom library search path, do it via via CMAKE_PREFIX_PATH 
-# 
+#
 # This module defines
 #  V8_INCLUDE_DIRS, where to find header, etc.
 #  V8_LIBRARIES, the libraries needed to use v8.
 #  V8_FOUND, If false, do not try to use v8.
 
-# only look in default directories
-find_path(V8_INCLUDE_DIRS NAMES v8.h)
+find_path(V8_INCLUDE_DIRS PATH_SUFFIXES v8 NAMES v8.h)
 
 find_library(V8_LIB NAMES v8)
 find_library(V8_LIBPLATFORM NAMES v8_libplatform)
