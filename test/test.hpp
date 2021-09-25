@@ -132,7 +132,7 @@ template<typename Char, typename Traits, typename Tuple, size_t... Is>
 void print_tuple(std::basic_ostream<Char, Traits>& os, Tuple const& tuple,
 	std::index_sequence<Is...>)
 {
-	(void)std::initializer_list<bool>{ ((os << (Is == 0? "" : ", ") << std::get<Is>(tuple)),true)... };
+	(void)std::initializer_list<bool>{ ((os << (Is == 0 ? "" : ", ") << std::get<Is>(tuple)), true)... };
 }
 
 template<typename Char, typename Traits, typename... Ts>

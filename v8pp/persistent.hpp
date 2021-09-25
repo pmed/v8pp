@@ -51,7 +51,7 @@ struct persistent : public v8::Global<T>
 	persistent& operator=(persistent&& src)
 	{
 		if (&src != this)
-		{	
+		{
 			base_class::operator=(src.Pass());
 		}
 		return *this;
@@ -75,7 +75,7 @@ public:
 
 	/// Create a persistent pointer from a  pointer to a wrapped object,
 	/// store persistent handle to it
-	explicit persistent_ptr(v8::Isolate* isolate,  T* value)
+	explicit persistent_ptr(v8::Isolate* isolate, T* value)
 		: value_()
 	{
 		reset(isolate, value);
@@ -94,7 +94,6 @@ public:
 	{
 		src.value_ = nullptr;
 	}
-
 
 	persistent_ptr& operator=(persistent_ptr&& src)
 	{
@@ -136,7 +135,7 @@ public:
 	/// Safe bool cast
 	operator unspecfied_bool_type() const
 	{
-		return value_? &persistent_ptr<T>::value_ : nullptr;
+		return value_ ? &persistent_ptr<T>::value_ : nullptr;
 	}
 
 	/// Dereference pointer, valid if get() != nullptr

@@ -25,7 +25,7 @@ static char const path_sep = '\\';
 static char const path_sep = '/';
 #endif
 
-#define STRINGIZE(s) STRINGIZE0(s)
+#define STRINGIZE(s)  STRINGIZE0(s)
 #define STRINGIZE0(s) #s
 
 namespace v8pp {
@@ -87,10 +87,10 @@ void context::load_module(v8::FunctionCallbackInfo<v8::Value> const& args)
 					+ "): could not load shared library " + filename);
 			}
 #if defined(WIN32)
-			void *sym = ::GetProcAddress((HMODULE)module.handle,
+			void* sym = ::GetProcAddress((HMODULE)module.handle,
 				STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
 #else
-			void *sym = dlsym(module.handle, STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
+			void* sym = dlsym(module.handle, STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
 #endif
 			if (!sym)
 			{
@@ -100,7 +100,7 @@ void context::load_module(v8::FunctionCallbackInfo<v8::Value> const& args)
 					" not found in " + filename);
 			}
 
-			using module_init_proc = v8::Local<v8::Value>(*)(v8::Isolate*);
+			using module_init_proc = v8::Local<v8::Value> (*)(v8::Isolate*);
 			module_init_proc init_proc = reinterpret_cast<module_init_proc>(sym);
 			result = init_proc(isolate);
 			module.exports.Reset(isolate, result);
@@ -150,7 +150,8 @@ struct array_buffer_allocator : v8::ArrayBuffer::Allocator
 	}
 	void Free(void* data, size_t length)
 	{
-		free(data); (void)length;
+		free(data);
+		(void)length;
 	}
 };
 static array_buffer_allocator array_buffer_allocator_;
@@ -168,7 +169,7 @@ context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
 		v8::Local<v8::ObjectTemplate> global)
 	: own_isolate_(isolate == nullptr)
 	, enter_context_(enter_context)
-	, isolate_(isolate? isolate : create_isolate(allocator))
+	, isolate_(isolate ? isolate : create_isolate(allocator))
 {
 	if (own_isolate_)
 	{

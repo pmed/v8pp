@@ -79,7 +79,7 @@ public:
 
 	v8::Local<v8::Value> getline(v8::Isolate* isolate)
 	{
-		if ( stream_.good() && ! stream_.eof())
+		if (stream_.good() && !stream_.eof())
 		{
 			std::string line;
 			std::getline(stream_, line);

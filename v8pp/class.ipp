@@ -348,9 +348,9 @@ V8PP_IMPL classes::classes_info::iterator classes::find(type_info const& type)
 {
 	return std::find_if(classes_.begin(), classes_.end(),
 		[&type](classes_info::value_type const& info)
-	{
-		return info->type == type;
-	});
+		{
+			return info->type == type;
+		});
 }
 
 V8PP_IMPL classes* classes::instance(operation op, v8::Isolate* isolate)
@@ -384,10 +384,10 @@ V8PP_IMPL classes* classes::instance(operation op, v8::Isolate* isolate)
 	switch (op)
 	{
 	case operation::get:
-	{
-		auto it = instances.find(isolate);
-		return it != instances.end() ? &it->second : nullptr;
-	}
+		{
+			auto it = instances.find(isolate);
+			return it != instances.end() ? &it->second : nullptr;
+		}
 	case operation::add:
 		return &instances[isolate];
 	case operation::remove:

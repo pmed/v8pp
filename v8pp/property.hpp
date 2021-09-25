@@ -40,8 +40,7 @@ using is_direct_getter = std::integral_constant<bool,
 		v8::Local<v8::String>>::value &&
 	std::is_same<typename call_from_v8_traits<F>::template arg_type<1>,
 		v8::PropertyCallbackInfo<v8::Value> const&>::value &&
-	is_void_return<F>::value
->;
+	is_void_return<F>::value>;
 
 template<typename F>
 using is_isolate_getter = std::integral_constant<bool,
@@ -62,8 +61,7 @@ using is_direct_setter = std::integral_constant<bool,
 		v8::Local<v8::Value>>::value &&
 	std::is_same<typename call_from_v8_traits<F>::template arg_type<2>,
 		v8::PropertyCallbackInfo<void> const&>::value &&
-	is_void_return<F>::value
->;
+	is_void_return<F>::value>;
 
 template<typename F>
 using is_isolate_setter = std::integral_constant<bool,
@@ -75,15 +73,13 @@ template<typename F>
 using select_getter_tag = typename std::conditional<is_direct_getter<F>::value,
 	direct_getter_tag,
 	typename std::conditional<is_isolate_getter<F>::value,
-		isolate_getter_tag, getter_tag>::type
->::type;
+		isolate_getter_tag, getter_tag>::type>::type;
 
 template<typename F>
 using select_setter_tag = typename std::conditional<is_direct_setter<F>::value,
 	direct_setter_tag,
 	typename std::conditional<is_isolate_setter<F>::value,
-		isolate_setter_tag, setter_tag>::type
->::type;
+		isolate_setter_tag, setter_tag>::type>::type;
 
 template<typename Get, typename Set, bool get_is_mem_fun>
 struct r_property_impl;
@@ -97,7 +93,7 @@ struct r_property_impl<Get, Set, true>
 	using property_type = property_<Get, Set>;
 
 	using class_type = typename std::decay<typename std::tuple_element<0,
-		typename function_traits<Get>::arguments> ::type>::type;
+		typename function_traits<Get>::arguments>::type>::type;
 
 	static_assert(is_getter<Get>::value
 		|| is_direct_getter<Get>::value
@@ -234,7 +230,7 @@ struct rw_property_impl<Get, Set, true>
 		(obj.*set)(name, value, info);
 	}
 
-	static void set_impl(class_type& obj, Set set, v8::Local<v8::String>, 
+	static void set_impl(class_type& obj, Set set, v8::Local<v8::String>,
 		v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info,
 		isolate_setter_tag)
 	{

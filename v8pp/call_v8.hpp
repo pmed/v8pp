@@ -20,7 +20,7 @@ namespace v8pp {
 /// @param func  V8 function to call
 /// @param recv V8 object used as `this` in the function
 /// @param args...  C++ arguments to convert to JS arguments using to_v8
-template<typename ...Args>
+template<typename... Args>
 v8::Local<v8::Value> call_v8(v8::Isolate* isolate, v8::Local<v8::Function> func,
 	v8::Local<v8::Value> recv, Args&&... args)
 {

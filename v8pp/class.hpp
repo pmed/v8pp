@@ -52,10 +52,10 @@ public:
 	object_registry(v8::Isolate* isolate, type_info const& type, dtor_function&& dtor);
 
 	object_registry(object_registry const&) = delete;
-	object_registry(object_registry && src) = default;
+	object_registry(object_registry&&) = default;
 
 	object_registry& operator=(object_registry const&) = delete;
-	object_registry& operator=(object_registry &&) = delete;
+	object_registry& operator=(object_registry&&) = delete;
 
 	~object_registry();
 
@@ -168,7 +168,7 @@ public:
 	using object_pointer_type = typename Traits::template object_pointer_type<T>;
 	using object_const_pointer_type = typename Traits::template object_const_pointer_type<T>;
 
-	template<typename ...Args>
+	template<typename... Args>
 	struct factory_create
 	{
 		static object_pointer_type call(v8::FunctionCallbackInfo<v8::Value> const& args)
@@ -209,7 +209,7 @@ public:
 	}
 
 	/// Set class constructor signature
-	template<typename ...Args, typename Create = factory_create<Args...>>
+	template<typename... Args, typename Create = factory_create<Args...>>
 	class_& ctor(ctor_function create = &Create::call)
 	{
 		class_info_.set_ctor([create = std::move(create)](v8::FunctionCallbackInfo<v8::Value> const& args)
@@ -282,8 +282,7 @@ public:
 	{
 		v8::HandleScope scope(isolate());
 
-		using attribute_type = typename
-			detail::function_traits<Attribute>::template pointer_type<T>;
+		using attribute_type = typename detail::function_traits<Attribute>::template pointer_type<T>;
 		attribute_type attr(attribute);
 		v8::AccessorGetterCallback getter = &member_get<attribute_type>;
 		v8::AccessorSetterCallback setter = &member_set<attribute_type>;
@@ -296,7 +295,7 @@ public:
 			->SetAccessor(v8pp::to_v8(isolate(), name), getter, setter,
 				detail::external_data::set(isolate(), std::forward<attribute_type>(attr)),
 				v8::DEFAULT,
-				v8::PropertyAttribute(v8::DontDelete | (setter? 0 : v8::ReadOnly)));
+				v8::PropertyAttribute(v8::DontDelete | (setter ? 0 : v8::ReadOnly)));
 		return *this;
 	}
 
@@ -310,8 +309,7 @@ public:
 
 		using property_type = property_<
 			typename detail::function_traits<GetMethod>::template pointer_type<T>,
-			typename detail::function_traits<SetMethod>::template pointer_type<T>
-		>;
+			typename detail::function_traits<SetMethod>::template pointer_type<T>>;
 		property_type prop(property);
 		v8::AccessorGetterCallback getter = property_type::template get<Traits>;
 		v8::AccessorSetterCallback setter = property_type::template set<Traits>;
@@ -400,7 +398,7 @@ public:
 	}
 
 	/// Create a wrapped C++ object and import it into JavaScript
-	template<typename ...Args>
+	template<typename... Args>
 	static v8::Local<v8::Object> create_object(v8::Isolate* isolate, Args&&... args)
 	{
 		return import_external(isolate,

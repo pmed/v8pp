@@ -24,22 +24,22 @@
 
 /// v8pp plugin filename suffix
 #if !defined(V8PP_PLUGIN_SUFFIX)
-	#if defined(WIN32)
-	#define V8PP_PLUGIN_SUFFIX ".dll"
-	#else
-	#define V8PP_PLUGIN_SUFFIX ".so"
-	#endif
+#if defined(WIN32)
+#define V8PP_PLUGIN_SUFFIX ".dll"
+#else
+#define V8PP_PLUGIN_SUFFIX ".so"
+#endif
 #endif
 
 #if defined(_MSC_VER)
-	#define V8PP_EXPORT __declspec(dllexport)
-	#define V8PP_IMPORT __declspec(dllimport)
+#define V8PP_EXPORT __declspec(dllexport)
+#define V8PP_IMPORT __declspec(dllimport)
 #elif __GNUC__ >= 4
-	#define V8PP_EXPORT __attribute__((__visibility__("default")))
-	#define V8PP_IMPORT V8PP_EXPORT
+#define V8PP_EXPORT __attribute__((__visibility__("default")))
+#define V8PP_IMPORT V8PP_EXPORT
 #else
-	#define V8PP_EXPORT
-	#define V8PP_IMPORT
+#define V8PP_EXPORT
+#define V8PP_IMPORT
 #endif
 
 #define V8PP_PLUGIN_INIT(isolate) extern "C" V8PP_EXPORT \

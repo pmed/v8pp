@@ -12,7 +12,7 @@
 #include "test.hpp"
 
 static int f(int const& x) { return x; }
-static std::string g(char const* s) { return s? s : ""; }
+static std::string g(char const* s) { return s ? s : ""; }
 static int h(v8::Isolate*, int x, int y) { return x + y; }
 
 struct X
@@ -40,7 +40,7 @@ void test_function()
 	context.set("lambda", v8pp::wrap_function(isolate, "lambda", lambda));
 	check_eq("lambda", run_script<int>(context, "lambda(3)"), 6);
 
-	auto lambda2 = [](){ return 99; };
+	auto lambda2 = []() { return 99; };
 	context.set("lambda2", v8pp::wrap_function(isolate, "lambda2", lambda2));
 	check_eq("lambda2", run_script<int>(context, "lambda2()"), 99);
 

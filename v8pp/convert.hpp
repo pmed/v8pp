@@ -109,12 +109,20 @@ struct convert<String, typename std::enable_if<detail::is_string<String>::value>
 
 // converter specializations for null-terminated strings
 template<>
-struct convert<char const*> : convert<basic_string_view<char>> {};
+struct convert<char const*> : convert<basic_string_view<char>>
+{
+};
+
 template<>
-struct convert<char16_t const*> : convert<basic_string_view<char16_t>> {};
+struct convert<char16_t const*> : convert<basic_string_view<char16_t>>
+{
+};
+
 #ifdef WIN32
 template<>
-struct convert<wchar_t const*> : convert<basic_string_view<wchar_t>> {};
+struct convert<wchar_t const*> : convert<basic_string_view<wchar_t>>
+{
+};
 #endif
 
 // converter specializations for primitive types
@@ -417,7 +425,7 @@ struct convert<Mapping, typename std::enable_if<detail::is_mapping<Mapping>::val
 		v8::EscapableHandleScope scope(isolate);
 		v8::Local<v8::Context> context = isolate->GetCurrentContext();
 		v8::Local<v8::Object> result = v8::Object::New(isolate);
-		for (auto const& item: value)
+		for (auto const& item : value)
 		{
 			result->Set(context,
 				convert<Key>::to_v8(isolate, item.first),
@@ -449,7 +457,6 @@ struct convert<v8::Local<T>>
 	}
 };
 
-
 template<typename T>
 struct is_wrapped_class : conjunction<
 	std::is_class<T>,
@@ -459,14 +466,20 @@ struct is_wrapped_class : conjunction<
 	negation<detail::is_array<T>>,
 	negation<detail::is_tuple<T>>,
 	negation<detail::is_shared_ptr<T>>
-> {};
+>
+{
+};
 
 // convert specialization for wrapped user classes
 template<typename T>
-struct is_wrapped_class<v8::Local<T>> : std::false_type {};
+struct is_wrapped_class<v8::Local<T>> : std::false_type
+{
+};
 
 template<typename T>
-struct is_wrapped_class<v8::Global<T>> : std::false_type {};
+struct is_wrapped_class<v8::Global<T>> : std::false_type
+{
+};
 
 template<typename T>
 struct convert<T*, typename std::enable_if<is_wrapped_class<T>::value>::type>
@@ -577,7 +590,7 @@ struct convert<T, ref_from_shared_ptr>
 		std::shared_ptr<T> object = class_<class_type, shared_ptr_traits>::unwrap_object(isolate, value);
 		if (object)
 		{
-//			assert(object.use_count() > 1);
+			//assert(object.use_count() > 1);
 			return *object;
 		}
 		throw std::runtime_error("failed to unwrap C++ object");
@@ -592,10 +605,14 @@ struct convert<T, ref_from_shared_ptr>
 };
 
 template<typename T>
-struct convert<T&> : convert<T> {};
+struct convert<T&> : convert<T>
+{
+};
 
 template<typename T>
-struct convert<T const&> : convert<T> {};
+struct convert<T const&> : convert<T>
+{
+};
 
 template<typename T>
 auto from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
@@ -605,10 +622,10 @@ auto from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
 }
 
 template<typename T, typename U>
-auto from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value,U const& default_value)
+auto from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value, U const& default_value)
 	-> decltype(convert<T>::from_v8(isolate, value))
 {
-	return convert<T>::is_valid(isolate, value)?
+	return convert<T>::is_valid(isolate, value) ?
 		convert<T>::from_v8(isolate, value) : default_value;
 }
 

@@ -88,7 +88,9 @@ struct Y : X
 
 int Y::instance_count = 0;
 
-struct Z {};
+struct Z
+{
+};
 
 namespace v8pp {
 template<>
@@ -106,7 +108,7 @@ struct factory<Y, v8pp::shared_ptr_traits>
 	}
 	static void destroy(v8::Isolate*, std::shared_ptr<Y> const&) {}
 };
-} // v8pp
+} // namespace v8pp
 
 template<typename Traits>
 static int extern_fun(v8::FunctionCallbackInfo<v8::Value> const& args)
@@ -180,10 +182,10 @@ void test_class_()
 
 	auto Y_class_find = v8pp::class_<Y, Traits>::extend(isolate);
 	Y_class_find.set("toJSON", [](const v8::FunctionCallbackInfo<v8::Value>& args)
-			{
-				bool const with_functions = true;
-				args.GetReturnValue().Set(v8pp::json_object(args.GetIsolate(), args.This(), with_functions));
-			});
+	{
+		bool const with_functions = true;
+		args.GetReturnValue().Set(v8pp::json_object(args.GetIsolate(), args.This(), with_functions));
+	});
 
 	check_ex<std::runtime_error>("already wrapped class X", [isolate]()
 	{
@@ -349,7 +351,8 @@ void test_multiple_inheritance()
 	B_class
 		.set("xB", &B::x)
 		.set("zB", &B::z)
-		.set("g", &B::g);
+		.set("g", &B::g)
+		;
 
 	v8pp::class_<C, Traits> C_class(isolate);
 	C_class
@@ -372,7 +375,6 @@ void test_multiple_inheritance()
 		.set("G", v8pp::property(&C::g, &C::set_g))
 		.set("H", v8pp::property(&C::h, &C::set_h))
 		;
-
 
 	context.set("C", C_class);
 	check_eq("get attributes", run_script<int>(context, "c = new C(); c.xA + c.xB + c.xC"), 1 + 2 + 3);
@@ -436,7 +438,8 @@ void test_auto_wrap_objects()
 	X_class
 		.template ctor<int>()
 		.auto_wrap_objects(true)
-		.set("x", v8pp::property(&X::get_x));
+		.set("x", v8pp::property(&X::get_x))
+		;
 
 	auto f0 = [](int x) { return X(x); };
 	auto f = v8pp::wrap_function<decltype(f0), Traits>(isolate, "f", std::move(f0));
