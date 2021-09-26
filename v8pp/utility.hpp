@@ -53,33 +53,42 @@ struct is_string<wchar_t const*> : std::true_type {};
 // is_mapping<T>
 //
 template<typename T, typename U = void>
-struct is_mapping : std::false_type {};
+struct is_mapping_impl : std::false_type {};
 
 template<typename T>
-struct is_mapping<T, std::void_t<typename T::key_type, typename T::mapped_type,
+struct is_mapping_impl<T, std::void_t<typename T::key_type, typename T::mapped_type,
 	decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> : std::true_type {};
+
+template<typename T>
+using is_mapping = is_mapping_impl<T>;
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // is_sequence<T>
 //
 template<typename T, typename U = void>
-struct is_sequence : std::false_type {};
+struct is_sequence_impl : std::false_type {};
 
 template<typename T>
-struct is_sequence<T, std::void_t<typename T::value_type,
+struct is_sequence_impl<T, std::void_t<typename T::value_type,
 	decltype(std::declval<T>().begin()), decltype(std::declval<T>().end()),
 	decltype(std::declval<T>().emplace_back(std::declval<typename T::value_type>()))>> : std::negation<is_string<T>> {};
+
+template<typename T>
+using is_sequence = is_sequence_impl<T>;
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // has_reserve<T>
 //
 template<typename T, typename U = void>
-struct has_reserve : std::false_type {};
+struct has_reserve_impl : std::false_type {};
 
 template<typename T>
-struct has_reserve<T, std::void_t<decltype(std::declval<T>().reserve(0))>> : std::true_type {};
+struct has_reserve_impl<T, std::void_t<decltype(std::declval<T>().reserve(0))>> : std::true_type {};
+
+template<typename T>
+using has_reserve = has_reserve_impl<T>;
 
 /////////////////////////////////////////////////////////////////////////////
 //
