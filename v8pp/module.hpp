@@ -84,7 +84,7 @@ public:
 
 	/// Set a C++ variable in the module with specified name
 	template<typename Variable>
-	module& var(char const *name, Variable& var)
+	module& var(char const* name, Variable& var)
 	{
 		static_assert(!detail::is_callable<Variable>::value, "Variable must not be callable");
 		v8::HandleScope scope(isolate_);
@@ -98,7 +98,7 @@ public:
 
 	/// Set property in the module with specified name and get/set functions
 	template<typename GetFunction, typename SetFunction = detail::none>
-	module& property(char const *name, GetFunction&& get, SetFunction&& set = {})
+	module& property(char const* name, GetFunction&& get, SetFunction&& set = {})
 	{
 		using Getter = typename std::decay<GetFunction>::type;
 		using Setter = typename std::decay<SetFunction>::type;

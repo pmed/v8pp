@@ -126,7 +126,7 @@ struct convert<person>
 			obj->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "name")).ToLocalChecked());
 		result.age = v8pp::from_v8<int>(isolate,
 			obj->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "age")).ToLocalChecked());
-		
+
 		/* Simpler after #include <v8pp/object.hpp>
 		get_option(isolate, obj, "name", result.name);
 		get_option(isolate, obj, "age", result.age);
@@ -135,7 +135,7 @@ struct convert<person>
 	}
 };
 
-} // v8pp
+} // namespace v8pp
 
 void test_convert_user_type(v8::Isolate* isolate)
 {
@@ -253,7 +253,7 @@ void check_range(v8::Isolate* isolate)
 template<typename... Ts>
 void check_ranges(v8::Isolate* isolate)
 {
-	(check_range<Ts>(isolate),...);
+	(check_range<Ts>(isolate), ...);
 }
 
 struct U
@@ -370,7 +370,7 @@ void test_convert()
 	test_conv(isolate, 2.2);
 	test_conv(isolate, true);
 
-	enum old_enum { A = 1, B = 5, C = - 1 };
+	enum old_enum { A = 1, B = 5, C = -1 };
 	test_conv(isolate, B);
 
 	enum class new_enum { X = 'a', Y = 'b', Z = 'c' };
@@ -396,9 +396,9 @@ void test_convert()
 	});
 
 	test_conv(isolate, std::map<char, int>{ { 'a', 1 }, { 'b', 2 }, { 'c', 3 } });
-	test_conv(isolate, std::multimap<int, int>{ { 1, -1 }, { 2, -2 }});
-	test_conv(isolate, std::unordered_map<char, std::string>{ { 'x', "1" }, { 'y', "2" }});
-	test_conv(isolate, std::unordered_multimap<std::string, int>{ { "a", 1 }, { "b", 2 }});
+	test_conv(isolate, std::multimap<int, int>{ { 1, -1 }, { 2, -2 } });
+	test_conv(isolate, std::unordered_map<char, std::string>{ { 'x', "1" }, { 'y', "2" } });
+	test_conv(isolate, std::unordered_multimap<std::string, int>{ { "a", 1 }, { "b", 2 } });
 
 	check_eq("initializer list to array",
 		v8pp::from_v8<std::vector<int>>(isolate, v8pp::to_v8(isolate, { 1, 2, 3 })), vector);

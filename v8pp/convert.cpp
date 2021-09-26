@@ -35,5 +35,5 @@ template struct convert<unsigned long long>;
 template struct convert<float>;
 template struct convert<double>;
 
-} // v8pp
+} // namespace v8pp
 #endif

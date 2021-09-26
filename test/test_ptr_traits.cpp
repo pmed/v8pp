@@ -26,7 +26,8 @@ struct X
 		ctor_types |= 0x01;
 	}
 
-	X(int) {
+	X(int)
+	{
 		++ctor_count;
 		ctor_types |= 0x02;
 	}
@@ -54,6 +55,7 @@ class Y
 public:
 	static Y* make(int) { return new Y; }
 	static void done(Y* y) { delete y; }
+
 private:
 	Y() {}
 	~Y() {}
@@ -99,7 +101,7 @@ struct Y_shared_ptr_traits : v8pp::shared_ptr_traits
 	}
 };
 
-template<typename T, typename Traits, typename ...Args>
+template<typename T, typename Traits, typename... Args>
 void test_create_destroy_(Args&&... args)
 {
 	auto obj = Traits::template create<T>(std::forward<Args>(args)...);

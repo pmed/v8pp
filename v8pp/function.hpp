@@ -30,7 +30,7 @@ public:
 		std::is_trivially_copyable_v<T>;
 
 	template<typename T>
-	static v8::Local<v8::Value> set(v8::Isolate* isolate, T && value)
+	static v8::Local<v8::Value> set(v8::Isolate* isolate, T&& value)
 	{
 		if constexpr (is_bitcast_allowed<T>)
 		{

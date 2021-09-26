@@ -70,7 +70,7 @@ void test_context()
 
 		check_eq("run_script with explicit context", r, 42);
 	}
-	
+
 	{
 		// Move constuctor allows to set up context inside function
 		// also it allows to move class with v8pp::context as a member value

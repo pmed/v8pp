@@ -141,7 +141,7 @@ std::ostream& operator<<(std::ostream& os, std::tuple<Ts...> const& tuple)
 	{
 		bool first = true;
 		os << '(';
-		((os << (first? (first = false, "") : ", ") << elems),...);
+		((os << (first ? (first = false, "") : ", ") << elems), ...);
 		os << ')';
 	}, tuple);
 	return os;

@@ -35,21 +35,21 @@ void run_tests()
 	void test_object();
 	void test_json();
 
-	std::pair<char const*, void(*)()> tests[] =
+	std::pair<char const*, void (*)()> tests[] =
 	{
-		{ "test_utility", test_utility },
-		{ "test_context", test_context },
-		{ "test_convert", test_convert },
-		{ "test_throw_ex", test_throw_ex },
-		{ "test_function", test_function },
-		{ "test_ptr_traits", test_ptr_traits },
-		{ "test_call_v8", test_call_v8 },
-		{ "test_call_from_v8", test_call_from_v8 },
-		{ "test_module", test_module },
-		{ "test_class", test_class },
-		{ "test_property", test_property },
-		{ "test_object", test_object },
-		{ "test_json", test_json },
+		{"test_utility", test_utility},
+		{"test_context", test_context},
+		{"test_convert", test_convert},
+		{"test_throw_ex", test_throw_ex},
+		{"test_function", test_function},
+		{"test_ptr_traits", test_ptr_traits},
+		{"test_call_v8", test_call_v8},
+		{"test_call_from_v8", test_call_from_v8},
+		{"test_module", test_module},
+		{"test_class", test_class},
+		{"test_property", test_property},
+		{"test_object", test_object},
+		{"test_json", test_json},
 	};
 
 	for (auto const& test : tests)
@@ -69,7 +69,7 @@ void run_tests()
 	}
 }
 
-int main(int argc, char const * argv[])
+int main(int argc, char const* argv[])
 {
 	std::vector<std::string> scripts;
 	std::string lib_path;
@@ -139,7 +139,7 @@ int main(int argc, char const * argv[])
 			context.run_file(script);
 		}
 	}
-	catch (std::exception & ex)
+	catch (std::exception const& ex)
 	{
 		std::cerr << ex.what() << std::endl;
 		result = EXIT_FAILURE;

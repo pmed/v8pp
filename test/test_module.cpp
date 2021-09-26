@@ -52,6 +52,7 @@ void test_module()
 		.property("rprop", get_x)
 		.property("wprop", get_x, set_x)
 		;
+
 	context.module("module", module);
 
 	check_eq("module.consts.bool",

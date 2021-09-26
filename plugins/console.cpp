@@ -20,7 +20,7 @@ void log(v8::FunctionCallbackInfo<v8::Value> const& args)
 	{
 		if (i > 0) std::cout << ' ';
 		v8::String::Utf8Value const str(args.GetIsolate(), args[i]);
-		std::cout <<  *str;
+		std::cout << *str;
 	}
 	std::cout << std::endl;
 }
