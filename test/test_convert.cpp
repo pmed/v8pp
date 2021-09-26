@@ -11,6 +11,7 @@
 
 #include "test.hpp"
 
+#include <cmath>
 #include <list>
 #include <vector>
 #include <map>
