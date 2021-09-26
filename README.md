@@ -1,5 +1,4 @@
 [![Build status](https://github.com/pmed/v8pp/actions/workflows/cmake.yml/badge.svg)](https://github.com/pmed/v8pp/actions/workflows/cmake.yml)
-[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/github/pmed/v8pp?svg=true)](https://ci.appveyor.com/project/pmed/v8pp)
 [![NPM](https://img.shields.io/npm/v/v8pp.svg)](https://npmjs.com/package/v8pp)
 [![Join the chat at https://gitter.im/pmed/v8pp](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pmed/v8pp?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
