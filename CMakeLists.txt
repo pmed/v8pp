@@ -22,6 +22,13 @@ set(V8PP_PLUGIN_INIT_PROC_NAME "v8pp_module_init" CACHE STRING "v8pp plugin init
 set(V8PP_PLUGIN_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX} CACHE STRING "v8pp plugin filename suffix")
 option(V8_COMPRESS_POINTERS "Use new V8 ABI with V8_COMPRESS_POINTERS and V8_31BIT_SMIS_ON_64BIT_ARCH" ON)
 
+if(BUILD_SHARED_LIBS AND WIN32)
+	set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS true)
+endif()
+
+# put all binaries into the output dir
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+
 add_subdirectory(v8pp)
 
 if(BUILD_TESTING)
