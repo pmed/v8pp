@@ -10,7 +10,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ ubuntu-latest, macOS-latest ]
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
         build_type: [ Release, Debug ]
         shared_lib: [ false, true ]
         header_only: [ false, true ]
@@ -18,7 +18,9 @@ jobs:
         exclude:
           - os: ubuntu-latest
             v8_compress_pointers: true
-          - os: macOS-latest
+          - os: macos-latest
+            v8_compress_pointers: false
+          - os: windows-latest
             v8_compress_pointers: false
 
     runs-on: ${{matrix.os}}
@@ -33,8 +35,16 @@ jobs:
       run: sudo apt install libv8-dev -y
 
     - name: Install V8 brew
-      if: startsWith(matrix.os, 'macOS')
+      if: startsWith(matrix.os, 'macos')
       run: brew install v8
+
+    - name: Install V8 nuget
+      if: startsWith(matrix.os, 'windows')
+      run: nuget install v8-v142-x64 -OutputDirectory ${{github.workspace}}/build
+
+    - name: Install Visual C++ 
+      if: startsWith(matrix.os, 'windows')
+      uses: ilammy/msvc-dev-cmd@v1
 
     - name: Install ninja-build tool
       uses: seanmiddleditch/gha-setup-ninja@v3
