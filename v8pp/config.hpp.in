@@ -10,25 +10,21 @@
 #define V8PP_CONFIG_HPP_INCLUDED
 
 /// v8pp library version
-#define V8PP_VERSION "1.7.0"
+#define V8PP_VERSION "@PROJECT_VERSION@"
 
 /// v8::Isolate data slot number, used in v8pp for shared data
 #if !defined(V8PP_ISOLATE_DATA_SLOT)
-#define V8PP_ISOLATE_DATA_SLOT 0
+#define V8PP_ISOLATE_DATA_SLOT @V8PP_ISOLATE_DATA_SLOT@
 #endif
 
 /// v8pp plugin initialization procedure name
 #if !defined(V8PP_PLUGIN_INIT_PROC_NAME)
-#define V8PP_PLUGIN_INIT_PROC_NAME v8pp_module_init
+#define V8PP_PLUGIN_INIT_PROC_NAME @V8PP_PLUGIN_INIT_PROC_NAME@
 #endif
 
 /// v8pp plugin filename suffix
 #if !defined(V8PP_PLUGIN_SUFFIX)
-#if defined(WIN32)
-#define V8PP_PLUGIN_SUFFIX ".dll"
-#else
-#define V8PP_PLUGIN_SUFFIX ".so"
-#endif
+#define V8PP_PLUGIN_SUFFIX "@V8PP_PLUGIN_SUFFIX@"
 #endif
 
 #if defined(_MSC_VER)
@@ -46,7 +42,7 @@
 v8::Local<v8::Value> V8PP_PLUGIN_INIT_PROC_NAME(isolate)
 
 #ifndef V8PP_HEADER_ONLY
-#define V8PP_HEADER_ONLY 1
+#define V8PP_HEADER_ONLY @V8PP_HEADER_ONLY@
 #endif
 
 #if V8PP_HEADER_ONLY

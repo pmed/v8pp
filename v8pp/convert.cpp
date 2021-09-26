@@ -41,5 +41,5 @@ template struct convert<float>;
 template struct convert<double>;
 template struct convert<long double>;
 
-} // v8pp
+} // namespace v8pp
 #endif

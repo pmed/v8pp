@@ -36,7 +36,7 @@ void run_tests()
 	void test_object();
 	void test_json();
 
-	std::pair<char const*, void(*)()> tests[] =
+	std::pair<char const*, void (*)()> tests[] =
 	{
 		{ "test_utility", test_utility },
 		{ "test_context", test_context },
@@ -71,7 +71,7 @@ void run_tests()
 	}
 }
 
-int main(int argc, char const * argv[])
+int main(int argc, char const* argv[])
 {
 	std::vector<std::string> scripts;
 	std::string lib_path;
@@ -141,7 +141,7 @@ int main(int argc, char const * argv[])
 			context.run_file(script);
 		}
 	}
-	catch (std::exception & ex)
+	catch (std::exception const& ex)
 	{
 		std::cerr << ex.what() << std::endl;
 		result = EXIT_FAILURE;

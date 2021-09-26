@@ -71,7 +71,7 @@ struct person
 	std::string name;
 	int age;
 
-//for test framework
+	//for test framework
 	bool operator==(person const& other) const
 	{
 		return name == other.name && age == other.age;
@@ -129,7 +129,7 @@ struct convert<person>
 			obj->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "name")).ToLocalChecked());
 		result.age = v8pp::from_v8<int>(isolate,
 			obj->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "age")).ToLocalChecked());
-		
+
 		/* Simpler after #include <v8pp/object.hpp>
 		get_option(isolate, obj, "name", result.name);
 		get_option(isolate, obj, "age", result.age);
@@ -138,7 +138,7 @@ struct convert<person>
 	}
 };
 
-} // v8pp
+} // namespace v8pp
 
 void test_convert()
 {
@@ -150,7 +150,7 @@ void test_convert()
 	test_conv(isolate, 2.2);
 	test_conv(isolate, true);
 
-	enum old_enum { A = 1, B = 5, C = - 1 };
+	enum old_enum { A = 1, B = 5, C = -1 };
 	test_conv(isolate, B);
 
 	enum class new_enum { X = 'a', Y = 'b', Z = 'c' };
@@ -176,9 +176,9 @@ void test_convert()
 	});
 
 	test_conv(isolate, std::map<char, int>{ { 'a', 1 }, { 'b', 2 }, { 'c', 3 } });
-	test_conv(isolate, std::multimap<int, int>{ { 1, -1 }, { 2, -2 }});
-	test_conv(isolate, std::unordered_map<char, std::string>{ { 'x', "1" }, { 'y', "2" }});
-	test_conv(isolate, std::unordered_multimap<std::string, int>{ { "a", 1 }, { "b", 2 }});
+	test_conv(isolate, std::multimap<int, int>{ { 1, -1 }, { 2, -2 } });
+	test_conv(isolate, std::unordered_map<char, std::string>{ { 'x', "1" }, { 'y', "2" } });
+	test_conv(isolate, std::unordered_multimap<std::string, int>{ { "a", 1 }, { "b", 2 } });
 
 	check_eq("initializer list to array",
 		v8pp::from_v8<std::vector<int>>(isolate, v8pp::to_v8(isolate, { 1, 2, 3 })), vector);
@@ -190,7 +190,6 @@ void test_convert()
 	person p;
 	p.name = "Al"; p.age = 33;
 	test_conv(isolate, p);
-
 
 	std::tuple<size_t, bool> const tuple_1{ 2, true };
 	test_conv(isolate, tuple_1);

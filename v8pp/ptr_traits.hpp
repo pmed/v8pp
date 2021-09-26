@@ -40,7 +40,7 @@ struct raw_ptr_traits
 	template<typename T>
 	using convert_ref = convert<T&>;
 
-	template<typename T, typename ...Args>
+	template<typename T, typename... Args>
 	static object_pointer_type<T> create(Args&&... args)
 	{
 		return new T(std::forward<Args>(args)...);
@@ -65,7 +65,9 @@ struct raw_ptr_traits
 	}
 };
 
-struct ref_from_shared_ptr {};
+struct ref_from_shared_ptr
+{
+};
 
 struct shared_ptr_traits
 {
@@ -91,7 +93,7 @@ struct shared_ptr_traits
 	template<typename T>
 	using convert_ref = convert<T, ref_from_shared_ptr>;
 
-	template<typename T, typename ...Args>
+	template<typename T, typename... Args>
 	static object_pointer_type<T> create(Args&&... args)
 	{
 		return std::make_shared<T>(std::forward<Args>(args)...);

@@ -70,7 +70,7 @@ void test_context()
 
 		check_eq("run_script with explicit context", r, 42);
 	}
-	
+
 	{
 		// Move constuctor allows to set up context inside function
 		// also it allows to move class with v8pp::context as a member value
@@ -104,7 +104,7 @@ void test_context()
 	}
 
 	{
-		const auto init_global  = [](v8::Isolate* isolate)
+		const auto init_global = [](v8::Isolate* isolate)
 		{
 			v8pp::module m(isolate);
 			m.set_const("value", 40);
@@ -120,7 +120,7 @@ void test_context()
 		opt.isolate = isolate; // use existing one
 		opt.add_default_global_methods = false;
 		opt.global = init_global(isolate);
-	 
+
 		v8pp::context context(opt);
 
 		int const r = context.run_script("value + func()")->Int32Value(context.isolate()->GetCurrentContext()).FromJust();

@@ -27,7 +27,8 @@ struct X
 		ctor_types |= 0x01;
 	}
 
-	X(int) {
+	X(int)
+	{
 		++ctor_count;
 		ctor_types |= 0x02;
 	}
@@ -55,12 +56,13 @@ class Y
 public:
 	static Y* make(int) { return new Y; }
 	static void done(Y* y) { delete y; }
+
 private:
 	Y() {}
 	~Y() {}
 };
 
-template<typename T, typename ...Args>
+template<typename T, typename... Args>
 void test_(v8::Isolate* isolate, Args&&... args)
 {
 	T* obj = v8pp::factory<T, v8pp::raw_ptr_traits>::create(isolate, std::forward<Args>(args)...);
@@ -120,7 +122,7 @@ struct factory<Y, v8pp::shared_ptr_traits>
 	}
 };
 
-} // v8pp
+} // namespace v8pp
 
 void test_factory()
 {

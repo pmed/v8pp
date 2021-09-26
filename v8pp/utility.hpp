@@ -18,12 +18,15 @@
 
 #ifdef __cpp_lib_string_view
 #include <string_view>
+
 namespace v8pp {
-	template<typename Char, typename Traits = std::char_traits<Char>>
-	using basic_string_view = std::basic_string_view<Char, Traits>;
-	using string_view = std::string_view;
-	using u16string_view = std::u16string_view;
-	using wstring_view = std::wstring_view;
+
+template<typename Char, typename Traits = std::char_traits<Char>>
+using basic_string_view = std::basic_string_view<Char, Traits>;
+using string_view = std::string_view;
+using u16string_view = std::u16string_view;
+using wstring_view = std::wstring_view;
+
 } // namespace v8pp
 #else
 namespace v8pp {
@@ -53,7 +56,7 @@ public:
 	}
 
 	basic_string_view(Char const* data)
-		: basic_string_view(data, data? Traits::length(data) : 0)
+		: basic_string_view(data, data ? Traits::length(data) : 0)
 	{
 	}
 
@@ -105,6 +108,7 @@ public:
 	{
 		return os.write(sv.data_, sv.size_);
 	}
+
 private:
 	Char const* data_;
 	size_t size_;
@@ -114,11 +118,10 @@ using string_view = basic_string_view<char>;
 using u16string_view = basic_string_view<char16_t>;
 using wstring_view = basic_string_view<wchar_t>;
 
-} // namespace v8pp {
+} // namespace v8pp
 #endif
 
-namespace v8pp
-{
+namespace v8pp {
 /////////////////////////////////////////////////////////////////////////////
 //
 // void_t
@@ -138,7 +141,8 @@ using std::conjunction;
 using std::disjunction;
 using std::negation;
 #else
-template<bool...> struct bool_pack {};
+template<bool...>
+struct bool_pack {};
 
 template<typename... Bs>
 using conjunction = std::is_same<bool_pack<true, Bs::value...>, bool_pack<Bs::value..., true>>;
@@ -149,7 +153,7 @@ using disjunction = std::integral_constant<bool, !conjunction<Bs...>::value>;
 template<typename B>
 using negation = std::integral_constant<bool, !B::value>;
 #endif
-} // namespace v8pp {
+} // namespace v8pp
 
 namespace v8pp { namespace detail {
 
@@ -166,45 +170,72 @@ struct tuple_tail<std::tuple<Head, Tail...>>
 //
 // is_string<T>
 //
-template<typename T> struct is_string : std::false_type {};
+template<typename T>
+struct is_string : std::false_type
+{
+};
 
 template<typename Char, typename Traits, typename Alloc>
-struct is_string<std::basic_string<Char, Traits, Alloc>> : std::true_type {};
+struct is_string<std::basic_string<Char, Traits, Alloc>> : std::true_type
+{
+};
 
 template<typename Char, typename Traits>
-struct is_string<v8pp::basic_string_view<Char, Traits>> : std::true_type {};
+struct is_string<v8pp::basic_string_view<Char, Traits>> : std::true_type
+{
+};
 
 template<>
-struct is_string<char const*> : std::true_type {};
+struct is_string<char const*> : std::true_type
+{
+};
+
 template<>
-struct is_string<char16_t const*> : std::true_type {};
+struct is_string<char16_t const*> : std::true_type
+{
+};
+
 template<>
-struct is_string<char32_t const*> : std::true_type {};
+struct is_string<char32_t const*> : std::true_type
+{
+};
+
 template<>
-struct is_string<wchar_t const*> : std::true_type {};
+struct is_string<wchar_t const*> : std::true_type
+{
+};
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // is_mapping<T>
 //
 template<typename T, typename U = void>
-struct is_mapping : std::false_type {};
+struct is_mapping : std::false_type
+{
+};
 
 template<typename T>
 struct is_mapping<T, void_t<typename T::key_type, typename T::mapped_type,
-	decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> : std::true_type {};
+	decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> : std::true_type
+{
+};
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // is_sequence<T>
 //
 template<typename T, typename U = void>
-struct is_sequence : std::false_type {};
+struct is_sequence : std::false_type
+{
+};
 
 template<typename T>
 struct is_sequence<T, void_t<typename T::value_type,
-	decltype(std::declval<T>().begin()), decltype(std::declval<T>().end()),
-	decltype(std::declval<T>().emplace_back(std::declval<typename T::value_type>()))>> : negation<is_string<T>> {};
+	decltype(std::declval<T>().begin()),
+	decltype(std::declval<T>().end()),
+	decltype(std::declval<T>().emplace_back(std::declval<typename T::value_type>()))>> : negation<is_string<T>>
+{
+};
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -216,7 +247,8 @@ struct has_reserve : std::false_type
 	static void reserve(T& container, size_t capacity)
 	{
 		// no-op
-		(void)container; (void)capacity;
+		(void)container;
+		(void)capacity;
 	}
 };
 
@@ -275,20 +307,28 @@ struct is_array<std::array<T, N>> : std::true_type
 // is_tuple<T>
 //
 template<typename T>
-struct is_tuple : std::false_type {};
+struct is_tuple : std::false_type
+{
+};
 
 template<typename... Ts>
-struct is_tuple<std::tuple<Ts...>> : std::true_type {};
+struct is_tuple<std::tuple<Ts...>> : std::true_type
+{
+};
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // is_shared_ptr<T>
 //
 template<typename T>
-struct is_shared_ptr : std::false_type {};
+struct is_shared_ptr : std::false_type
+{
+};
 
 template<typename T>
-struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type
+{
+};
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -297,7 +337,7 @@ struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
 template<typename F>
 struct function_traits;
 
-template<typename R, typename ...Args>
+template<typename R, typename... Args>
 struct function_traits<R (Args...)>
 {
 	using return_type = R;
@@ -305,7 +345,7 @@ struct function_traits<R (Args...)>
 };
 
 // function pointer
-template<typename R, typename ...Args>
+template<typename R, typename... Args>
 struct function_traits<R (*)(Args...)>
 	: function_traits<R (Args...)>
 {
@@ -313,7 +353,7 @@ struct function_traits<R (*)(Args...)>
 };
 
 // member function pointer
-template<typename C, typename R, typename ...Args>
+template<typename C, typename R, typename... Args>
 struct function_traits<R (C::*)(Args...)>
 	: function_traits<R (C&, Args...)>
 {
@@ -322,7 +362,7 @@ struct function_traits<R (C::*)(Args...)>
 };
 
 // const member function pointer
-template<typename C, typename R, typename ...Args>
+template<typename C, typename R, typename... Args>
 struct function_traits<R (C::*)(Args...) const>
 	: function_traits<R (C const&, Args...)>
 {
@@ -331,7 +371,7 @@ struct function_traits<R (C::*)(Args...) const>
 };
 
 // volatile member function pointer
-template<typename C, typename R, typename ...Args>
+template<typename C, typename R, typename... Args>
 struct function_traits<R (C::*)(Args...) volatile>
 	: function_traits<R (C volatile&, Args...)>
 {
@@ -340,7 +380,7 @@ struct function_traits<R (C::*)(Args...) volatile>
 };
 
 // const volatile member function pointer
-template<typename C, typename R, typename ...Args>
+template<typename C, typename R, typename... Args>
 struct function_traits<R (C::*)(Args...) const volatile>
 	: function_traits<R (C const volatile&, Args...)>
 {
@@ -390,18 +430,24 @@ struct function_traits
 {
 	static_assert(!std::is_bind_expression<F>::value,
 		"std::bind result is not supported yet");
+
 private:
 	using callable_traits = function_traits<decltype(&F::operator())>;
+
 public:
 	using return_type = typename callable_traits::return_type;
 	using arguments = typename tuple_tail<typename callable_traits::arguments>::type;
 };
 
 template<typename F>
-struct function_traits<F&> : function_traits<F> {};
+struct function_traits<F&> : function_traits<F>
+{
+};
 
 template<typename F>
-struct function_traits<F&&> : function_traits<F> {};
+struct function_traits<F&&> : function_traits<F>
+{
+};
 
 template<typename F>
 using is_void_return = std::is_same<void,
@@ -420,15 +466,17 @@ private:
 	struct fallback { void operator()(); };
 	struct derived : F, fallback {};
 
-	template<typename U, U> struct check;
+	template<typename U, U>
+	struct check;
 
 	template<typename>
 	static std::true_type test(...);
 
 	template<typename C>
-	static std::false_type test(check<void(fallback::*)(), &C::operator()>*);
+	static std::false_type test(check<void (fallback::*)(), &C::operator()>*);
 
 	using type = decltype(test<derived>(0));
+
 public:
 	static const bool value = type::value;
 };
@@ -444,12 +492,16 @@ public:
 	string_view name() const { return name_; }
 	bool operator==(type_info const& other) const { return name_ == other.name_; }
 	bool operator!=(type_info const& other) const { return name_ != other.name_; }
+
 private:
-	template<typename T> friend type_info type_id();
+	template<typename T>
+	friend type_info type_id();
+
 	type_info(char const* name, size_t size)
 		: name_(name, size)
 	{
 	}
+
 	string_view name_;
 };
 

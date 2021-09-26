@@ -52,6 +52,7 @@ void test_module()
 		.set("rprop", v8pp::property(get_x))
 		.set("wprop", v8pp::property(get_x, set_x))
 		;
+
 	context.set("module", module);
 
 	check_eq("module.consts.bool",

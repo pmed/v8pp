@@ -21,7 +21,7 @@ struct factory
 {
 	using object_pointer_type = typename Traits::template object_pointer_type<T>;
 
-	template<typename ...Args>
+	template<typename... Args>
 	static object_pointer_type create(v8::Isolate* isolate, Args... args)
 	{
 		object_pointer_type object = Traits::template create<T>(std::forward<Args>(args)...);

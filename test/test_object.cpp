@@ -44,12 +44,10 @@ void test_object()
 	check("obj.pi", fabs(pi - 3.1415926) < 10e-6);
 
 	v8::Local<v8::Object> sub;
-	check("get obj.sub", v8pp::get_option(isolate, obj, "sub", sub)
-		&& sub->IsObject());
+	check("get obj.sub", v8pp::get_option(isolate, obj, "sub", sub) && sub->IsObject());
 
 	context.run_script("test = { test : function() { return 1; } }");
 	obj = isolate->GetCurrentContext()->Global();
 	v8::Local<v8::Function> fun;
-	check("test.test", v8pp::get_option(isolate, obj, "test.test", fun)
-		&& fun->IsFunction());
+	check("test.test", v8pp::get_option(isolate, obj, "test.test", fun) && fun->IsFunction());
 }

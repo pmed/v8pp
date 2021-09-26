@@ -40,7 +40,7 @@ class external_data
 		explicit pointer_cast(void* ptr) : ptr(ptr) {}
 		explicit pointer_cast(T value) : value(value) {}
 
-		operator void* () const { return ptr; }
+		operator void*() const { return ptr; }
 		operator T() const { return value; }
 	};
 
