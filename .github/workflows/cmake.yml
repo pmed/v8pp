@@ -1,11 +1,5 @@
 name: CMake
-
-on:
-  push:
-    branches: [ master, c++17 ]
-  pull_request:
-    branches: [ master, c++17 ]
-
+on: [ push, pull_request ]
 jobs:
   build:
     strategy:
