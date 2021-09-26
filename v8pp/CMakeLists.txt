@@ -65,7 +65,7 @@ if(V8PP_HEADER_ONLY)
 	target_include_directories(v8pp INTERFACE
 		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
 		$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
-	target_link_libraries(v8pp INTERFACE V8::V8)
+	target_link_libraries(v8pp INTERFACE V8::v8 V8::libplatform)
 else()
 	add_library(v8pp ${V8PP_HEADERS} ${V8PP_SOURCES})
 	target_compile_definitions(v8pp PUBLIC ${V8PP_DEFINES})
@@ -73,7 +73,7 @@ else()
 	target_include_directories(v8pp PUBLIC
 		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
 		$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
-	target_link_libraries(v8pp PUBLIC V8::V8)
+	target_link_libraries(v8pp PUBLIC V8::v8 V8::libplatform)
 	if(BUILD_SHARED_LIBS)
 		target_link_libraries(v8pp PUBLIC ${CMAKE_DL_LIBS})
 	endif()
