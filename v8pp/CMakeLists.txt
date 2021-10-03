@@ -3,14 +3,14 @@
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(V8 REQUIRED)
 
-configure_file(config.hpp.in config.hpp)
+configure_file(config.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/config.hpp)
 
 if(V8_COMPRESS_POINTERS)
 	set(V8PP_DEFINES V8_COMPRESS_POINTERS V8_31BIT_SMIS_ON_64BIT_ARCH)
 endif()
 
 set(V8PP_HEADERS
-	config.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/config.hpp
 	call_from_v8.hpp
 	call_v8.hpp
 	class.hpp
