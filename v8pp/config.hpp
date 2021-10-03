@@ -10,7 +10,7 @@
 #define V8PP_CONFIG_HPP_INCLUDED
 
 /// v8pp library version
-#define V8PP_VERSION "1.7.0"
+#define V8PP_VERSION "2.0.0"
 
 /// v8::Isolate data slot number, used in v8pp for shared data
 #if !defined(V8PP_ISOLATE_DATA_SLOT)
@@ -43,8 +43,7 @@
 #endif
 
 #define V8PP_PLUGIN_INIT(isolate) extern "C" V8PP_EXPORT \
-	v8::Local<v8::Value>                                 \
-		V8PP_PLUGIN_INIT_PROC_NAME(isolate)
+v8::Local<v8::Value> V8PP_PLUGIN_INIT_PROC_NAME(isolate)
 
 #ifndef V8PP_HEADER_ONLY
 #define V8PP_HEADER_ONLY 1
@@ -55,5 +54,10 @@
 #else
 #define V8PP_IMPL
 #endif
+
+#define V8PP_USE_STD_STRING_VIEW 1
+
+#define V8PP_STRINGIZE(s)  V8PP_STRINGIZE0(s)
+#define V8PP_STRINGIZE0(s) #s
 
 #endif // V8PP_CONFIG_HPP_INCLUDED

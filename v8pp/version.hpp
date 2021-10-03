@@ -15,6 +15,8 @@ namespace v8pp {
 
 char const* version();
 
+char const* build_options();
+
 }
 
 #if V8PP_HEADER_ONLY

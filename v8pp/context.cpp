@@ -27,9 +27,6 @@ static char const path_sep = '\\';
 static char const path_sep = '/';
 #endif
 
-#define STRINGIZE(s) STRINGIZE0(s)
-#define STRINGIZE0(s) #s
-
 namespace v8pp {
 
 struct context::dynamic_module
@@ -90,15 +87,15 @@ void context::load_module(v8::FunctionCallbackInfo<v8::Value> const& args)
 			}
 #if defined(WIN32)
 			void* sym = ::GetProcAddress((HMODULE)module.handle,
-				STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
+				V8PP_STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
 #else
-			void* sym = dlsym(module.handle, STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
+			void* sym = dlsym(module.handle, V8PP_STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
 #endif
 			if (!sym)
 			{
 				throw std::runtime_error("load_module(" + name
 					+ "): initialization function "
-					STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME)
+					V8PP_STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME)
 					" not found in " + filename);
 			}
 
