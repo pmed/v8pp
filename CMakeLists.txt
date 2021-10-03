@@ -20,7 +20,7 @@ set(V8PP_HEADER_ONLY 0 CACHE BOOL "Header-only library")
 set(V8PP_ISOLATE_DATA_SLOT 0 CACHE STRING "v8::Isolate data slot number, used in v8pp for shared data")
 set(V8PP_PLUGIN_INIT_PROC_NAME "v8pp_module_init" CACHE STRING "v8pp plugin initialization procedure name")
 set(V8PP_PLUGIN_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX} CACHE STRING "v8pp plugin filename suffix")
-option(V8_COMPRESS_POINTERS "Use new V8 ABI with V8_COMPRESS_POINTERS and V8_31BIT_SMIS_ON_64BIT_ARCH" ON)
+set(V8_COMPRESS_POINTERS 1 CACHE BOOL "Use new V8 ABI with V8_COMPRESS_POINTERS and V8_31BIT_SMIS_ON_64BIT_ARCH")
 
 if(BUILD_SHARED_LIBS AND WIN32)
 	set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS true)
