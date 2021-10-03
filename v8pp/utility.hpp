@@ -16,7 +16,7 @@
 #include <tuple>
 #include <type_traits>
 
-#ifdef __cpp_lib_string_view
+#if defined(__cpp_lib_string_view) && V8PP_USE_STD_STRING_VIEW
 #include <string_view>
 
 namespace v8pp {

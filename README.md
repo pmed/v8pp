@@ -50,6 +50,9 @@ Some of them could be:
 > // v8pp plugin filename suffix
 > V8PP_PLUGIN_SUFFIX:STRING=.dylib
 >
+> // Use std::string_view
+> V8PP_USE_STD_STRING_VIEW:BOOL=0
+>
 > // Use new V8 ABI with V8_COMPRESS_POINTERS and V8_31BIT_SMIS_ON_64BIT_ARCH
 > V8_COMPRESS_POINTERS:BOOL=ON
 

@@ -51,4 +51,8 @@ v8::Local<v8::Value> V8PP_PLUGIN_INIT_PROC_NAME(isolate)
 #define V8PP_IMPL
 #endif
 
+#if !defined(V8PP_USE_STD_STRING_VIEW)
+#define V8PP_USE_STD_STRING_VIEW @V8PP_USE_STD_STRING_VIEW@
+#endif
+
 #endif // V8PP_CONFIG_HPP_INCLUDED
