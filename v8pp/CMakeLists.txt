@@ -54,7 +54,7 @@ if(MSVC)
 	# set warning level 3 for system headers
 	list(APPEND V8PP_COMPILE_OPTIONS /experimental:external /external:anglebrackets /external:W3)
 else()
-	set(V8PP_COMPILE_OPTIONS -fno-rtti -Wall -Wextra -Wpedantic)
+	set(V8PP_COMPILE_OPTIONS -fno-rtti -fexceptions -Wall -Wextra -Wpedantic)
 endif()
 
 if(V8PP_HEADER_ONLY)
@@ -69,7 +69,7 @@ if(V8PP_HEADER_ONLY)
 else()
 	add_library(v8pp ${V8PP_HEADERS} ${V8PP_SOURCES})
 	target_compile_definitions(v8pp PUBLIC ${V8PP_DEFINES})
-	target_compile_options(v8pp PRIVATE ${V8PP_COMPILE_OPTIONS})
+	target_compile_options(v8pp PUBLIC ${V8PP_COMPILE_OPTIONS})
 	target_include_directories(v8pp PUBLIC
 		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
 		$<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
