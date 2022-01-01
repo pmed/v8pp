@@ -336,17 +336,15 @@ using is_callable = std::integral_constant<bool,
 class type_info
 {
 public:
-	std::string_view name() const { return name_; }
-
-	bool operator==(type_info const& other) const { return name_ == other.name_; }
-	bool operator!=(type_info const& other) const { return name_ != other.name_; }
+	constexpr std::string_view name() const { return name_; }
+	constexpr bool operator==(type_info const& other) const { return name_ == other.name_; }
+	constexpr bool operator!=(type_info const& other) const { return name_ != other.name_; }
 
 private:
-	template<typename T>
-	friend type_info type_id();
+	template<typename T> constexpr friend type_info type_id();
 
-	type_info(char const* name, size_t size)
-		: name_(name, size)
+	constexpr explicit type_info(std::string_view name)
+		: name_(name)
 	{
 	}
 
@@ -356,37 +354,39 @@ private:
 /// Get type information for type T
 /// The idea is borrowed from https://github.com/Manu343726/ctti
 template<typename T>
-type_info type_id()
+constexpr type_info type_id()
 {
 #if defined(_MSC_VER) && !defined(__clang__)
-#define V8PP_PRETTY_FUNCTION __FUNCSIG__
-#define V8PP_PRETTY_FUNCTION_PREFIX "class v8pp::detail::type_info __cdecl v8pp::detail::type_id<"
-#define V8PP_PRETTY_FUNCTION_SUFFIX ">(void)"
+	std::string_view name = __FUNCSIG__;
+	const std::initializer_list<std::string_view> all_prefixes{ "type_id<", "struct ", "class " };
+	const std::initializer_list<std::string_view> any_suffixes{ ">" };
 #elif defined(__clang__) || defined(__GNUC__)
-#define V8PP_PRETTY_FUNCTION __PRETTY_FUNCTION__
-#if !defined(__clang__)
-#define V8PP_PRETTY_FUNCTION_PREFIX "v8pp::detail::type_info v8pp::detail::type_id() [with T = "
-#else
-#define V8PP_PRETTY_FUNCTION_PREFIX "v8pp::detail::type_info v8pp::detail::type_id() [T = "
-#endif
-#define V8PP_PRETTY_FUNCTION_SUFFIX "]"
+	std::string_view name = __PRETTY_FUNCTION__;
+	const std::initializer_list<std::string_view> all_prefixes{ "T = " };
+	const std::initializer_list<std::string_view> any_suffixes{ ";", "]" };
 #else
 #error "Unknown compiler"
 #endif
+	for (auto&& prefix : all_prefixes)
+	{
+		const auto p = name.find(prefix);
+		if (p != name.npos)
+		{
+			name.remove_prefix(p + prefix.size());
+		}
+	}
 
-#define V8PP_PRETTY_FUNCTION_LEN (sizeof(V8PP_PRETTY_FUNCTION) - 1)
-#define V8PP_PRETTY_FUNCTION_PREFIX_LEN (sizeof(V8PP_PRETTY_FUNCTION_PREFIX) - 1)
-#define V8PP_PRETTY_FUNCTION_SUFFIX_LEN (sizeof(V8PP_PRETTY_FUNCTION_SUFFIX) - 1)
+	for (auto&& suffix : any_suffixes)
+	{
+		const auto p = name.rfind(suffix);
+		if (p != name.npos)
+		{
+			name.remove_suffix(name.size() - p);
+			break;
+		}
+	}
 
-	return type_info(V8PP_PRETTY_FUNCTION + V8PP_PRETTY_FUNCTION_PREFIX_LEN,
-		V8PP_PRETTY_FUNCTION_LEN - V8PP_PRETTY_FUNCTION_PREFIX_LEN - V8PP_PRETTY_FUNCTION_SUFFIX_LEN);
-
-#undef V8PP_PRETTY_FUNCTION
-#undef V8PP_PRETTY_FUNCTION_PREFIX
-#undef V8PP_PRETTY_FUNCTION_SUFFFIX
-#undef V8PP_PRETTY_FUNCTION_LEN
-#undef V8PP_PRETTY_FUNCTION_PREFIX_LEN
-#undef V8PP_PRETTY_FUNCTION_SUFFFIX_LEN
+	return type_info(name);
 }
 
 }} // namespace v8pp::detail

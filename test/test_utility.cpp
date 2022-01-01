@@ -259,11 +259,6 @@ void test_utility()
 
 	check_eq("type_id", type_id<int>().name(), "int");
 	check_eq("type_id", type_id<bool>().name(), "bool");
-#if defined(_MSC_VER) && !defined(__clang__)
-	check_eq("type_id", type_id<some_struct>().name(), "struct some_struct");
-	check_eq("type_id", type_id<test::some_class>().name(), "class test::some_class");
-#else
 	check_eq("type_id", type_id<some_struct>().name(), "some_struct");
 	check_eq("type_id", type_id<test::some_class>().name(), "test::some_class");
-#endif
 }
