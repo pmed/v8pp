@@ -1,6 +1,7 @@
 #ifndef V8PP_UTILITY_HPP_INCLUDED
 #define V8PP_UTILITY_HPP_INCLUDED
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <stdexcept>
@@ -74,11 +75,42 @@ public:
 		return ptr ? ptr - data_ : npos;
 	}
 
+	size_t find(basic_string_view str) const
+	{
+		for (const_iterator it = begin(); it != end(); ++it)
+		{
+			const size_t rest = end() - it;
+			if (str.size() > rest) break;
+			if (Traits::compare(it, str.data(), str.size()) == 0)
+			{
+				return it - begin();
+			}
+		}
+		return npos;
+	}
+
+	size_t rfind(basic_string_view str) const
+	{
+		if (size_ >= str.size_)
+		{
+			const auto p = std::find_end(begin(), end(), str.begin(), str.end());
+			if (p != end())
+			{
+				return p - begin();
+			}
+
+		}
+		return npos;
+	}
+
 	basic_string_view substr(size_t pos = 0, size_t count = npos) const
 	{
 		if (pos > size_) throw std::out_of_range("pos > size");
 		return basic_string_view(data_ + pos, std::min(count, size_ - pos));
 	}
+
+	void remove_prefix(size_t n) { data_ += n; size_ -=n;}
+	void remove_suffix(size_t n) { size_ -= n; }
 
 	operator std::basic_string<Char, Traits>() const
 	{
@@ -489,8 +521,8 @@ private:
 	template<typename T>
 	friend type_info type_id();
 
-	type_info(char const* name, size_t size)
-		: name_(name, size)
+	explicit type_info(string_view name)
+		: name_(name)
 	{
 	}
 
@@ -503,34 +535,36 @@ template<typename T>
 type_info type_id()
 {
 #if defined(_MSC_VER) && !defined(__clang__)
-	#define V8PP_PRETTY_FUNCTION __FUNCSIG__
-	#define V8PP_PRETTY_FUNCTION_PREFIX "class v8pp::detail::type_info __cdecl v8pp::detail::type_id<"
-	#define V8PP_PRETTY_FUNCTION_SUFFIX ">(void)"
+	string_view name = __FUNCSIG__;
+	const std::initializer_list<string_view> all_prefixes{ "type_id<", "struct ", "class " };
+	const std::initializer_list<string_view> any_suffixes{ ">" };
 #elif defined(__clang__) || defined(__GNUC__)
-	#define V8PP_PRETTY_FUNCTION __PRETTY_FUNCTION__
-	#if !defined(__clang__)
-		#define V8PP_PRETTY_FUNCTION_PREFIX "v8pp::detail::type_info v8pp::detail::type_id() [with T = "
-	#else
-		#define V8PP_PRETTY_FUNCTION_PREFIX "v8pp::detail::type_info v8pp::detail::type_id() [T = "
-	#endif
-	#define V8PP_PRETTY_FUNCTION_SUFFIX "]"
+	string_view name = __PRETTY_FUNCTION__;
+	const std::initializer_list<string_view> all_prefixes{ "T = " };
+	const std::initializer_list<string_view> any_suffixes{ ";", "]" };
 #else
-	#error "Unknown compiler"
+#error "Unknown compiler"
 #endif
+	for (auto&& prefix : all_prefixes)
+	{
+		const auto p = name.find(prefix);
+		if (p != name.npos)
+		{
+			name.remove_prefix(p + prefix.size());
+		}
+	}
 
-#define V8PP_PRETTY_FUNCTION_LEN (sizeof(V8PP_PRETTY_FUNCTION) - 1)
-#define V8PP_PRETTY_FUNCTION_PREFIX_LEN (sizeof(V8PP_PRETTY_FUNCTION_PREFIX) - 1)
-#define V8PP_PRETTY_FUNCTION_SUFFIX_LEN (sizeof(V8PP_PRETTY_FUNCTION_SUFFIX) - 1)
+	for (auto&& suffix : any_suffixes)
+	{
+		const auto p = name.rfind(suffix);
+		if (p != name.npos)
+		{
+			name.remove_suffix(name.size() - p);
+			break;
+		}
+	}
 
-	return type_info(V8PP_PRETTY_FUNCTION + V8PP_PRETTY_FUNCTION_PREFIX_LEN,
-		V8PP_PRETTY_FUNCTION_LEN - V8PP_PRETTY_FUNCTION_PREFIX_LEN - V8PP_PRETTY_FUNCTION_SUFFIX_LEN);
-
-#undef V8PP_PRETTY_FUNCTION
-#undef V8PP_PRETTY_FUNCTION_PREFIX
-#undef V8PP_PRETTY_FUNCTION_SUFFFIX
-#undef V8PP_PRETTY_FUNCTION_LEN
-#undef V8PP_PRETTY_FUNCTION_PREFIX_LEN
-#undef V8PP_PRETTY_FUNCTION_SUFFFIX_LEN
+	return type_info(name);
 }
 
 }} // namespace v8pp::detail
