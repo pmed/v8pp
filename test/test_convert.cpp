@@ -108,7 +108,7 @@ struct convert<person>
 	{
 		if (!is_valid(isolate, value))
 		{
-			throw std::runtime_error("excpected object");
+			throw std::runtime_error("expected object");
 		}
 
 		v8::HandleScope scope(isolate);
@@ -374,6 +374,8 @@ void test_convert()
 #ifdef WIN32
 	test_string_conv(isolate, L"qaz");
 #endif
+	// numeric string
+	test_string_conv(isolate, "0");
 
 	const std::vector<int> vector{ 1, 2, 3 };
 	test_conv(isolate, vector);
@@ -391,7 +393,7 @@ void test_convert()
 	test_conv(isolate, std::map<char, int>{ { 'a', 1 }, { 'b', 2 }, { 'c', 3 } });
 	test_conv(isolate, std::multimap<int, int>{ { 1, -1 }, { 2, -2 } });
 	test_conv(isolate, std::unordered_map<char, std::string>{ { 'x', "1" }, { 'y', "2" } });
-	test_conv(isolate, std::unordered_multimap<std::string, int>{ { "a", 1 }, { "b", 2 } });
+	test_conv(isolate, std::unordered_multimap<std::string, int>{ { "0", 0 }, { "a", 1 }, { "b", 2 } });
 
 	check_eq("initializer list to array",
 		v8pp::from_v8<std::vector<int>>(isolate, v8pp::to_v8(isolate, { 1, 2, 3 })), vector);

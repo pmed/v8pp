@@ -67,7 +67,7 @@ struct convert<String, typename std::enable_if<detail::is_string<String>::value>
 
 	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
 	{
-		return !value.IsEmpty() && value->IsString();
+		return !value.IsEmpty() && (value->IsString() || value->IsNumber());
 	}
 
 	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
