@@ -1,5 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\v8-v143-x86.9.8.177.4\build\native\v8-v143-x86.props" Condition="Exists('..\packages\v8-v143-x86.9.8.177.4\build\native\v8-v143-x86.props')" />
+  <Import Project="..\packages\v8.redist-v143-x86.9.8.177.4\build\native\v8.redist-v143-x86.props" Condition="Exists('..\packages\v8.redist-v143-x86.9.8.177.4\build\native\v8.redist-v143-x86.props')" />
+  <Import Project="..\packages\v8-v143-x64.9.8.177.4\build\native\v8-v143-x64.props" Condition="Exists('..\packages\v8-v143-x64.9.8.177.4\build\native\v8-v143-x64.props')" />
+  <Import Project="..\packages\v8.redist-v143-x64.9.8.177.4\build\native\v8.redist-v143-x64.props" Condition="Exists('..\packages\v8.redist-v143-x64.9.8.177.4\build\native\v8.redist-v143-x64.props')" />
   <Import Project="..\packages\v8.symbols-v142-x86.7.5.288.23\build\native\v8.symbols-v142-x86.props" Condition="Exists('..\packages\v8.symbols-v142-x86.7.5.288.23\build\native\v8.symbols-v142-x86.props')" />
   <Import Project="..\packages\v8-v142-x86.7.5.288.23\build\native\v8-v142-x86.props" Condition="Exists('..\packages\v8-v142-x86.7.5.288.23\build\native\v8-v142-x86.props')" />
   <Import Project="..\packages\v8.redist-v142-x86.7.5.288.23\build\native\v8.redist-v142-x86.props" Condition="Exists('..\packages\v8.redist-v142-x86.7.5.288.23\build\native\v8.redist-v142-x86.props')" />
@@ -35,25 +39,25 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -172,5 +176,9 @@
     <Error Condition="!Exists('..\packages\v8.redist-v142-x86.7.5.288.23\build\native\v8.redist-v142-x86.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.redist-v142-x86.7.5.288.23\build\native\v8.redist-v142-x86.props'))" />
     <Error Condition="!Exists('..\packages\v8-v142-x86.7.5.288.23\build\native\v8-v142-x86.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8-v142-x86.7.5.288.23\build\native\v8-v142-x86.props'))" />
     <Error Condition="!Exists('..\packages\v8.symbols-v142-x86.7.5.288.23\build\native\v8.symbols-v142-x86.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.symbols-v142-x86.7.5.288.23\build\native\v8.symbols-v142-x86.props'))" />
+    <Error Condition="!Exists('..\packages\v8.redist-v143-x64.9.8.177.4\build\native\v8.redist-v143-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.redist-v143-x64.9.8.177.4\build\native\v8.redist-v143-x64.props'))" />
+    <Error Condition="!Exists('..\packages\v8-v143-x64.9.8.177.4\build\native\v8-v143-x64.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8-v143-x64.9.8.177.4\build\native\v8-v143-x64.props'))" />
+    <Error Condition="!Exists('..\packages\v8.redist-v143-x86.9.8.177.4\build\native\v8.redist-v143-x86.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8.redist-v143-x86.9.8.177.4\build\native\v8.redist-v143-x86.props'))" />
+    <Error Condition="!Exists('..\packages\v8-v143-x86.9.8.177.4\build\native\v8-v143-x86.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\v8-v143-x86.9.8.177.4\build\native\v8-v143-x86.props'))" />
   </Target>
 </Project>
