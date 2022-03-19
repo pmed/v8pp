@@ -16,9 +16,22 @@ if(WIN32)
 			set(ARCH x86)
 		endif()
 	endif()
-	message(STATUS "v8-v${MSVC_TOOLSET_VERSION}-${ARCH}")
-	file(GLOB V8_NUGET_DEV_DIR LIST_DIRECTORIES TRUE
-		${CMAKE_BINARY_DIR}/v8-v${MSVC_TOOLSET_VERSION}-${ARCH}.*)
+
+	set(V8_PACKAGE_NAME v8-v${MSVC_TOOLSET_VERSION}-${ARCH})
+	set(V8_PACKAGE_DIRS ${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/packages)
+
+	message(STATUS "Looking for ${V8_PACKAGE_NAME} in ${V8_PACKAGE_DIRS}")
+	foreach(V8_PACKAGE_DIR ${V8_PACKAGE_DIRS})
+		file(GLOB V8_NUGET_DEV_DIR LIST_DIRECTORIES TRUE ${V8_PACKAGE_DIR}/${V8_PACKAGE_NAME}.*)
+		if(V8_NUGET_DEV_DIR)
+			break()
+		endif()
+	endforeach()
+
+	if (NOT V8_NUGET_DEV_DIR)
+		message(FATAL_ERROR "Not found ${V8_PACKAGE_NAME} in ${V8_PACKAGE_DIRS}")
+	endif()
+
 	string(REPLACE "v8-" "v8.redist-" V8_NUGET_BIN_DIR ${V8_NUGET_DEV_DIR})
 
 	set(V8_NUGET_INCLUDE_DIR ${V8_NUGET_DEV_DIR}/include)
@@ -46,12 +59,12 @@ mark_as_advanced(V8_INCLUDE_DIRS V8_LIB)
 if(V8_FOUND)
 	add_library(V8::v8 SHARED IMPORTED)
 	add_library(V8::libplatform SHARED IMPORTED)
-    if(WIN32)
+	if(WIN32)
 		set_target_properties(V8::v8 PROPERTIES
 			IMPORTED_IMPLIB ${V8_LIB} IMPORTED_LOCATION ${V8_DLL})
 		set_target_properties(V8::libplatform PROPERTIES
 			IMPORTED_IMPLIB ${V8_LIBPLATFORM} IMPORTED_LOCATION ${V8_LIBPLATFORMDLL})
-    else()
+	else()
 		set_target_properties(V8::v8 PROPERTIES IMPORTED_LOCATION ${V8_LIB})
 		set_target_properties(V8::libplatform PROPERTIES IMPORTED_LOCATION ${V8_LIBPLATFORM})
 	endif()
