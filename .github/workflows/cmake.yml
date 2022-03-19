@@ -39,6 +39,9 @@ jobs:
     - name: Install Visual C++ 
       if: startsWith(matrix.os, 'windows')
       uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+        toolset: 14.29 # Visual C++ 2019
 
     - name: Install ninja-build tool
       uses: seanmiddleditch/gha-setup-ninja@v3
