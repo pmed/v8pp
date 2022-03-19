@@ -91,7 +91,7 @@ A class template in [`v8pp/class.hpp`](../v8pp/class.hpp) is used to register
 a wrapped C++ class in `v8pp` and to bind the class members into V8.
 
 Allowed `class_` bindings:
-  * literla constanst with `const_(name, const_value)`
+  * literal constanst with `const_(name, const_value)`
   * class data members with `var(name, &Class::data_member)`
   * functions with `function(name, &Class::function_member)`
   * static class functions, free functions, lambdas with `function(name, function_or_lambda_ref)`
@@ -99,6 +99,7 @@ Allowed `class_` bindings:
 
 
 ```c++
+// C++ code
 struct X
 {
 	bool b;
@@ -190,4 +191,35 @@ y.wprop == 12;
 assert(y.get() == 12);
 assert(y.ext_fun() == y.b);
 assert(module.Y.ext_fun(100) == 100);
+```
+
+### Auto-wrapping objects
+
+A wrapped object would be created automatically if `class_<T>.auto_wrap_objects(bool auto_wrap = true)`
+has been called for the class binding. This feature allows immediately to use
+in JavaScript an object that was created in C++ code:
+
+```c++
+// C++ code
+struct X
+{
+	int x;
+	explicit X(int x) : x(x) {}
+};
+
+v8pp::class_<X, Traits> X_class(isolate);
+X_class
+	.template ctor<int>()
+	.auto_wrap_objects(true)
+	.property("x", &X::x)
+	;
+
+context.class_("X", X_class);
+context.function("makeX", [](int x) { return X(x); });
+```
+
+```javascript
+// JavaScript after bindings above
+obj = makeX(123);
+assert(obj.x == 123);
 ```

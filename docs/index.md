@@ -9,7 +9,6 @@ description: Uncompleted documentation on v8pp usage and internals.
 * [Data conversion](./convert.md)
 * [Exceptions](./exceptions.md)
 * [Wrapping C++ functions and classes](wrapping.md)
-* [Persistent handles](persistent.md)
 * [Utility functions](utilities.md)
 * [Context](context.md)
 * [Plugins](plugins.md)
