@@ -1,7 +1,11 @@
 # v8pp target
+if(DEFINED VCPKG_TARGET_TRIPLET)
+	find_package(V8 CONFIG REQUIRED)
+else()
+	list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+	find_package(V8 REQUIRED)
+endif()
 
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-find_package(V8 REQUIRED)
 
 configure_file(config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/config.hpp)
 
@@ -65,7 +69,6 @@ if(V8PP_HEADER_ONLY)
 		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
 		$<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
 		$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
-	target_link_libraries(v8pp INTERFACE V8::v8 V8::libplatform)
 else()
 	add_library(v8pp ${V8PP_HEADERS} ${V8PP_SOURCES})
 	target_compile_definitions(v8pp PUBLIC ${V8PP_DEFINES})
@@ -74,10 +77,15 @@ else()
 		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
 		$<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
 		$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
-	target_link_libraries(v8pp PUBLIC V8::v8 V8::libplatform)
 	if(BUILD_SHARED_LIBS)
 		target_link_libraries(v8pp PUBLIC ${CMAKE_DL_LIBS})
 	endif()
+endif()
+
+if(DEFINED VCPKG_TARGET_TRIPLET)
+	target_link_libraries(v8pp PUBLIC V8::V8)
+else()
+	target_link_libraries(v8pp PUBLIC V8::v8 V8::libplatform)
 endif()
 
 #source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${V8PP_HEADERS} ${V8PP_SOURCES})
