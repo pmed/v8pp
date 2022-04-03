@@ -106,6 +106,7 @@ void test_context()
 
 		// Isolate and HandleScope shall exist before init_global
 		v8::Isolate* isolate = v8pp::context::create_isolate();
+		v8::Isolate::Scope isolate_scope(isolate);
 		v8::HandleScope scope(isolate);
 
 		v8pp::context::options opt;
