@@ -17,6 +17,10 @@ if(WIN32)
 		endif()
 	endif()
 
+	if(NOT CMAKE_BUILD_TYPE)
+		message(WARNING "No CMAKE_BUILD_TYPE set")
+	endif()
+
 	set(V8_PACKAGE_NAME v8-v${MSVC_TOOLSET_VERSION}-${ARCH})
 	set(V8_PACKAGE_DIRS ${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/packages)
 
@@ -30,6 +34,8 @@ if(WIN32)
 
 	if (NOT V8_NUGET_DEV_DIR)
 		message(FATAL_ERROR "Not found ${V8_PACKAGE_NAME} in ${V8_PACKAGE_DIRS}")
+	else()
+		message(STATUS "Found V8 ${V8_NUGET_DEV_DIR}")
 	endif()
 
 	string(REPLACE "v8-" "v8.redist-" V8_NUGET_BIN_DIR ${V8_NUGET_DEV_DIR})
@@ -37,13 +43,13 @@ if(WIN32)
 	set(V8_NUGET_INCLUDE_DIR ${V8_NUGET_DEV_DIR}/include)
 	set(V8_NUGET_LIB_DIR ${V8_NUGET_DEV_DIR}/lib/${CMAKE_BUILD_TYPE})
 	set(V8_NUGET_BIN_DIR ${V8_NUGET_BIN_DIR}/lib/${CMAKE_BUILD_TYPE})
+
 	find_file(V8_DLL v8.dll ${V8_NUGET_BIN_DIR})
 	find_file(V8_LIBPLATFORMDLL v8_libplatform.dll ${V8_NUGET_BIN_DIR})
 
 	file(GLOB V8_BINARIES ${V8_NUGET_BIN_DIR}/*)
 	message(STATUS "Copy ${V8_BINARIES} to the project output dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 	file(COPY ${V8_BINARIES} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-else()
 endif()
 
 find_path(V8_INCLUDE_DIRS PATHS ${V8_NUGET_INCLUDE_DIR} PATH_SUFFIXES v8 NAMES v8.h)
@@ -70,4 +76,9 @@ if(V8_FOUND)
 	endif()
 	target_include_directories(V8::v8 INTERFACE ${V8_INCLUDE_DIRS})
 	target_include_directories(V8::libplatform INTERFACE ${V8_INCLUDE_DIRS})
+	target_link_libraries(V8::v8 INTERFACE V8::libplatform)
+
+	if(NOT TARGET V8::V8)
+		add_library(V8::V8 ALIAS V8::v8)
+	endif()
 endif()
