@@ -265,6 +265,41 @@ struct convert<T, typename std::enable_if<std::is_floating_point<T>::value>::typ
 	}
 };
 
+// convert std::optional <-> value or undefined
+template<typename T>
+struct convert<std::optional<T>>
+{
+	using from_type = std::optional<T>;
+	using to_type = typename convert<T>::to_type; // v8::Local<v8::Value>;
+
+	static bool is_valid(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	{
+		return convert<T>::is_valid(isolate, value);
+	}
+
+	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	{
+		if (!is_valid(isolate, value))
+		{
+			throw invalid_argument(isolate, value, "Optional");
+		}
+
+		return convert<T>::from_v8(isolate, value);
+	}
+
+	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
+	{
+		if (value.has_value())
+		{
+			return convert<T>::to_v8(isolate, value.value());
+		}
+		else
+		{
+			return to_type::Cast(v8::Undefined(isolate));
+		}
+	}
+};
+
 // convert std::tuple <-> Array
 template<typename... Ts>
 struct convert<std::tuple<Ts...>>
@@ -637,7 +672,8 @@ struct is_wrapped_class : std::conjunction<
 	std::negation<detail::is_sequence<T>>,
 	std::negation<detail::is_array<T>>,
 	std::negation<detail::is_tuple<T>>,
-	std::negation<detail::is_shared_ptr<T>>>
+	std::negation<detail::is_shared_ptr<T>>,
+	std::negation<detail::is_optional<T>>>
 {
 };
 
