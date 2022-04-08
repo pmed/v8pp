@@ -11,12 +11,29 @@
 
 namespace v8pp { namespace detail {
 
+template<typename>
+struct optional_count_impl;
+
+template<typename... Ts>
+struct optional_count_impl<std::tuple<Ts...>>
+{
+	constexpr static std::size_t count =
+		(0 + ... + (is_optional<Ts>::value ? 1 : 0));
+};
+
+template<typename Tuple>
+constexpr auto optional_count() -> std::size_t
+{
+	return optional_count_impl<Tuple>::count;
+}
+
 template<typename F, size_t Offset = 0>
 struct call_from_v8_traits
 {
 	static constexpr size_t offset = Offset;
 	static constexpr bool is_mem_fun = std::is_member_function_pointer<F>::value;
 	using arguments = typename function_traits<F>::arguments;
+	static constexpr size_t optional_arg_count = optional_count<arguments>();
 
 	static constexpr size_t arg_count =
 		std::tuple_size<arguments>::value - is_mem_fun - offset;
@@ -91,7 +108,7 @@ decltype(auto) call_from_v8(F&& func, v8::FunctionCallbackInfo<v8::Value> const&
 		using call_traits = call_from_v8_traits<F, with_isolate>;
 		using indices = std::make_index_sequence<call_traits::arg_count>;
 
-		if (args.Length() != call_traits::arg_count)
+		if (args.Length() > call_traits::arg_count || args.Length() < call_traits::arg_count - call_traits::optional_arg_count)
 		{
 			throw std::runtime_error("argument count does not match function definition");
 		}

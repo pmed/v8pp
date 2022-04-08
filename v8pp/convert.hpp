@@ -270,7 +270,7 @@ template<typename T>
 struct convert<std::optional<T>>
 {
 	using from_type = std::optional<T>;
-	using to_type = typename convert<T>::to_type; // v8::Local<v8::Value>;
+	using to_type = typename convert<T>::to_type;
 
 	static bool is_valid(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
@@ -281,7 +281,7 @@ struct convert<std::optional<T>>
 	{
 		if (!is_valid(isolate, value))
 		{
-			throw invalid_argument(isolate, value, "Optional");
+			return from_type{};
 		}
 
 		return convert<T>::from_v8(isolate, value);
@@ -894,6 +894,15 @@ v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 	return convert<std::wstring_view>::to_v8(isolate, std::wstring_view(str, len));
 }
 #endif
+
+template<typename T>
+auto to_v8(v8::Isolate* isolate, std::optional<T> const& value) -> v8::Local<v8::Value>
+{
+	if (value.has_value())
+		return convert<T>::to_v8(isolate, value.value());
+	else
+		return v8::Undefined(isolate);
+}
 
 template<typename T>
 auto to_v8(v8::Isolate* isolate, T const& value)
