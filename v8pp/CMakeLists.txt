@@ -1,5 +1,7 @@
 # v8pp target
 
+include(GNUInstallDirs)
+
 if(DEFINED VCPKG_TARGET_TRIPLET)
 	find_package(V8 CONFIG REQUIRED)
 else()
@@ -87,7 +89,6 @@ endif()
 #source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${V8PP_HEADERS} ${V8PP_SOURCES})
 
 # Install
-include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 set(targets_export_name v8pp_Targets)
