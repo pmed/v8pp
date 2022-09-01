@@ -2,7 +2,11 @@
 #define V8PP_CONFIG_HPP_INCLUDED
 
 /// v8pp library version
-#define V8PP_VERSION "@PROJECT_VERSION@"
+#define V8PP_MAJOR @V8PP_MAJOR@
+#define V8PP_MINOR @V8PP_MINOR@
+#define V8PP_REVISION @V8PP_REVISION@
+
+#define V8PP_VERSION V8PP_MAJOR.V8PP_MINOR.V8PP_REVISION
 
 /// v8::Isolate data slot number, used in v8pp for shared data
 #if !defined(V8PP_ISOLATE_DATA_SLOT)
