@@ -5,7 +5,7 @@ namespace v8pp {
 
 V8PP_IMPL char const* version()
 {
-	return #V8PP_VERSION;
+	return V8PP_VERSION;
 }
 
 V8PP_IMPL char const* build_options()
