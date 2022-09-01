@@ -7,7 +7,7 @@ project(v8pp
 	LANGUAGES CXX
 )
 
-set(V8PP_MAJOR 1)
+set(V8PP_MAJOR 2)
 set(V8PP_MINOR 0)
 set(V8PP_REVISION 0)
 
