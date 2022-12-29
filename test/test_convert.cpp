@@ -232,14 +232,14 @@ void check_range(v8::Isolate* isolate)
 	}
 	else
 	{
-		min = std::numeric_limits<T>::min();
+		min = std::numeric_limits<T>::lowest();
 		max = std::numeric_limits<T>::max();
 	}
 
 	check_range(zero);
 	check_range(min);
 	check_range(max);
-	check_range.check_ex(std::nextafter(double(min), std::numeric_limits<double>::min())); // like min - 1 (out of range)
+	check_range.check_ex(std::nextafter(double(min), std::numeric_limits<double>::lowest())); // like min - 1 (out of range)
 	check_range.check_ex(std::nextafter(double(max), std::numeric_limits<double>::max())); // like max + 1 (out of range)
 }
 
