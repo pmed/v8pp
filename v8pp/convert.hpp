@@ -417,7 +417,7 @@ private:
 		}
 		else
 		{
-			Number const min = std::numeric_limits<T>::min();
+			Number const min = std::numeric_limits<T>::lowest();
 			Number const max = std::numeric_limits<T>::max();
 			if (number >= min && number <= max)
 			{
