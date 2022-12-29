@@ -126,6 +126,33 @@ struct convert<wchar_t const*> : convert<std::basic_string_view<wchar_t>>
 
 // converter specializations for primitive types
 template<>
+struct convert<std::monostate>
+{
+	using from_type = std::monostate;
+	using to_type = v8::Local<v8::Primitive>;
+
+	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
+	{
+		return value.IsEmpty() || value->IsNullOrUndefined();
+	}
+
+	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	{
+		if (!is_valid(isolate, value))
+		{
+			throw invalid_argument(isolate, value, "Undefined");
+		}
+
+		return from_type{};
+	}
+
+	static to_type to_v8(v8::Isolate* isolate, from_type value)
+	{
+		return v8::Undefined(isolate);
+	}
+};
+
+template<>
 struct convert<bool>
 {
 	using from_type = bool;
@@ -408,6 +435,10 @@ public:
 				return alternate<is_wrapped_class, detail::is_shared_ptr>(isolate, value);
 			}
 		}
+		else if (value->IsNullOrUndefined())
+		{
+			return alternate<is_monostate>(isolate, value);
+		}
 		else
 		{
 			return alternate<is_any>(isolate, value);
@@ -426,6 +457,9 @@ public:
 private:
 	template<typename T>
 	using is_bool = std::is_same<T, bool>;
+
+	template<typename T>
+	using is_monostate = std::is_same<T, std::monostate>;
 
 	template<typename T>
 	using is_integral_not_bool = std::bool_constant<std::is_integral<T>::value && !is_bool<T>::value>;
@@ -464,7 +498,14 @@ private:
 	template<typename T>
 	static bool try_as(v8::Isolate* isolate, v8::Local<v8::Value> value, std::optional<from_type>& result)
 	{
-		if constexpr (detail::is_shared_ptr<T>::value)
+		if constexpr (std::is_same<T, std::monostate>::value)
+		{
+			if(v8pp::convert<std::monostate>::is_valid(isolate, value))
+			{
+				result = std::monostate{};
+			}
+		}
+		else if constexpr (detail::is_shared_ptr<T>::value)
 		{
 			using U = typename T::element_type;
 			if (auto obj = v8pp::class_<U, v8pp::shared_ptr_traits>::unwrap_object(isolate, value))
