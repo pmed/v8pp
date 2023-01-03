@@ -60,7 +60,7 @@ if(MSVC)
 	# set warning level 3 for system headers
 	list(APPEND V8PP_COMPILE_OPTIONS /experimental:external /external:anglebrackets /external:W3)
 else()
-	set(V8PP_COMPILE_OPTIONS -fno-rtti -fexceptions -Wall -Wextra -Wpedantic)
+	set(V8PP_COMPILE_OPTIONS -frtti -fexceptions -Wall -Wextra -Wpedantic)
 endif()
 
 if(V8PP_HEADER_ONLY)
@@ -83,6 +83,11 @@ else()
 	target_link_libraries(v8pp PUBLIC V8::V8)
 	if(BUILD_SHARED_LIBS)
 		target_link_libraries(v8pp PUBLIC ${CMAKE_DL_LIBS})
+	endif()
+	if(APPLE)
+		# turn off RTTI to avoid generating typeinfo for v8::ArrayBuffer::Allocator
+		# used in context.cpp
+		set_source_files_properties(context.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
 	endif()
 endif()
 
