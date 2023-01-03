@@ -102,6 +102,10 @@ int main(int argc, char const* argv[])
 		}
 	}
 
+	// allow Isolate::RequestGarbageCollectionForTesting() before Initialize()
+	// for v8pp::class_ tests
+	v8::V8::SetFlagsFromString("--expose_gc");
+
 	//v8::V8::InitializeICU();
 	v8::V8::InitializeExternalStartupData(argv[0]);
 #if V8_MAJOR_VERSION >= 7

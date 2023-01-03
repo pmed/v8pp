@@ -320,8 +320,6 @@ void test_class_()
 	check("unref y3_obj", v8pp::to_v8(isolate, y3).IsEmpty());
 	y3_obj.Clear();
 
-	std::string const v8_flags = "--expose_gc";
-	v8::V8::SetFlagsFromString(v8_flags.data(), (int)v8_flags.length());
 	context.isolate()->RequestGarbageCollectionForTesting(
 		v8::Isolate::GarbageCollectionType::kFullGarbageCollection);
 
