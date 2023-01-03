@@ -56,11 +56,41 @@ public:
 		}
 	}
 
+#if V8_MAJOR_VERSION > 10 || (V8_MAJOR_VERSION == 10 && V8_MINOR_VERSION >= 5)
+	static void destroy_all(v8::Isolate*)
+	{
+		// deprecated `Isolate::VisitHandlesWithClassIds()` has been removed
+	}
+#else
 	static void destroy_all(v8::Isolate* isolate)
 	{
+		struct handle_visitor final : v8::PersistentHandleVisitor
+		{
+			v8::Isolate* isolate;
+
+			explicit handle_visitor(v8::Isolate* isolate)
+				: isolate(isolate)
+			{
+			}
+
+			virtual void VisitPersistentHandle(v8::Persistent<v8::Value>* value, uint16_t value_class_id) override
+			{
+				if (value_class_id == external_data::class_id)
+				{
+					v8::HandleScope scope(isolate);
+					v8::Local<v8::External> ext = value->Get(isolate).As<v8::External>();
+					if (!ext.IsEmpty())
+					{
+						delete static_cast<value_holder_base*>(ext->Value());
+					}
+				}
+			}
+		};
+
 		handle_visitor visitor(isolate);
 		isolate->VisitHandlesWithClassIds(&visitor);
 	}
+#endif
 
 private:
 	static constexpr uint16_t class_id = 0x7bc;
@@ -96,29 +126,6 @@ private:
 			{
 				data().~T();
 				pext.Reset();
-			}
-		}
-	};
-
-	struct handle_visitor final : v8::PersistentHandleVisitor
-	{
-		v8::Isolate* isolate;
-
-		explicit handle_visitor(v8::Isolate* isolate)
-			: isolate(isolate)
-		{
-		}
-
-		virtual void VisitPersistentHandle(v8::Persistent<v8::Value>* value, uint16_t value_class_id) override
-		{
-			if (value_class_id == external_data::class_id)
-			{
-				v8::HandleScope scope(isolate);
-				v8::Local<v8::External> ext = value->Get(isolate).As<v8::External>();
-				if (!ext.IsEmpty())
-				{
-					delete static_cast<value_holder_base*>(ext->Value());
-				}
 			}
 		}
 	};
