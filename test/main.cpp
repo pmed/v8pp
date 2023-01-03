@@ -139,7 +139,11 @@ int main(int argc, char const* argv[])
 	}
 
 	v8::V8::Dispose();
+#if V8_MAJOR_VERSION > 9 || (V8_MAJOR_VERSION == 9 && V8_MINOR_VERSION >= 8)
+	v8::V8::DisposePlatform();
+#else
 	v8::V8::ShutdownPlatform();
+#endif
 
 	return result;
 }
