@@ -8,6 +8,21 @@ V8PP_IMPL char const* version()
 	return V8PP_VERSION;
 }
 
+V8PP_IMPL unsigned version_major()
+{
+	return V8PP_VERSION_MAJOR;
+}
+
+V8PP_IMPL unsigned version_minor()
+{
+	return V8PP_VERSION_MINOR;
+}
+
+V8PP_IMPL unsigned version_patch()
+{
+	return V8PP_VERSION_PATCH;
+}
+
 V8PP_IMPL char const* build_options()
 {
 #define STR(opt) #opt "=" V8PP_STRINGIZE(opt) " "

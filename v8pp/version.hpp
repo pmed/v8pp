@@ -7,6 +7,10 @@ namespace v8pp {
 
 char const* version();
 
+unsigned version_major();
+unsigned version_minor();
+unsigned version_patch();
+
 char const* build_options();
 
 }
