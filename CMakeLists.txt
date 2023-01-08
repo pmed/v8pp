@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 
 project(v8pp
-	VERSION 2.0.0
+	VERSION 2.1.0
 	DESCRIPTION "Bind C++ functions and classes into V8 JavaScript engine"
 	HOMEPAGE_URL https://github.com/pmed/v8pp
 	LANGUAGES CXX
