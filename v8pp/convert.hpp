@@ -396,9 +396,7 @@ private:
 	using is_integral_not_bool = std::bool_constant<std::is_integral<T>::value && !is_bool<T>::value>;
 
 	template<typename T>
-	struct is_any : std::true_type
-	{
-	};
+	using is_any = std::true_type;
 
 	static bool is_map_object(v8::Isolate* isolate, v8::Local<v8::Object> obj)
 	{
