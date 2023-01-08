@@ -84,7 +84,11 @@ int main(int argc, char const* argv[])
 		else if (arg == "-v" || arg == "--version")
 		{
 			std::cout << "V8 version " << v8::V8::GetVersion() << std::endl;
-			std::cout << "v8pp version " << v8pp::version() << std::endl;
+			std::cout << "v8pp version " << v8pp::version()
+				<< " (major=" << v8pp::version_major()
+				<< " minor=" << v8pp::version_minor()
+				<< " patch=" << v8pp::version_patch()
+				<< ")\n";
 			std::cout << "v8pp build options " << v8pp::build_options() << std::endl;
 		}
 		else if (arg == "--lib-path")
