@@ -13,6 +13,8 @@
 
 void run_tests()
 {
+	void cpp_call_js();
+	void js_call_cpp();
 	void test_utility();
 	void test_context();
 	void test_convert();
@@ -29,6 +31,8 @@ void run_tests()
 
 	std::pair<char const*, void (*)()> tests[] =
 	{
+		{"cpp_call_js", cpp_call_js},
+		{"js_call_cpp", js_call_cpp},
 		{"test_utility", test_utility},
 		{"test_context", test_context},
 		{"test_convert", test_convert},

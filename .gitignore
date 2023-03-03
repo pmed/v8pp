@@ -13,3 +13,7 @@
 *.so
 *.o
 *.a
+*.dir
+.vs
+CMakeFiles
+/build

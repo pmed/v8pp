@@ -5,6 +5,8 @@ add_executable(v8pp_test
 	test.hpp
 	test_call_from_v8.cpp
 	test_call_v8.cpp
+	js_call_cpp.cpp
+	cpp_call_js.cpp
 	test_class.cpp
 	test_context.cpp
 	test_convert.cpp
