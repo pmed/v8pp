@@ -205,7 +205,7 @@ V8PP_IMPL v8::Local<v8::Object> object_registry<Traits>::wrap_object(pointer_typ
 	{
 		obj->SetAlignedPointerInInternalField(0, Traits::pointer_id(object));
 		obj->SetAlignedPointerInInternalField(1, this);
-	
+
 		v8::Global<v8::Object> pobj(isolate_, obj);
 		pobj.SetWeak(this, [](v8::WeakCallbackInfo<object_registry> const& data)
 			{
@@ -351,9 +351,9 @@ V8PP_IMPL classes::classes_info::iterator classes::find(type_info const& type)
 {
 	return std::find_if(classes_.begin(), classes_.end(),
 		[&type](classes_info::value_type const& info)
-	{
-		return info->type == type;
-	});
+		{
+			return info->type == type;
+		});
 }
 
 V8PP_IMPL classes* classes::instance(operation op, v8::Isolate* isolate)
@@ -385,10 +385,10 @@ V8PP_IMPL classes* classes::instance(operation op, v8::Isolate* isolate)
 	switch (op)
 	{
 	case operation::get:
-	{
-		auto it = instances.find(isolate);
-		return it != instances.end() ? &it->second : nullptr;
-	}
+		{
+			auto it = instances.find(isolate);
+			return it != instances.end() ? &it->second : nullptr;
+		}
 	case operation::add:
 		return &instances[isolate];
 	case operation::remove:

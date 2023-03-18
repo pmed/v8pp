@@ -1,11 +1,3 @@
-//
-// Copyright (c) 2013-2016 Pavel Medvedev. All rights reserved.
-//
-// This file is part of v8pp (https://github.com/pmed/v8pp) project.
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
 #ifndef V8PP_MODULE_HPP_INCLUDED
 #define V8PP_MODULE_HPP_INCLUDED
 
@@ -37,8 +29,17 @@ public:
 	{
 	}
 
+	module(module const&) = delete;
+	module& operator=(module const&) = delete;
+
+	module(module&&) = default;
+	module& operator=(module&&) = default;
+
 	/// v8::Isolate where the module belongs
 	v8::Isolate* isolate() { return isolate_; }
+
+	/// V8 ObjectTemplate implementation
+	v8::Local<v8::ObjectTemplate> impl() const { return obj_; }
 
 	/// Set a V8 value in the module with specified name
 	template<typename Data>
@@ -75,7 +76,7 @@ public:
 
 	/// Set a C++ variable in the module with specified name
 	template<typename Variable>
-	module& var(char const *name, Variable& var)
+	module& var(char const* name, Variable& var)
 	{
 		static_assert(!detail::is_callable<Variable>::value, "Variable must not be callable");
 		v8::HandleScope scope(isolate_);
@@ -89,7 +90,7 @@ public:
 
 	/// Set property in the module with specified name and get/set functions
 	template<typename GetFunction, typename SetFunction = detail::none>
-	module& property(char const *name, GetFunction&& get, SetFunction&& set = {})
+	module& property(char const* name, GetFunction&& get, SetFunction&& set = {})
 	{
 		using Getter = typename std::decay<GetFunction>::type;
 		using Setter = typename std::decay<SetFunction>::type;

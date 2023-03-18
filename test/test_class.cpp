@@ -1,11 +1,3 @@
-//
-// Copyright (c) 2013-2016 Pavel Medvedev. All rights reserved.
-//
-// This file is part of v8pp (https://github.com/pmed/v8pp) project.
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
 #include "v8pp/class.hpp"
 #include "v8pp/json.hpp"
 #include "v8pp/module.hpp"
@@ -13,6 +5,8 @@
 #include "v8pp/property.hpp"
 
 #include "test.hpp"
+
+#include <type_traits>
 
 struct Xbase
 {
@@ -116,7 +110,9 @@ struct Y : X
 
 int Y::instance_count = 0;
 
-struct Z {};
+struct Z
+{
+};
 
 template<typename Traits>
 static int extern_fun(v8::FunctionCallbackInfo<v8::Value> const& args)
@@ -166,9 +162,9 @@ void test_class_()
 		.template ctor<v8::FunctionCallbackInfo<v8::Value> const&>(X_ctor)
 		.const_("konst", 99)
 		.var("var", &X::var)
-//TODO: static property definition works only at the end of class_ declaration!
-//		.static_("my_static_var", 1)
-//		.static_("my_static_const_var", 42, true)
+		//TODO: static property definition works only at the end of class_ declaration!
+		//.static_("my_static_var", 1)
+		//.static_("my_static_const_var", 42, true)
 		.property("rprop", &X::get)
 		.property("wprop", &X::get, &X::set)
 		.property("wprop2", static_cast<x_prop_get>(&X::prop), static_cast<x_prop_set>(&X::prop))
@@ -193,20 +189,24 @@ void test_class_()
 		.static_("my_static_const_var", 42, true)
 		;
 
+	static_assert(std::is_move_constructible<decltype(X_class)>::value, "");
+	static_assert(!std::is_move_assignable<decltype(X_class)>::value, "");
+	static_assert(!std::is_copy_assignable<decltype(X_class)>::value, "");
+	static_assert(!std::is_copy_constructible<decltype(X_class)>::value, "");
+
 	v8pp::class_<Y, Traits> Y_class(isolate);
 	Y_class
 		.template inherit<X>()
 		.template ctor<int>()
 		.function("useX", &Y::useX)
-		.function("useX_ptr", &Y::useX_ptr<Traits>)
-		;
+		.function("useX_ptr", &Y::useX_ptr<Traits>);
 
 	auto Y_class_find = v8pp::class_<Y, Traits>::extend(isolate);
 	Y_class_find.function("toJSON", [](const v8::FunctionCallbackInfo<v8::Value>& args)
-			{
-				bool const with_functions = true;
-				args.GetReturnValue().Set(v8pp::json_object(args.GetIsolate(), args.This(), with_functions));
-			});
+	{
+		bool const with_functions = true;
+		args.GetReturnValue().Set(v8pp::json_object(args.GetIsolate(), args.This(), with_functions));
+	});
 
 	check_ex<std::runtime_error>("already wrapped class X", [isolate]()
 	{
@@ -282,19 +282,16 @@ void test_class_()
 
 	auto y1 = Traits::template create<Y>(-1);
 
-	v8::Local<v8::Object> y1_obj =
-		v8pp::class_<Y, Traits>::reference_external(context.isolate(), y1);
+	v8::Local<v8::Object> y1_obj = v8pp::class_<Y, Traits>::reference_external(context.isolate(), y1);
 	check("y1", v8pp::from_v8<decltype(y1)>(isolate, y1_obj) == y1);
 	check("y1_obj", v8pp::to_v8(isolate, y1) == y1_obj);
 
 	auto y2 = Traits::template create<Y>(-2);
-	v8::Local<v8::Object> y2_obj =
-		v8pp::class_<Y, Traits>::import_external(context.isolate(), y2);
+	v8::Local<v8::Object> y2_obj = v8pp::class_<Y, Traits>::import_external(context.isolate(), y2);
 	check("y2", v8pp::from_v8<decltype(y2)>(isolate, y2_obj) == y2);
 	check("y2_obj", v8pp::to_v8(isolate, y2) == y2_obj);
 
-	v8::Local<v8::Object> y3_obj =
-		v8pp::class_<Y, Traits>::create_object(context.isolate(), -3);
+	v8::Local<v8::Object> y3_obj = v8pp::class_<Y, Traits>::create_object(context.isolate(), -3);
 	auto y3 = v8pp::class_<Y, Traits>::unwrap_object(isolate, y3_obj);
 	check("y3", v8pp::from_v8<decltype(y3)>(isolate, y3_obj) == y3);
 	check("y3_obj", v8pp::to_v8(isolate, y3) == y3_obj);
@@ -407,7 +404,6 @@ void test_multiple_inheritance()
 		.property("H", &C::h, &C::set_h)
 		;
 
-
 	context.class_("C", C_class);
 	check_eq("get attributes", run_script<int>(context, "c = new C(); c.xA + c.xB + c.xC"), 1 + 2 + 3);
 	check_eq("set attributes", run_script<int>(context,
@@ -470,7 +466,8 @@ void test_auto_wrap_objects()
 	X_class
 		.template ctor<int>()
 		.auto_wrap_objects(true)
-		.property("x", &X::get_x);
+		.property("x", &X::get_x)
+		;
 
 	auto f = [](int x) { return X(x); };
 

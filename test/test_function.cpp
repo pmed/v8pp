@@ -1,18 +1,10 @@
-//
-// Copyright (c) 2013-2016 Pavel Medvedev. All rights reserved.
-//
-// This file is part of v8pp (https://github.com/pmed/v8pp) project.
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
 #include "v8pp/function.hpp"
 #include "v8pp/context.hpp"
 
 #include "test.hpp"
 
 static int f(int const& x) { return x; }
-static std::string g(char const* s) { return s? s : ""; }
+static std::string g(char const* s) { return s ? s : ""; }
 static int h(v8::Isolate*, int x, int y) { return x + y; }
 
 struct X
@@ -42,14 +34,14 @@ void test_function()
 		moveonly() = default;
 		moveonly(moveonly const&) = delete;
 		moveonly& operator=(moveonly const&) = delete;
-		moveonly(moveonly &&) = default;
+		moveonly(moveonly&&) = default;
 		moveonly& operator=(moveonly&&) = default;
 	};
 	moveonly z;
 	context.function("lambda", [x, y, z = std::move(z)](int a) { return a + x + y + z.v; });
 	check_eq("lambda", run_script<int>(context, "lambda(3)"), 9);
 
-	auto lambda2 = [](){ return 99; };
+	auto lambda2 = []() { return 99; };
 	//TODO: static_assert(v8pp::detail::external_data::is_bitcast_allowed<decltype(lambda2)>::value);
 
 	context.function("lambda2", lambda2);

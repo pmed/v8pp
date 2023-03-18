@@ -1,11 +1,3 @@
-//
-// Copyright (c) 2013-2016 Pavel Medvedev. All rights reserved.
-//
-// This file is part of v8pp (https://github.com/pmed/v8pp) project.
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
 #ifndef V8PP_CLASS_HPP_INCLUDED
 #define V8PP_CLASS_HPP_INCLUDED
 
@@ -51,10 +43,10 @@ public:
 	object_registry(v8::Isolate* isolate, type_info const& type, dtor_function&& dtor);
 
 	object_registry(object_registry const&) = delete;
-	object_registry(object_registry && src) = default;
+	object_registry(object_registry&&) = default;
 
 	object_registry& operator=(object_registry const&) = delete;
-	object_registry& operator=(object_registry &&) = delete;
+	object_registry& operator=(object_registry&&) = delete;
 
 	~object_registry();
 
@@ -170,8 +162,8 @@ public:
 	using dtor_function = std::function<void(v8::Isolate* isolate, object_pointer_type const& obj)>;
 
 private:
-	template<typename ...Args>
-	static object_pointer_type object_create(v8::Isolate* isolate, Args&&...args)
+	template<typename... Args>
+	static object_pointer_type object_create(v8::Isolate* isolate, Args&&... args)
 	{
 		object_pointer_type object = Traits::template create<T>(std::forward<Args>(args)...);
 		isolate->AdjustAmountOfExternalAllocatedMemory(
@@ -179,7 +171,7 @@ private:
 		return object;
 	}
 
-	template<typename ...Args>
+	template<typename... Args>
 	struct object_create_from_v8
 	{
 		static object_pointer_type call(v8::FunctionCallbackInfo<v8::Value> const& args)
@@ -214,6 +206,12 @@ public:
 	{
 	}
 
+	class_(class_ const&) = delete;
+	class_& operator=(class_ const&) = delete;
+
+	class_(class_&&) = default;
+	class_& operator=(class_&&) = delete;
+
 	/// Find existing class_ to extend bindings
 	static class_ extend(v8::Isolate* isolate)
 	{
@@ -221,7 +219,7 @@ public:
 	}
 
 	/// Set class constructor signature
-	template<typename ...Args, typename Create = object_create_from_v8<Args...>>
+	template<typename... Args, typename Create = object_create_from_v8<Args...>>
 	class_& ctor(ctor_function create = &Create::call)
 	{
 		class_info_.set_ctor([create = std::move(create)](v8::FunctionCallbackInfo<v8::Value> const& args)
@@ -261,7 +259,7 @@ public:
 	class_& function(std::string_view name, Function&& func, v8::PropertyAttribute attr = v8::None)
 	{
 		constexpr bool is_mem_fun = std::is_member_function_pointer_v<Function>;
-	
+
 		static_assert(is_mem_fun || detail::is_callable<Function>::value,
 			"Function must be pointer to member function or callable object");
 
@@ -294,8 +292,7 @@ public:
 
 		v8::HandleScope scope(isolate());
 
-		using attribute_type = typename
-			detail::function_traits<Attribute>::template pointer_type<T>;
+		using attribute_type = typename detail::function_traits<Attribute>::template pointer_type<T>;
 		attribute_type attr = attribute;
 
 		v8::Local<v8::Name> v8_name = v8pp::to_v8(isolate(), name);
@@ -315,14 +312,12 @@ public:
 		using Getter = typename std::conditional<
 			std::is_member_function_pointer<GetFunction>::value,
 			typename detail::function_traits<GetFunction>::template pointer_type<T>,
-			typename std::decay<GetFunction>::type
-		>::type;
+			typename std::decay<GetFunction>::type>::type;
 
 		using Setter = typename std::conditional<
 			std::is_member_function_pointer<SetFunction>::value,
 			typename detail::function_traits<SetFunction>::template pointer_type<T>,
-			typename std::decay<SetFunction>::type
-		>::type;
+			typename std::decay<SetFunction>::type>::type;
 
 		static_assert(std::is_member_function_pointer<GetFunction>::value
 			|| detail::is_callable<Getter>::value, "GetFunction must be callable");
@@ -338,7 +333,7 @@ public:
 		v8::HandleScope scope(isolate());
 
 		v8::AccessorGetterCallback getter = property_type::template get<Traits>;
-		v8::AccessorSetterCallback setter = property_type::is_readonly? nullptr : property_type::template set<Traits>;
+		v8::AccessorSetterCallback setter = property_type::is_readonly ? nullptr : property_type::template set<Traits>;
 		v8::Local<v8::String> v8_name = v8pp::to_v8(isolate(), name);
 		v8::Local<v8::Value> data = detail::external_data::set(isolate(), property_type(std::move(get), std::move(set)));
 		class_info_.class_function_template()->PrototypeTemplate()
@@ -418,7 +413,7 @@ public:
 	}
 
 	/// Create a wrapped C++ object and import it into JavaScript
-	template<typename ...Args>
+	template<typename... Args>
 	static v8::Local<v8::Object> create_object(v8::Isolate* isolate, Args&&... args)
 	{
 		return import_external(isolate, object_create(isolate, std::forward<Args>(args)...));

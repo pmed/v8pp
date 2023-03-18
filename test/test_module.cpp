@@ -1,16 +1,10 @@
-//
-// Copyright (c) 2013-2016 Pavel Medvedev. All rights reserved.
-//
-// This file is part of v8pp (https://github.com/pmed/v8pp) project.
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
 #include "v8pp/module.hpp"
 #include "v8pp/context.hpp"
 #include "v8pp/property.hpp"
 
 #include "test.hpp"
+
+#include <type_traits>
 
 static std::string var;
 
@@ -19,6 +13,11 @@ static int fun(int x) { return x + 1; }
 static int x = 1;
 static int get_x() { return x + 1; }
 static void set_x(int v) { x = v - 1; }
+
+static_assert(std::is_move_constructible<v8pp::module>::value, "");
+static_assert(std::is_move_assignable<v8pp::module>::value, "");
+static_assert(!std::is_copy_assignable<v8pp::module>::value, "");
+static_assert(!std::is_copy_constructible<v8pp::module>::value, "");
 
 void test_module()
 {
@@ -45,6 +44,7 @@ void test_module()
 		.property("rprop", get_x)
 		.property("wprop", get_x, set_x)
 		;
+
 	context.module("module", module);
 
 	check_eq("module.consts.bool",

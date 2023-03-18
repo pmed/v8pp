@@ -1,11 +1,3 @@
-//
-// Copyright (c) 2013-2016 Pavel Medvedev. All rights reserved.
-//
-// This file is part of v8pp (https://github.com/pmed/v8pp) project.
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
 #include <functional>
 
 #include "v8pp/utility.hpp"
@@ -106,7 +98,9 @@ void test_function_traits()
 	test_ret<short>(&X::zz);
 	test_args<std::tuple<X volatile&>>(&X::zz);
 
-	struct Y : X {};
+	struct Y : X
+	{
+	};
 
 	test_ret_derived<float, Y>(&Y::f);
 	test_args_derived<std::tuple<Y const&>, Y>(&Y::f);
@@ -140,12 +134,9 @@ void test_tuple_tail()
 {
 	using v8pp::detail::tuple_tail;
 
-	static_assert(std::is_same<tuple_tail<std::tuple<int>>::type,
-		std::tuple<>>::value, "");
-	static_assert(std::is_same<tuple_tail<std::tuple<int, char>>::type,
-		std::tuple<char>>::value, "");
-	static_assert(std::is_same<tuple_tail<std::tuple<int, char, bool>>::type,
-		std::tuple<char, bool>>::value, "");
+	static_assert(std::is_same<tuple_tail<std::tuple<int>>::type, std::tuple<>>::value, "");
+	static_assert(std::is_same<tuple_tail<std::tuple<int, char>>::type, std::tuple<char>>::value, "");
+	static_assert(std::is_same<tuple_tail<std::tuple<int, char, bool>>::type, std::tuple<char, bool>>::value, "");
 }
 
 int f() { return 1; }
@@ -268,11 +259,6 @@ void test_utility()
 
 	check_eq("type_id", type_id<int>().name(), "int");
 	check_eq("type_id", type_id<bool>().name(), "bool");
-#if defined(_MSC_VER) && !defined(__clang__)
-	check_eq("type_id", type_id<some_struct>().name(), "struct some_struct");
-	check_eq("type_id", type_id<test::some_class>().name(), "class test::some_class");
-#else
 	check_eq("type_id", type_id<some_struct>().name(), "some_struct");
 	check_eq("type_id", type_id<test::some_class>().name(), "test::some_class");
-#endif
 }

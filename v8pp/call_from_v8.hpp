@@ -1,11 +1,3 @@
-//
-// Copyright (c) 2013-2016 Pavel Medvedev. All rights reserved.
-//
-// This file is part of v8pp (https://github.com/pmed/v8pp) project.
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
 #ifndef V8PP_CALL_FROM_V8_HPP_INCLUDED
 #define V8PP_CALL_FROM_V8_HPP_INCLUDED
 
@@ -42,8 +34,7 @@ struct call_from_v8_traits
 	};
 
 	template<size_t Index>
-	using arg_type = typename tuple_element<Index + is_mem_fun,
-		Index < (arg_count + offset)>::type;
+	using arg_type = typename tuple_element < Index + is_mem_fun, Index<(arg_count + offset)>::type;
 
 	template<typename Arg, typename Traits,
 		typename T = std::remove_reference_t<Arg>,
@@ -52,10 +43,8 @@ struct call_from_v8_traits
 		is_wrapped_class<std::remove_cv_t<U>>::value,
 		std::conditional_t<std::is_pointer_v<T>,
 			typename Traits::template convert_ptr<U>,
-			typename Traits::template convert_ref<U>
-		>,
-		convert<std::remove_cv_t<T>>
-	>;
+			typename Traits::template convert_ref<U>>,
+		convert<std::remove_cv_t<T>>>;
 
 	template<size_t Index, typename Traits>
 	static decltype(auto) arg_from_v8(v8::FunctionCallbackInfo<v8::Value> const& args)
@@ -73,17 +62,17 @@ template<typename F, size_t Offset = 0, typename CallTraits = call_from_v8_trait
 inline constexpr bool is_first_arg_isolate = CallTraits::arg_count != (Offset + 0) &&
 	std::is_same_v<typename CallTraits::template arg_type<Offset>, v8::Isolate*>;
 
-template<typename Traits, typename F, typename CallTraits, size_t ...Indices, typename ...ObjArg>
+template<typename Traits, typename F, typename CallTraits, size_t... Indices, typename... ObjArg>
 decltype(auto) call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
-	CallTraits, std::index_sequence<Indices...>, ObjArg&& ... obj)
+	CallTraits, std::index_sequence<Indices...>, ObjArg&&... obj)
 {
 	(void)args;
 	return (std::invoke(func, std::forward<ObjArg>(obj)...,
 		CallTraits::template arg_from_v8<Indices + CallTraits::offset, Traits>(args)...));
 }
 
-template<typename Traits, typename F, typename ...ObjArg>
-decltype(auto) call_from_v8(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args, ObjArg& ...obj)
+template<typename Traits, typename F, typename... ObjArg>
+decltype(auto) call_from_v8(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args, ObjArg&... obj)
 {
 	constexpr bool with_isolate = is_first_arg_isolate<F>;
 	if constexpr (is_direct_args<F, with_isolate>)
@@ -120,6 +109,6 @@ decltype(auto) call_from_v8(F&& func, v8::FunctionCallbackInfo<v8::Value> const&
 	}
 }
 
-}} // v8pp::detail
+}} // namespace v8pp::detail
 
 #endif // V8PP_CALL_FROM_V8_HPP_INCLUDED

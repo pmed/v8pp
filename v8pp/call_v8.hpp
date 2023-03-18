@@ -1,11 +1,3 @@
-//
-// Copyright (c) 2013-2016 Pavel Medvedev. All rights reserved.
-//
-// This file is part of v8pp (https://github.com/pmed/v8pp) project.
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
 #ifndef V8PP_CALL_V8_HPP_INCLUDED
 #define V8PP_CALL_V8_HPP_INCLUDED
 
@@ -20,7 +12,7 @@ namespace v8pp {
 /// @param func  V8 function to call
 /// @param recv V8 object used as `this` in the function
 /// @param args...  C++ arguments to convert to JS arguments using to_v8
-template<typename ...Args>
+template<typename... Args>
 v8::Local<v8::Value> call_v8(v8::Isolate* isolate, v8::Local<v8::Function> func,
 	v8::Local<v8::Value> recv, Args&&... args)
 {

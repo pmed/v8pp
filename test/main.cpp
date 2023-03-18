@@ -1,11 +1,3 @@
-//
-// Copyright (c) 2013-2016 Pavel Medvedev. All rights reserved.
-//
-// This file is part of v8pp (https://github.com/pmed/v8pp) project.
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
 #include <iostream>
 #include <algorithm>
 #include <memory>
@@ -35,21 +27,21 @@ void run_tests()
 	void test_object();
 	void test_json();
 
-	std::pair<char const*, void(*)()> tests[] =
+	std::pair<char const*, void (*)()> tests[] =
 	{
-		{ "test_utility", test_utility },
-		{ "test_context", test_context },
-		{ "test_convert", test_convert },
-		{ "test_throw_ex", test_throw_ex },
-		{ "test_function", test_function },
-		{ "test_ptr_traits", test_ptr_traits },
-		{ "test_call_v8", test_call_v8 },
-		{ "test_call_from_v8", test_call_from_v8 },
-		{ "test_module", test_module },
-		{ "test_class", test_class },
-		{ "test_property", test_property },
-		{ "test_object", test_object },
-		{ "test_json", test_json },
+		{"test_utility", test_utility},
+		{"test_context", test_context},
+		{"test_convert", test_convert},
+		{"test_throw_ex", test_throw_ex},
+		{"test_function", test_function},
+		{"test_ptr_traits", test_ptr_traits},
+		{"test_call_v8", test_call_v8},
+		{"test_call_from_v8", test_call_from_v8},
+		{"test_module", test_module},
+		{"test_class", test_class},
+		{"test_property", test_property},
+		{"test_object", test_object},
+		{"test_json", test_json},
 	};
 
 	for (auto const& test : tests)
@@ -69,7 +61,7 @@ void run_tests()
 	}
 }
 
-int main(int argc, char const * argv[])
+int main(int argc, char const* argv[])
 {
 	std::vector<std::string> scripts;
 	std::string lib_path;
@@ -93,6 +85,7 @@ int main(int argc, char const * argv[])
 		{
 			std::cout << "V8 version " << v8::V8::GetVersion() << std::endl;
 			std::cout << "v8pp version " << v8pp::version() << std::endl;
+			std::cout << "v8pp build options " << v8pp::build_options() << std::endl;
 		}
 		else if (arg == "--lib-path")
 		{
@@ -139,7 +132,7 @@ int main(int argc, char const * argv[])
 			context.run_file(script);
 		}
 	}
-	catch (std::exception & ex)
+	catch (std::exception const& ex)
 	{
 		std::cerr << ex.what() << std::endl;
 		result = EXIT_FAILURE;

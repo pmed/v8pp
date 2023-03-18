@@ -1,11 +1,3 @@
-//
-// Copyright (c) 2013-2016 Pavel Medvedev. All rights reserved.
-//
-// This file is part of v8pp (https://github.com/pmed/v8pp) project.
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
 #include "v8pp/property.hpp"
 #include "v8pp/context.hpp"
 
@@ -52,11 +44,11 @@ static_assert(is_getter<decltype(&X::get1), 0>, "getter member function");
 static_assert(is_getter<decltype(&external_get1), 1>, "getter external function");
 
 static_assert(is_setter<decltype(&set1), 0>, "setter function");
-static_assert(is_setter<decltype(&X::set1), 0>,	"setter member function");
+static_assert(is_setter<decltype(&X::set1), 0>, "setter member function");
 static_assert(is_setter<decltype(&external_set1), 1>, "setter external function");
 
 static_assert(is_isolate_getter<decltype(&get2), 0>, "isolate getter function");
-static_assert(is_isolate_getter<decltype(&X::get2), 0>,	"isolate getter member function");
+static_assert(is_isolate_getter<decltype(&X::get2), 0>, "isolate getter member function");
 static_assert(is_isolate_getter<decltype(&external_get2), 1>, "isolate getter external function");
 
 static_assert(is_isolate_setter<decltype(&set2), 0>, "isolate setter function");
@@ -80,7 +72,7 @@ void test_property(Get&& get, Set&& set)
 	check_eq("prop setter", prop.setter, set);
 }
 
-} // namespace {
+} // namespace
 
 void test_property()
 {

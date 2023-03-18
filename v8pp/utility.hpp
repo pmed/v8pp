@@ -1,15 +1,8 @@
-//
-// Copyright (c) 2013-2016 Pavel Medvedev. All rights reserved.
-//
-// This file is part of v8pp (https://github.com/pmed/v8pp) project.
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
 #ifndef V8PP_UTILITY_HPP_INCLUDED
 #define V8PP_UTILITY_HPP_INCLUDED
 
 #include <functional>
+#include <memory>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
@@ -25,68 +18,111 @@ struct tuple_tail<std::tuple<Head, Tail...>>
 	using type = std::tuple<Tail...>;
 };
 
-struct none{};
+struct none
+{
+};
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // is_string<T>
 //
-template<typename T> struct is_string : std::false_type {};
+template<typename T>
+struct is_string : std::false_type
+{
+};
 
 template<typename Char, typename Traits, typename Alloc>
-struct is_string<std::basic_string<Char, Traits, Alloc>> : std::true_type {};
+struct is_string<std::basic_string<Char, Traits, Alloc>> : std::true_type
+{
+};
 
 template<typename Char, typename Traits>
-struct is_string<std::basic_string_view<Char, Traits>> : std::true_type {};
+struct is_string<std::basic_string_view<Char, Traits>> : std::true_type
+{
+};
 
 template<>
-struct is_string<char const*> : std::true_type {};
+struct is_string<char const*> : std::true_type
+{
+};
+
 template<>
-struct is_string<char16_t const*> : std::true_type {};
+struct is_string<char16_t const*> : std::true_type
+{
+};
+
 template<>
-struct is_string<char32_t const*> : std::true_type {};
+struct is_string<char32_t const*> : std::true_type
+{
+};
+
 template<>
-struct is_string<wchar_t const*> : std::true_type {};
+struct is_string<wchar_t const*> : std::true_type
+{
+};
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // is_mapping<T>
 //
 template<typename T, typename U = void>
-struct is_mapping : std::false_type {};
+struct is_mapping_impl : std::false_type
+{
+};
 
 template<typename T>
-struct is_mapping<T, std::void_t<typename T::key_type, typename T::mapped_type,
-	decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> : std::true_type {};
+struct is_mapping_impl<T, std::void_t<typename T::key_type, typename T::mapped_type,
+	decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> : std::true_type
+{
+};
+
+template<typename T>
+using is_mapping = is_mapping_impl<T>;
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // is_sequence<T>
 //
 template<typename T, typename U = void>
-struct is_sequence : std::false_type {};
+struct is_sequence_impl : std::false_type
+{
+};
 
 template<typename T>
-struct is_sequence<T, std::void_t<typename T::value_type,
+struct is_sequence_impl<T, std::void_t<typename T::value_type,
 	decltype(std::declval<T>().begin()), decltype(std::declval<T>().end()),
-	decltype(std::declval<T>().emplace_back(std::declval<typename T::value_type>()))>> : std::negation<is_string<T>> {};
+	decltype(std::declval<T>().emplace_back(std::declval<typename T::value_type>()))>> : std::negation<is_string<T>>
+{
+};
+
+template<typename T>
+using is_sequence = is_sequence_impl<T>;
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // has_reserve<T>
 //
 template<typename T, typename U = void>
-struct has_reserve : std::false_type {};
+struct has_reserve_impl : std::false_type
+{
+};
 
 template<typename T>
-struct has_reserve<T, std::void_t<decltype(std::declval<T>().reserve(0))>> : std::true_type {};
+struct has_reserve_impl<T, std::void_t<decltype(std::declval<T>().reserve(0))>> : std::true_type
+{
+};
+
+template<typename T>
+using has_reserve = has_reserve_impl<T>;
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // is_array<T>
 //
 template<typename T>
-struct is_array : std::false_type {};
+struct is_array : std::false_type
+{
+};
 
 template<typename T, std::size_t N>
 struct is_array<std::array<T, N>> : std::true_type
@@ -99,20 +135,28 @@ struct is_array<std::array<T, N>> : std::true_type
 // is_tuple<T>
 //
 template<typename T>
-struct is_tuple : std::false_type {};
+struct is_tuple : std::false_type
+{
+};
 
 template<typename... Ts>
-struct is_tuple<std::tuple<Ts...>> : std::true_type {};
+struct is_tuple<std::tuple<Ts...>> : std::true_type
+{
+};
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // is_shared_ptr<T>
 //
 template<typename T>
-struct is_shared_ptr : std::false_type {};
+struct is_shared_ptr : std::false_type
+{
+};
 
 template<typename T>
-struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type
+{
+};
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -130,7 +174,7 @@ struct function_traits<none>
 	using pointer_type = void;
 };
 
-template<typename R, typename ...Args>
+template<typename R, typename... Args>
 struct function_traits<R (Args...)>
 {
 	using return_type = R;
@@ -140,14 +184,14 @@ struct function_traits<R (Args...)>
 };
 
 // function pointer
-template<typename R, typename ...Args>
+template<typename R, typename... Args>
 struct function_traits<R (*)(Args...)>
 	: function_traits<R (Args...)>
 {
 };
 
 // member function pointer
-template<typename C, typename R, typename ...Args>
+template<typename C, typename R, typename... Args>
 struct function_traits<R (C::*)(Args...)>
 	: function_traits<R (C&, Args...)>
 {
@@ -157,7 +201,7 @@ struct function_traits<R (C::*)(Args...)>
 };
 
 // const member function pointer
-template<typename C, typename R, typename ...Args>
+template<typename C, typename R, typename... Args>
 struct function_traits<R (C::*)(Args...) const>
 	: function_traits<R (C const&, Args...)>
 {
@@ -167,7 +211,7 @@ struct function_traits<R (C::*)(Args...) const>
 };
 
 // volatile member function pointer
-template<typename C, typename R, typename ...Args>
+template<typename C, typename R, typename... Args>
 struct function_traits<R (C::*)(Args...) volatile>
 	: function_traits<R (C volatile&, Args...)>
 {
@@ -177,7 +221,7 @@ struct function_traits<R (C::*)(Args...) volatile>
 };
 
 // const volatile member function pointer
-template<typename C, typename R, typename ...Args>
+template<typename C, typename R, typename... Args>
 struct function_traits<R (C::*)(Args...) const volatile>
 	: function_traits<R (C const volatile&, Args...)>
 {
@@ -232,8 +276,10 @@ struct function_traits
 {
 	static_assert(!std::is_bind_expression<F>::value,
 		"std::bind result is not supported yet");
+
 private:
 	using callable_traits = function_traits<decltype(&F::operator())>;
+
 public:
 	using return_type = typename callable_traits::return_type;
 	using arguments = typename tuple_tail<typename callable_traits::arguments>::type;
@@ -242,10 +288,14 @@ public:
 };
 
 template<typename F>
-struct function_traits<F&> : function_traits<F> {};
+struct function_traits<F&> : function_traits<F>
+{
+};
 
 template<typename F>
-struct function_traits<F&&> : function_traits<F> {};
+struct function_traits<F&&> : function_traits<F>
+{
+};
 
 template<typename F>
 inline constexpr bool is_void_return = std::is_same_v<void, typename function_traits<F>::return_type>;
@@ -263,15 +313,17 @@ private:
 	struct fallback { void operator()(); };
 	struct derived : F, fallback {};
 
-	template<typename U, U> struct check;
+	template<typename U, U>
+	struct check;
 
 	template<typename>
 	static std::true_type test(...);
 
 	template<typename C>
-	static std::false_type test(check<void(fallback::*)(), &C::operator()>*);
+	static std::false_type test(check<void (fallback::*)(), &C::operator()>*);
 
 	using type = decltype(test<derived>(0));
+
 public:
 	static constexpr bool value = type::value;
 };
@@ -284,52 +336,57 @@ using is_callable = std::integral_constant<bool,
 class type_info
 {
 public:
-	std::string_view name() const { return name_; }
-	bool operator==(type_info const& other) const { return name_ == other.name_; }
-	bool operator!=(type_info const& other) const { return name_ != other.name_; }
+	constexpr std::string_view name() const { return name_; }
+	constexpr bool operator==(type_info const& other) const { return name_ == other.name_; }
+	constexpr bool operator!=(type_info const& other) const { return name_ != other.name_; }
+
 private:
-	template<typename T> friend type_info type_id();
-	type_info(char const* name, size_t size)
-		: name_(name, size)
+	template<typename T> constexpr friend type_info type_id();
+
+	constexpr explicit type_info(std::string_view name)
+		: name_(name)
 	{
 	}
+
 	std::string_view name_;
 };
 
 /// Get type information for type T
 /// The idea is borrowed from https://github.com/Manu343726/ctti
 template<typename T>
-type_info type_id()
+constexpr type_info type_id()
 {
 #if defined(_MSC_VER) && !defined(__clang__)
-	#define V8PP_PRETTY_FUNCTION __FUNCSIG__
-	#define V8PP_PRETTY_FUNCTION_PREFIX "class v8pp::detail::type_info __cdecl v8pp::detail::type_id<"
-	#define V8PP_PRETTY_FUNCTION_SUFFIX ">(void)"
+	std::string_view name = __FUNCSIG__;
+	const std::initializer_list<std::string_view> all_prefixes{ "type_id<", "struct ", "class " };
+	const std::initializer_list<std::string_view> any_suffixes{ ">" };
 #elif defined(__clang__) || defined(__GNUC__)
-	#define V8PP_PRETTY_FUNCTION __PRETTY_FUNCTION__
-	#if !defined(__clang__)
-		#define V8PP_PRETTY_FUNCTION_PREFIX "v8pp::detail::type_info v8pp::detail::type_id() [with T = "
-	#else
-		#define V8PP_PRETTY_FUNCTION_PREFIX "v8pp::detail::type_info v8pp::detail::type_id() [T = "
-	#endif
-	#define V8PP_PRETTY_FUNCTION_SUFFIX "]"
+	std::string_view name = __PRETTY_FUNCTION__;
+	const std::initializer_list<std::string_view> all_prefixes{ "T = " };
+	const std::initializer_list<std::string_view> any_suffixes{ ";", "]" };
 #else
-	#error "Unknown compiler"
+#error "Unknown compiler"
 #endif
+	for (auto&& prefix : all_prefixes)
+	{
+		const auto p = name.find(prefix);
+		if (p != name.npos)
+		{
+			name.remove_prefix(p + prefix.size());
+		}
+	}
 
-#define V8PP_PRETTY_FUNCTION_LEN (sizeof(V8PP_PRETTY_FUNCTION) - 1)
-#define V8PP_PRETTY_FUNCTION_PREFIX_LEN (sizeof(V8PP_PRETTY_FUNCTION_PREFIX) - 1)
-#define V8PP_PRETTY_FUNCTION_SUFFIX_LEN (sizeof(V8PP_PRETTY_FUNCTION_SUFFIX) - 1)
+	for (auto&& suffix : any_suffixes)
+	{
+		const auto p = name.rfind(suffix);
+		if (p != name.npos)
+		{
+			name.remove_suffix(name.size() - p);
+			break;
+		}
+	}
 
-	return type_info(V8PP_PRETTY_FUNCTION + V8PP_PRETTY_FUNCTION_PREFIX_LEN,
-		V8PP_PRETTY_FUNCTION_LEN - V8PP_PRETTY_FUNCTION_PREFIX_LEN - V8PP_PRETTY_FUNCTION_SUFFIX_LEN);
-
-#undef V8PP_PRETTY_FUNCTION
-#undef V8PP_PRETTY_FUNCTION_PREFIX
-#undef V8PP_PRETTY_FUNCTION_SUFFFIX
-#undef V8PP_PRETTY_FUNCTION_LEN
-#undef V8PP_PRETTY_FUNCTION_PREFIX_LEN
-#undef V8PP_PRETTY_FUNCTION_SUFFFIX_LEN
+	return type_info(name);
 }
 
 }} // namespace v8pp::detail

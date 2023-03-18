@@ -1,11 +1,3 @@
-//
-// Copyright (c) 2013-2016 Pavel Medvedev. All rights reserved.
-//
-// This file is part of v8pp (https://github.com/pmed/v8pp) project.
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
 #include "v8pp/context.hpp"
 #include "v8pp/config.hpp"
 #include "v8pp/convert.hpp"
@@ -15,6 +7,7 @@
 #include "v8pp/throw_ex.hpp"
 
 #include <fstream>
+#include <utility>
 
 #if defined(WIN32)
 #define VC_EXTRALEAN
@@ -25,9 +18,6 @@ static char const path_sep = '\\';
 #include <dlfcn.h>
 static char const path_sep = '/';
 #endif
-
-#define STRINGIZE(s) STRINGIZE0(s)
-#define STRINGIZE0(s) #s
 
 namespace v8pp {
 
@@ -88,20 +78,20 @@ void context::load_module(v8::FunctionCallbackInfo<v8::Value> const& args)
 					+ "): could not load shared library " + filename);
 			}
 #if defined(WIN32)
-			void *sym = ::GetProcAddress((HMODULE)module.handle,
-				STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
+			void* sym = ::GetProcAddress((HMODULE)module.handle,
+				V8PP_STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
 #else
-			void *sym = dlsym(module.handle, STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
+			void* sym = dlsym(module.handle, V8PP_STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME));
 #endif
 			if (!sym)
 			{
 				throw std::runtime_error("load_module(" + name
 					+ "): initialization function "
-					STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME)
+					V8PP_STRINGIZE(V8PP_PLUGIN_INIT_PROC_NAME)
 					" not found in " + filename);
 			}
 
-			using module_init_proc = v8::Local<v8::Value>(*)(v8::Isolate*);
+			using module_init_proc = v8::Local<v8::Value> (*)(v8::Isolate*);
 			module_init_proc init_proc = reinterpret_cast<module_init_proc>(sym);
 			result = init_proc(isolate);
 			module.exports.Reset(isolate, result);
@@ -151,29 +141,38 @@ struct array_buffer_allocator : v8::ArrayBuffer::Allocator
 	}
 	void Free(void* data, size_t length)
 	{
-		free(data); (void)length;
+		free(data);
+		(void)length;
 	}
 };
 static array_buffer_allocator array_buffer_allocator_;
 
-context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
-	bool add_default_global_methods, bool enter_context)
+v8::Isolate* context::create_isolate(v8::ArrayBuffer::Allocator* allocator)
 {
-	own_isolate_ = (isolate == nullptr);
+	v8::Isolate::CreateParams create_params;
+	create_params.array_buffer_allocator = allocator ? allocator : &array_buffer_allocator_;
+
+	return v8::Isolate::New(create_params);
+}
+
+context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
+		bool add_default_global_methods, bool enter_context,
+		v8::Local<v8::ObjectTemplate> global)
+	: own_isolate_(isolate == nullptr)
+	, enter_context_(enter_context)
+	, isolate_(isolate ? isolate : create_isolate(allocator))
+{
 	if (own_isolate_)
 	{
-		v8::Isolate::CreateParams create_params;
-		create_params.array_buffer_allocator =
-			allocator ? allocator : &array_buffer_allocator_;
-
-		isolate = v8::Isolate::New(create_params);
-		isolate->Enter();
+		isolate_->Enter();
 	}
-	isolate_ = isolate;
 
 	v8::HandleScope scope(isolate_);
 
-	v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate_);
+	if (global.IsEmpty())
+	{
+		global = v8::ObjectTemplate::New(isolate_);
+	}
 
 	if (add_default_global_methods)
 	{
@@ -185,7 +184,6 @@ context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
 	}
 
 	v8::Local<v8::Context> impl = v8::Context::New(isolate_, nullptr, global);
-	enter_context_ = enter_context;
 	if (enter_context_)
 	{
 		impl->Enter();
@@ -193,8 +191,45 @@ context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
 	impl_.Reset(isolate_, impl);
 }
 
+context::context(context&& src) noexcept
+	: own_isolate_(std::exchange(src.own_isolate_, false))
+	, enter_context_(std::exchange(src.enter_context_, false))
+	, isolate_(std::exchange(src.isolate_, nullptr))
+	, impl_(std::move(src.impl_))
+	, modules_(std::move(src.modules_))
+	, lib_path_(std::move(src.lib_path_))
+{
+}
+
+context& context::operator=(context&& src) noexcept
+{
+	if (&src != this)
+	{
+		destroy();
+
+		own_isolate_ = std::exchange(src.own_isolate_, false);
+		enter_context_ = std::exchange(src.enter_context_, false);
+		isolate_ = std::exchange(src.isolate_, nullptr);
+		impl_ = std::move(src.impl_);
+		modules_ = std::move(src.modules_);
+		lib_path_ = std::move(src.lib_path_);
+	}
+	return *this;
+}
+
 context::~context()
 {
+	destroy();
+}
+
+void context::destroy()
+{
+	if (isolate_ == nullptr && impl_.IsEmpty())
+	{
+		// moved out state
+		return;
+	}
+
 	// remove all class singletons and external data before modules unload
 	cleanup(isolate_);
 
@@ -224,6 +259,7 @@ context::~context()
 		isolate_->Exit();
 		isolate_->Dispose();
 	}
+	isolate_ = nullptr;
 }
 
 context& context::value(std::string_view name, v8::Local<v8::Value> value)

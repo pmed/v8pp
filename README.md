@@ -1,5 +1,4 @@
-[![Travis Build status](https://travis-ci.org/pmed/v8pp.svg)](https://travis-ci.org/pmed/v8pp)
-[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/github/pmed/v8pp?svg=true)](https://ci.appveyor.com/project/pmed/v8pp)
+[![Build status](https://github.com/pmed/v8pp/actions/workflows/cmake.yml/badge.svg)](https://github.com/pmed/v8pp/actions/workflows/cmake.yml)
 [![NPM](https://img.shields.io/npm/v/v8pp.svg)](https://npmjs.com/package/v8pp)
 [![Join the chat at https://gitter.im/pmed/v8pp](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pmed/v8pp?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
@@ -10,6 +9,50 @@ Header-only library to expose C++ classes and functions into [V8](https://develo
   * Microsoft Visual C++ 2019 (Windows 10)
   * GCC 5.4.0 (Ubuntu 16.04)
   * Clang 5.0.0 (Ubuntu 16.04)
+
+## Building and testing
+
+The library has a set of tests that can be configured, built, and run with CMake:
+
+```console
+~/v8pp$ mkdir out; cd out
+~/v8pp/out$ cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON ..
+~/v8pp/out$ make
+~/v8pp/out$ ctest -V
+```
+
+The full list of project options can be listed with cmake command:
+
+```console
+~/v8pp/out$ cmake -LH ..
+```
+
+Some of them could be:
+
+> // Build documentation
+> BUILD_DOCUMENTATION:BOOL=OFF
+>
+> // Build shared library
+> BUILD_SHARED_LIBS:BOOL=ON
+>
+> // Build and run tests
+> BUILD_TESTING:BOOL=OFF
+>
+> // Header-only library
+> V8PP_HEADER_ONLY:BOOL=0
+>
+> // v8::Isolate data slot number, used in v8pp for shared data
+> V8PP_ISOLATE_DATA_SLOT:STRING=0
+>
+> // v8pp plugin initialization procedure name
+> V8PP_PLUGIN_INIT_PROC_NAME:STRING=v8pp_module_init
+>
+> // v8pp plugin filename suffix
+> V8PP_PLUGIN_SUFFIX:STRING=.dylib
+>
+> // Use new V8 ABI with V8_COMPRESS_POINTERS and V8_31BIT_SMIS_ON_64BIT_ARCH
+> V8_COMPRESS_POINTERS:BOOL=ON
+
 
 ## Binding example
 

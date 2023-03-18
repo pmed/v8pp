@@ -1,16 +1,9 @@
-//
-// Copyright (c) 2013-2016 Pavel Medvedev. All rights reserved.
-//
-// This file is part of v8pp (https://github.com/pmed/v8pp) project.
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
 #include "v8pp/convert.hpp"
 #include "v8pp/class.hpp"
 
 #include "test.hpp"
 
+#include <cmath>
 #include <list>
 #include <vector>
 #include <map>
@@ -115,7 +108,7 @@ struct convert<person>
 	{
 		if (!is_valid(isolate, value))
 		{
-			throw std::runtime_error("excpected object");
+			throw std::runtime_error("expected object");
 		}
 
 		v8::HandleScope scope(isolate);
@@ -126,7 +119,7 @@ struct convert<person>
 			obj->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "name")).ToLocalChecked());
 		result.age = v8pp::from_v8<int>(isolate,
 			obj->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "age")).ToLocalChecked());
-		
+
 		/* Simpler after #include <v8pp/object.hpp>
 		get_option(isolate, obj, "name", result.name);
 		get_option(isolate, obj, "age", result.age);
@@ -135,7 +128,7 @@ struct convert<person>
 	}
 };
 
-} // v8pp
+} // namespace v8pp
 
 void test_convert_user_type(v8::Isolate* isolate)
 {
@@ -253,7 +246,7 @@ void check_range(v8::Isolate* isolate)
 template<typename... Ts>
 void check_ranges(v8::Isolate* isolate)
 {
-	(check_range<Ts>(isolate),...);
+	(check_range<Ts>(isolate), ...);
 }
 
 struct U
@@ -370,7 +363,7 @@ void test_convert()
 	test_conv(isolate, 2.2);
 	test_conv(isolate, true);
 
-	enum old_enum { A = 1, B = 5, C = - 1 };
+	enum old_enum { A = 1, B = 5, C = -1 };
 	test_conv(isolate, B);
 
 	enum class new_enum { X = 'a', Y = 'b', Z = 'c' };
@@ -381,6 +374,8 @@ void test_convert()
 #ifdef WIN32
 	test_string_conv(isolate, L"qaz");
 #endif
+	// numeric string
+	test_string_conv(isolate, "0");
 
 	const std::vector<int> vector{ 1, 2, 3 };
 	test_conv(isolate, vector);
@@ -396,9 +391,9 @@ void test_convert()
 	});
 
 	test_conv(isolate, std::map<char, int>{ { 'a', 1 }, { 'b', 2 }, { 'c', 3 } });
-	test_conv(isolate, std::multimap<int, int>{ { 1, -1 }, { 2, -2 }});
-	test_conv(isolate, std::unordered_map<char, std::string>{ { 'x', "1" }, { 'y', "2" }});
-	test_conv(isolate, std::unordered_multimap<std::string, int>{ { "a", 1 }, { "b", 2 }});
+	test_conv(isolate, std::multimap<int, int>{ { 1, -1 }, { 2, -2 } });
+	test_conv(isolate, std::unordered_map<char, std::string>{ { 'x', "1" }, { 'y', "2" } });
+	test_conv(isolate, std::unordered_multimap<std::string, int>{ { "0", 0 }, { "a", 1 }, { "b", 2 } });
 
 	check_eq("initializer list to array",
 		v8pp::from_v8<std::vector<int>>(isolate, v8pp::to_v8(isolate, { 1, 2, 3 })), vector);
