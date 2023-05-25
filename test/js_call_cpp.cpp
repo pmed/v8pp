@@ -100,7 +100,8 @@ void g_set_var(int x)
 	g_var = x + 1;
 }
 
-// 这里可以看出，整个指针都是不支持js调过来的，js语言是没有指针的，所以这里没有暴，引用也不暴，只有const引用可以暴，切记！参数就是参数，这里禁用了参数作为返回的用法
+// T* / const T* / T& not supported. const T& ok.
+// keep in mind: when js call cpp, nothing can be changged both in parameters and return.
 static int test_param_int(int i /*, int* pi*/ /*, const int* cpi*/ /*, int& ri*/, const int& cri, uint32_t ui, const uint32_t& crui)
 {
 	P_JS_CALL_CPP_FUNC;
@@ -124,7 +125,8 @@ static int64_t test_param_int64(int64_t i64, const int64_t& cri64, uint64_t ui64
 	cout << "crui64:" << crui64 << endl;
 	return (int64_t)4194967298;
 }
-// 与int同，所有可能修改参数作为返回的用法，全部禁用
+// same as int, all the usage that can change parameter as a return reference usage forbidden.
+// keep in mind: when js call cpp, nothing can be changged both in parameters and return.
 // static const char* test_param_string(/*char* c, */ const char* cc, string s /*, string& rs*/, const string& crs /*, string* ps*/ /*, const string* cps*/)
 // static const char* test_param_string(const char* cc, string s, const string& crs)
 static const std::string& test_param_string(const char* cc, string s, const string& crs)
@@ -144,8 +146,8 @@ static const std::string& test_param_string(const char* cc, string s, const stri
 	// return str.c_str();
 	return str;
 }
-// 注意用户自定义类型的指针引用const指针const引用都是ok的。用户自定义类型作为实例、引用、const引用返回都是不行的！！！只能作为指针、const指针返回能编译过，但是返回的是undefined.
-// 所以统一返回int或bool，用指针或者引用作为参数返回需要的值，跟linux内核的c代码类似
+// user types T* / T& / const T* / const T& ok. usertype used as return everything not ok!!!
+// so just return int or bool, and set user type as some parameter T* / T&
 static bool test_param_utype(UserTypeIS ut, UserTypeIS* put, const UserTypeIS* cput, UserTypeIS& rut, const UserTypeIS& crut)
 // static UserTypeIS test_param_utype(UserTypeIS ut, UserTypeIS* put, const UserTypeIS* cput, UserTypeIS& rut, const UserTypeIS& crut)
 // static const UserTypeIS& test_param_utype(UserTypeIS ut, UserTypeIS* put, const UserTypeIS* cput, UserTypeIS& rut, const UserTypeIS& crut)
@@ -166,14 +168,14 @@ static bool test_param_utype(UserTypeIS ut, UserTypeIS* put, const UserTypeIS* c
 	return true;
 }
 
-// 注意Array也是不能传指针不能传引用不能传const指针，只能传值或const引用!不允许函数内部修改
+// Array: T* / T& / const T* / const T& not ok!!!
 // static void test_param_arr_string(v8::Isolate* isolate, v8::Local<v8::Array> as /*, v8::Local<v8::Array>* pas*/ /*, v8::Local<v8::Array>& ras*/ /*, const v8::Local<v8::Array>* cpas*/, const v8::Local<v8::Array>& cras)
 // static void test_param_arr_string(v8::Isolate* isolate, v8::Local<v8::Array> as, const v8::Local<v8::Array>& cras)
 // static std::vector<std::string> test_param_arr_string(v8::Isolate* isolate, v8::Local<v8::Array> as, const v8::Local<v8::Array>& cras)
 static std::list<std::string> test_param_arr_string(v8::Isolate* isolate, v8::Local<v8::Array> as, const v8::Local<v8::Array>& cras)
 {
 	P_JS_CALL_CPP_FUNC;
-	// 这样写会多一次转换，多一次拷贝
+	// easy to use, copied once more. performance test needed.
 	auto strs = v8pp::from_v8<std::vector<std::string>>(isolate, as);
 	cout << strs.size() << endl;
 	std::for_each(strs.begin(), strs.end(), [](const std::string& s)
@@ -185,7 +187,7 @@ static std::list<std::string> test_param_arr_string(v8::Isolate* isolate, v8::Lo
 		{ cout << s << " "; });
 	cout << endl;
 
-	// 这样写会繁杂一点，但是省去了拷贝，性能会高一点
+	// more complicated, less copy. performance test needed.
 	if (!is_valid_v8array(isolate, as))
 	{
 		throw std::runtime_error("not Array");
@@ -202,7 +204,7 @@ static std::list<std::string> test_param_arr_string(v8::Isolate* isolate, v8::Lo
 	}
 	cout << endl;
 
-	// 或者这样简单封一下
+	// or wrap it like this
 	loop_v8_array_of_val<string>(isolate, as, [](const std::string& str)
 		{ cout << str << " "; return true; });
 	cout << endl;
@@ -230,8 +232,8 @@ static void performance_param_arr_str_v8(v8::Isolate* isolate, const v8::Local<v
 }
 // ***** performance op:performance_param_arr_str_v8	diff: 47278686
 // *****performance op : performance_param_arr_str_cpp	diff: 29188187
-// 可以看出，使用std::vector<std::string>会比原生的 v8::Local<v8::Array>的性能要高出不少，而且v8的用法还是封装过的原生的循环。
-// !!! 所以，js调用c++的时候，统一封装c++的数据结构vector/list/map
+// performance test result: std::vector<std::string> is FASTER than v8::Local<v8::Array>
+// !!! so, js call c++, wrap everything by c++ container (vector/list/map)
 // static void performance_param_arr_str_cpp(const std::vector<std::string>& as, const std::vector<std::string>& cras)
 static void performance_param_arr_str_cpp(const std::list<std::string>& as, const std::list<std::string>& cras)
 {
@@ -253,7 +255,7 @@ static void performance_param_map_is_v8(v8::Isolate* isolate, const v8::Local<v8
 		{ cout << k << "=>" << v << " "; return true; });
 	cout << endl;
 }
-// map的性能相当，cpp要略差一丢丢，但不大。好用的层面来说还是用stl方便
+// map performance test neck by neck. map just a little slower, stl easier to use.
 static void performance_param_map_is_cpp(const std::map<int, std::string>& as, const std::map<int, std::string>& cras)
 // static void performance_param_map_is_cpp(const std::unordered_map<int, std::string>& as, const std::unordered_map<int, std::string>& cras)
 {
@@ -265,13 +267,13 @@ static void performance_param_map_is_cpp(const std::map<int, std::string>& as, c
 		{ cout << s.first << "=>" << s.second << " "; return true; });
 	cout << endl;
 }
-// 其实特么就是 v8::Array ，不过处理是当int处理的，写成Int32Array更容易理解一点点
+// this is just v8::Array, used as Int32. Int32Array is easier to understand.
 // static void test_param_arr_int(v8::Isolate* isolate, v8::Local<v8::Int32Array> ai /*, v8::Local<v8::Int32Array>* pai*/ /*, v8::Local<v8::Int32Array>& rai*/ /*, const v8::Local<v8::Int32Array>* cpai*/, const v8::Local<v8::Int32Array>& crai)
 static void test_param_arr_int(v8::Isolate* isolate, v8::Local<v8::Int32Array> ai, const v8::Local<v8::Int32Array>& crai)
 // static void test_param_arr_int(v8::Isolate* isolate, v8::Local<v8::Array> ai, const v8::Local<v8::Array>& crai)
 {
 	P_JS_CALL_CPP_FUNC;
-	// 这样写会多一次转换，多一次拷贝
+	// one more converse, one more copy
 	auto arr = v8pp::from_v8<std::vector<int>>(isolate, ai);
 	cout << arr.size() << endl;
 	std::for_each(arr.begin(), arr.end(), [](int i)
@@ -283,7 +285,7 @@ static void test_param_arr_int(v8::Isolate* isolate, v8::Local<v8::Int32Array> a
 		{ cout << i << " "; });
 	cout << endl;
 
-	// 或者这样简单封一下
+	// or simply wrap like this
 	loop_v8_array_of_val<int>(isolate, ai, [](const int& val)
 		{ cout << val << " "; return true; });
 	cout << endl;
@@ -292,7 +294,7 @@ static void test_param_arr_int(v8::Isolate* isolate, v8::Local<v8::Int32Array> a
 static void test_param_arr_utype(v8::Isolate* isolate, v8::Local<v8::Array> au, const v8::Local<v8::Array>& crau)
 {
 	P_JS_CALL_CPP_FUNC;
-	// 这样写会多一次转换，多一次拷贝
+	// one more converse, one more copy
 	auto arr = v8pp::from_v8<std::vector<UserTypeIS>>(isolate, au);
 	cout << arr.size() << endl;
 	std::for_each(arr.begin(), arr.end(), [](const UserTypeIS& i)
@@ -304,7 +306,7 @@ static void test_param_arr_utype(v8::Isolate* isolate, v8::Local<v8::Array> au, 
 		{ cout << i << " "; });
 	cout << endl;
 
-	// 或者这样简单封一下
+	// or simply wrap like this
 	loop_v8_array_of_val<UserTypeIS>(isolate, au, [](const UserTypeIS& val)
 		{ cout << val << " "; return true; });
 	cout << endl;
@@ -347,11 +349,11 @@ static void test_param_set_string(v8::Isolate* isolate, v8::Local<v8::Value> si,
 	cout << endl;
 }
 
-// map/ unordered_map都是可以的，另外可以简单封装一下，或者是强遍历，会省去一次map/unordered_map的构造、拷贝、析构
+// map/ unordered_map all works. or simply wrap it, or loop by user logic, to avoid map/unordered_map construct/copy/destruct
 static void test_param_map_int_int(v8::Isolate* isolate, v8::Local<v8::Map> ms, const v8::Local<v8::Map>& crms)
 {
 	P_JS_CALL_CPP_FUNC;
-	// 这样写会多一次转换，多一次拷贝
+	// one more converse, one more copy
 	auto melements = v8pp::from_v8<std::map<int, int>>(isolate, ms);
 	cout << melements.size() << endl;
 	std::for_each(melements.begin(), melements.end(), [](const std::pair<int, int>& pi)
@@ -363,7 +365,7 @@ static void test_param_map_int_int(v8::Isolate* isolate, v8::Local<v8::Map> ms, 
 		{ cout << pi.first << "=>" << pi.second << " "; });
 	cout << endl;
 
-	// 这样写会繁杂一点，但是省去了拷贝，性能会高一点
+	// more complicated, but less copy. will have better performance
 	if (!is_valid(isolate, ms))
 	{
 		throw std::runtime_error("not map");
@@ -384,7 +386,7 @@ static void test_param_map_int_int(v8::Isolate* isolate, v8::Local<v8::Map> ms, 
 	}
 	cout << endl;
 
-	// 或者这样简单封一下
+	// or simply wrap like this
 	loop_v8_map_of_val<int, int>(isolate, ms, [](const int& k, const int& v)
 		{ cout << k << "=>" << v << " "; return true; });
 	cout << endl;
@@ -392,7 +394,7 @@ static void test_param_map_int_int(v8::Isolate* isolate, v8::Local<v8::Map> ms, 
 static void test_param_map_int_string(v8::Isolate* isolate, v8::Local<v8::Map> m, const v8::Local<v8::Map>& crm)
 {
 	P_JS_CALL_CPP_FUNC;
-	// 这样写会多一次转换，多一次拷贝
+	// one more converse, one more copy
 	auto melements = v8pp::from_v8<std::map<int, std::string>>(isolate, m);
 	cout << melements.size() << endl;
 	std::for_each(melements.begin(), melements.end(), [](const std::pair<int, std::string>& pi)
@@ -404,7 +406,7 @@ static void test_param_map_int_string(v8::Isolate* isolate, v8::Local<v8::Map> m
 		{ cout << pi.first << "=>" << pi.second << " "; });
 	cout << endl;
 
-	// 这样写会繁杂一点，但是省去了拷贝，性能会高一点
+	// more complicated, but less copy. will have better performance
 	if (!is_valid(isolate, m))
 	{
 		throw std::runtime_error("not map");
@@ -425,7 +427,7 @@ static void test_param_map_int_string(v8::Isolate* isolate, v8::Local<v8::Map> m
 	}
 	cout << endl;
 
-	// 或者这样简单封一下
+	// or simply wrap like this
 	loop_v8_map_of_val<int, std::string>(isolate, m, [](const int& k, const std::string& v)
 		{ cout << k << "=>" << v << " "; return true; });
 	cout << endl;
@@ -433,7 +435,7 @@ static void test_param_map_int_string(v8::Isolate* isolate, v8::Local<v8::Map> m
 static void test_param_map_string_int(v8::Isolate* isolate, v8::Local<v8::Map> ms, const v8::Local<v8::Map>& crms)
 {
 	P_JS_CALL_CPP_FUNC;
-	// 这样写会多一次转换，多一次拷贝
+	// one more converse, one more copy
 	auto melements = v8pp::from_v8<std::map<std::string, int>>(isolate, ms);
 	cout << melements.size() << endl;
 	std::for_each(melements.begin(), melements.end(), [](const std::pair<std::string, int>& pi)
@@ -445,7 +447,7 @@ static void test_param_map_string_int(v8::Isolate* isolate, v8::Local<v8::Map> m
 		{ cout << pi.first << "=>" << pi.second << " "; });
 	cout << endl;
 
-	// 这样写会繁杂一点，但是省去了拷贝，性能会高一点
+	// more complicated, but less copy. will have better performance
 	if (!is_valid(isolate, ms))
 	{
 		throw std::runtime_error("not map");
@@ -466,7 +468,7 @@ static void test_param_map_string_int(v8::Isolate* isolate, v8::Local<v8::Map> m
 	}
 	cout << endl;
 
-	// 或者这样简单封一下
+	// or simply wrap like this
 	loop_v8_map_of_val<std::string, int>(isolate, ms, [](const std::string& k, const int& v)
 		{ cout << k << "=>" << v << " "; return true; });
 	cout << endl;
@@ -474,7 +476,7 @@ static void test_param_map_string_int(v8::Isolate* isolate, v8::Local<v8::Map> m
 static void test_param_map_string_string(v8::Isolate* isolate, v8::Local<v8::Map> m, const v8::Local<v8::Map>& crm)
 {
 	P_JS_CALL_CPP_FUNC;
-	// 这样写会多一次转换，多一次拷贝
+	// one more converse, one more copy
 	auto melements = v8pp::from_v8<std::map<std::string, std::string>>(isolate, m);
 	cout << melements.size() << endl;
 	std::for_each(melements.begin(), melements.end(), [](const std::pair<std::string, std::string>& pi)
@@ -486,7 +488,7 @@ static void test_param_map_string_string(v8::Isolate* isolate, v8::Local<v8::Map
 		{ cout << pi.first << "=>" << pi.second << " "; });
 	cout << endl;
 
-	// 这样写会繁杂一点，但是省去了拷贝，性能会高一点
+	// more complicated, but less copy. will have better performance
 	if (!is_valid(isolate, m))
 	{
 		throw std::runtime_error("not map");
@@ -507,7 +509,7 @@ static void test_param_map_string_string(v8::Isolate* isolate, v8::Local<v8::Map
 	}
 	cout << endl;
 
-	// 或者这样简单封一下
+	// or simply wrap like this
 	loop_v8_map_of_val<std::string, std::string>(isolate, m, [](const std::string& k, const std::string& v)
 		{ cout << k << "=>" << v << " "; return true; });
 	cout << endl;
@@ -515,7 +517,7 @@ static void test_param_map_string_string(v8::Isolate* isolate, v8::Local<v8::Map
 static void test_param_map_int_utype(v8::Isolate* isolate, v8::Local<v8::Map> ms, const v8::Local<v8::Map>& crms)
 {
 	P_JS_CALL_CPP_FUNC;
-	// 这样写会多一次转换，多一次拷贝
+	// one more converse, one more copy
 	auto melements = v8pp::from_v8<std::map<int, UserTypeIS>>(isolate, ms);
 	cout << melements.size() << endl;
 	std::for_each(melements.begin(), melements.end(), [](const std::pair<int, UserTypeIS>& pi)
@@ -527,7 +529,7 @@ static void test_param_map_int_utype(v8::Isolate* isolate, v8::Local<v8::Map> ms
 		{ cout << pi.first << "=>" << pi.second << " "; });
 	cout << endl;
 
-	// 这样写会繁杂一点，但是省去了拷贝，性能会高一点
+	// more complicated, but less copy. will have better performance
 	if (!is_valid(isolate, ms))
 	{
 		throw std::runtime_error("not map");
@@ -548,7 +550,7 @@ static void test_param_map_int_utype(v8::Isolate* isolate, v8::Local<v8::Map> ms
 	}
 	cout << endl;
 
-	// 或者这样简单封一下
+	// or simply wrap like this
 	loop_v8_map_of_val<int, UserTypeIS>(isolate, ms, [](const int& k, const UserTypeIS& v)
 		{ cout << k << "=>" << v << " "; return true; });
 	cout << endl;
@@ -556,7 +558,7 @@ static void test_param_map_int_utype(v8::Isolate* isolate, v8::Local<v8::Map> ms
 static void test_param_map_string_utype(v8::Isolate* isolate, v8::Local<v8::Map> ms, const v8::Local<v8::Map>& crms)
 {
 	P_JS_CALL_CPP_FUNC;
-	// 这样写会多一次转换，多一次拷贝
+	// one more converse, one more copy
 	auto melements = v8pp::from_v8<std::map<std::string, UserTypeIS>>(isolate, ms);
 	cout << melements.size() << endl;
 	std::for_each(melements.begin(), melements.end(), [](const std::pair<std::string, UserTypeIS>& pi)
@@ -568,7 +570,7 @@ static void test_param_map_string_utype(v8::Isolate* isolate, v8::Local<v8::Map>
 		{ cout << pi.first << "=>" << pi.second << " "; });
 	cout << endl;
 
-	// 这样写会繁杂一点，但是省去了拷贝，性能会高一点
+	// more complicated, but less copy. will have better performance
 	if (!is_valid(isolate, ms))
 	{
 		throw std::runtime_error("not map");
@@ -589,7 +591,7 @@ static void test_param_map_string_utype(v8::Isolate* isolate, v8::Local<v8::Map>
 	}
 	cout << endl;
 
-	// 或者这样简单封一下
+	// or simply wrap like this
 	loop_v8_map_of_val<std::string, UserTypeIS>(isolate, ms, [](const std::string& k, const UserTypeIS& v)
 		{ cout << k << "=>" << v << " "; return true; });
 	cout << endl;

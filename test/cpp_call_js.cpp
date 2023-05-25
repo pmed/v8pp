@@ -39,14 +39,23 @@ void test_functions(v8pp::context& context, v8::Isolate* isolate)
 	js_param_string = context.run_script("js_param_string").As<v8::Function>();
 	js_param_utype = context.run_script("js_param_utype").As<v8::Function>();
 
-	// ######################################################## 内置类型
-	// 看下来所有内置类型(int/uint/int64/uint64/string）都只支持实例、引用、const引用，不支持指针，不支持const指针。char*和const char*是可以的
+	// ######################################################## raw types
+	/*
+		raw types (int/uint/int64/uint64/string):
+			T, T&, const T& ok
+			T* / const T* not ok.
+			char* / const char* is ok.
+	*/
 	u64 = 4294967296;
 	const uint64_t& cru64 = u64;
 	uint64_t& ru64 = u64;
 	uint64_t* pu64 = &u64;
 	const uint64_t* cpu64 = &u64;
-	// int/int64/uint64之类的可传实例，可传引用，可传const引用，不能传指针，不能传const指针
+	/*
+		int/int64/uint64:
+			T / T& const T& ok.
+			T* / const T* not ok.
+	*/
 	recv = v8pp::call_v8(isolate, js_param_int, js_param_int, 1024, 2147483648 /*, pu64*/ /*, cpu64*/, ru64, cru64);
 	i64 = v8pp::convert<int64_t>::from_v8(isolate, recv);
 	cout << "i64:" << i64 << endl;
@@ -56,14 +65,19 @@ void test_functions(v8pp::context& context, v8::Isolate* isolate)
 	std::string& rs = s;
 	const std::string* cps = &s;
 	std::string* ps = &s;
-	// string类型可传const char*，可传char*，可传string实例，可传string&， 可传const string&，不能传指针，不能传const指针
+	/*
+		string:
+			const char* / char* / std::string / std::string& / const std::string& ok.
+			std::string* / const std::string* not ok.
+	*/
 	recv = v8pp::call_v8(isolate, js_param_string, js_param_string, (char*)"hello ", std::string("world "), rs, crs);
 	// recv = v8pp::call_v8(isolate, js_param_string, js_param_string, (const char*)"hello ", std::string("world "), ps, cps);
 	sret = v8pp::convert<std::string>::from_v8(isolate, recv);
 	cout << "sret:" << sret << endl;
 
 	// ######################################################## usertype
-	// usertype一直报错，暂时只找到用tuple传多个参数的方式，很不方便，返回也一直不行，tuple返回倒是可以，而且可以嵌套
+	// usertype get some error and stuck for a long time. I will work on this some time later after I finished studying Nginx.
+	// currently only tuple to pass multiple params, not very convenient. return not works either, tuple return ok, and can be used recursively.
 	UserTypeIS ut1(111, "hello");
 	UserTypeIS ut(222, "world");
 	UserTypeIS* put = &ut;

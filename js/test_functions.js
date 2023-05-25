@@ -1,4 +1,4 @@
-// 这就直接传值了，不传啥引用指针了
+// raw types here, so just pass value, not reference or pointer
 function js_param_int(i, i64, p64, u64) {
     dlog("js_param_int i:", i, " i64:", i64, " p64:", p64, " u64:", u64);
     return i + i64 + p64 + u64;
