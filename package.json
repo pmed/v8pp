@@ -1,6 +1,6 @@
 {
   "name": "v8pp",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "C++ bindings for V8",
   "keywords": [ "V8", "native", "addon", "module", "bindings" ],
   "engines": { "node": ">=8.0.0" },
