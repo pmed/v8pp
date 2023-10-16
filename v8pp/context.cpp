@@ -129,6 +129,7 @@ void context::run_file(v8::FunctionCallbackInfo<v8::Value> const& args)
 	args.GetReturnValue().Set(scope.Escape(result));
 }
 
+#if V8_MAJOR_VERSION < 5 || (V8_MAJOR_VERSION == 5 && V8_MINOR_VERSION < 4)
 struct array_buffer_allocator : v8::ArrayBuffer::Allocator
 {
 	void* Allocate(size_t length)
@@ -145,12 +146,16 @@ struct array_buffer_allocator : v8::ArrayBuffer::Allocator
 		(void)length;
 	}
 };
-static array_buffer_allocator array_buffer_allocator_;
+#endif
 
 v8::Isolate* context::create_isolate(v8::ArrayBuffer::Allocator* allocator)
 {
 	v8::Isolate::CreateParams create_params;
-	create_params.array_buffer_allocator = allocator ? allocator : &array_buffer_allocator_;
+#if V8_MAJOR_VERSION < 5 || (V8_MAJOR_VERSION == 5 && V8_MINOR_VERSION < 4)
+	create_params.array_buffer_allocator = allocator ? allocator : new array_buffer_allocator;
+#else
+	create_params.array_buffer_allocator = allocator ? allocator : v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+#endif
 
 	return v8::Isolate::New(create_params);
 }
@@ -165,6 +170,11 @@ context::context(v8::Isolate* isolate, v8::ArrayBuffer::Allocator* allocator,
 	if (own_isolate_)
 	{
 		isolate_->Enter();
+		if (!allocator)
+		{
+			// take ownership over the new allocator created in create_isolate()
+			array_buffer_allocator_.reset(isolate_->GetArrayBufferAllocator());
+		}
 	}
 
 	v8::HandleScope scope(isolate_);
@@ -196,6 +206,7 @@ context::context(context&& src) noexcept
 	, enter_context_(std::exchange(src.enter_context_, false))
 	, isolate_(std::exchange(src.isolate_, nullptr))
 	, impl_(std::move(src.impl_))
+	, array_buffer_allocator_(std::move(src.array_buffer_allocator_))
 	, modules_(std::move(src.modules_))
 	, lib_path_(std::move(src.lib_path_))
 {
@@ -210,6 +221,7 @@ context& context::operator=(context&& src) noexcept
 		own_isolate_ = std::exchange(src.own_isolate_, false);
 		enter_context_ = std::exchange(src.enter_context_, false);
 		isolate_ = std::exchange(src.isolate_, nullptr);
+		array_buffer_allocator_ = std::move(src.array_buffer_allocator_);
 		impl_ = std::move(src.impl_);
 		modules_ = std::move(src.modules_);
 		lib_path_ = std::move(src.lib_path_);
@@ -260,6 +272,7 @@ void context::destroy()
 		isolate_->Dispose();
 	}
 	isolate_ = nullptr;
+	array_buffer_allocator_.reset();
 }
 
 context& context::value(std::string_view name, v8::Local<v8::Value> value)

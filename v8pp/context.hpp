@@ -108,6 +108,7 @@ private:
 	bool enter_context_;
 	v8::Isolate* isolate_;
 	v8::Global<v8::Context> impl_;
+	std::unique_ptr<v8::ArrayBuffer::Allocator> array_buffer_allocator_;
 
 	static void load_module(v8::FunctionCallbackInfo<v8::Value> const& args);
 	static void run_file(v8::FunctionCallbackInfo<v8::Value> const& args);
