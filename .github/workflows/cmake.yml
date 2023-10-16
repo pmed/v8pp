@@ -8,18 +8,16 @@ jobs:
         build_type: [ Release ]
         shared_lib: [ false, true ]
         header_only: [ false, true ]
-        v8_compress_pointers: [ false, true ]
-        v8_enable_sandbox: [ false, true ]
-        exclude:
+        include:
           - os: ubuntu-latest
-            v8_compress_pointers: true
-            v8_enable_sandbox: true
-          - os: macos-latest
             v8_compress_pointers: false
             v8_enable_sandbox: false
-          - os: windows-latest
-            v8_compress_pointers: false
+          - os: macos-latest
+            v8_compress_pointers: true
             v8_enable_sandbox: true
+          - os: windows-latest
+            v8_compress_pointers: true
+            v8_enable_sandbox: false
 
     runs-on: ${{matrix.os}}
 
