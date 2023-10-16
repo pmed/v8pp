@@ -8,18 +8,20 @@ jobs:
         build_type: [ Release ]
         shared_lib: [ false, true ]
         header_only: [ false, true ]
-        v8_compress_pointers: [ false, true ]
-        exclude:
+        include:
           - os: ubuntu-latest
-            v8_compress_pointers: true
+            v8_compress_pointers: false
+            v8_enable_sandbox: false
           - os: macos-latest
-            v8_compress_pointers: false
+            v8_compress_pointers: true
+            v8_enable_sandbox: true
           - os: windows-latest
-            v8_compress_pointers: false
+            v8_compress_pointers: true
+            v8_enable_sandbox: false
 
     runs-on: ${{matrix.os}}
 
-    name: '${{matrix.os}} ${{matrix.build_type}} shared_lib=${{matrix.shared_lib}} header_only=${{matrix.header_only}} v8_compress_pointers=${{matrix.v8_compress_pointers}}'
+    name: '${{matrix.os}} ${{matrix.build_type}} shared_lib=${{matrix.shared_lib}} header_only=${{matrix.header_only}} v8_compress_pointers=${{matrix.v8_compress_pointers}} v8_enable_sandbox=${{matrix.v8_enable_sandbox}}'
 
     steps:
     - uses: actions/checkout@v2
@@ -47,7 +49,7 @@ jobs:
       uses: seanmiddleditch/gha-setup-ninja@v3
 
     - name: Configure CMake
-      run: cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBUILD_TESTING=TRUE -DBUILD_SHARED_LIBS=${{matrix.shared_lib}} -DV8PP_HEADER_ONLY=${{matrix.header_only}} -DV8_COMPRESS_POINTERS=${{matrix.v8_compress_pointers}}
+      run: cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBUILD_TESTING=TRUE -DBUILD_SHARED_LIBS=${{matrix.shared_lib}} -DV8PP_HEADER_ONLY=${{matrix.header_only}} -DV8_COMPRESS_POINTERS=${{matrix.v8_compress_pointers}} -DV8_ENABLE_SANDBOX=${{matrix.v8_enable_sandbox}}
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{matrix.build_type}}

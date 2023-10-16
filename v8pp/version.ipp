@@ -42,6 +42,9 @@ V8PP_IMPL char const* build_options()
 #ifdef V8_COMPRESS_POINTERS
 	STR(V8_COMPRESS_POINTERS)
 #endif
+#ifdef V8_ENABLE_SANDBOX
+	STR(V8_ENABLE_SANDBOX)
+#endif
 	;
 #undef STR
 }
