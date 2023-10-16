@@ -205,8 +205,8 @@ context::context(context&& src) noexcept
 	: own_isolate_(std::exchange(src.own_isolate_, false))
 	, enter_context_(std::exchange(src.enter_context_, false))
 	, isolate_(std::exchange(src.isolate_, nullptr))
-	, array_buffer_allocator_(std::move(src.array_buffer_allocator_))
 	, impl_(std::move(src.impl_))
+	, array_buffer_allocator_(std::move(src.array_buffer_allocator_))
 	, modules_(std::move(src.modules_))
 	, lib_path_(std::move(src.lib_path_))
 {
