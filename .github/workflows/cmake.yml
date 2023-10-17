@@ -17,7 +17,7 @@ jobs:
             v8_enable_sandbox: true
           - os: windows-latest
             v8_compress_pointers: true
-            v8_enable_sandbox: false
+            v8_enable_sandbox: true
 
     runs-on: ${{matrix.os}}
 
