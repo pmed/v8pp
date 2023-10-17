@@ -10,6 +10,7 @@
 
 struct Xbase
 {
+	char c = 'X';
 	int var = 1;
 
 	int get() const { return var; }
@@ -342,6 +343,7 @@ void test_multiple_inheritance()
 {
 	struct A
 	{
+		char a = 'A';
 		int x;
 		A() : x(1) {}
 		int f() { return x; }
@@ -352,6 +354,7 @@ void test_multiple_inheritance()
 
 	struct B
 	{
+		char b = 'B';
 		int x;
 		B() : x(2) {}
 		int g() { return x; }
