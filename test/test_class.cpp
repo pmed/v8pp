@@ -228,11 +228,11 @@ void test_class_()
 		;
 
 	check_eq("C++ exception from X ctor",
-		run_script<std::string>(context, "ret = ''; try { new X(1, 2); } catch(err) { ret = err; } ret"),
+		run_script<std::string>(context, "ret = ''; try { new X(1, 2); } catch(err) { ret = err.message; } ret"),
 		"C++ exception");
 	check("Unhandled C++ exception from X ctor", context.run_script("x = new X(1, 2); x").IsEmpty());
 	check_eq("V8 exception from X ctor",
-		run_script<std::string>(context, "ret = ''; try { new X(1, 2, 3); } catch(err) { ret = err; } ret"),
+		run_script<std::string>(context, "ret = ''; try { new X(1, 2, 3); } catch(err) { ret = err.message; } ret"),
 		"JS exception");
 	check("Unhandled V8 exception from X ctor", context.run_script("x = new X(1, 2, 3); x").IsEmpty());
 
