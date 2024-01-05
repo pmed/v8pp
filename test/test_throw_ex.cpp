@@ -4,7 +4,7 @@
 
 namespace {
 
-void test(v8pp::context& context, std::string type, v8pp::exception_ctor ctor = {}, v8::Local<v8::Value> opts = {})
+void test(v8pp::context& context, std::string type, v8pp::exception_ctor ctor, v8::Local<v8::Value> opts = {})
 {
 	v8::Isolate* isolate = context.isolate();
 
@@ -15,12 +15,7 @@ void test(v8pp::context& context, std::string type, v8pp::exception_ctor ctor = 
 	check(" has caught", try_catch.HasCaught());
 	check("the same stack trace", try_catch.Message()->GetStackTrace() == v8::Exception::GetStackTrace(ex));
 	v8::String::Utf8Value const err_msg(isolate, try_catch.Message()->Get());
-
-	if (!type.empty())
-	{
-		type += ": ";
-	}
-	check_eq("message", *err_msg, "Uncaught " + type + "exception message");
+	check_eq("message", *err_msg, "Uncaught " + type + ": exception message");
 }
 
 } // unnamed namespace
@@ -30,7 +25,6 @@ void test_throw_ex()
 	v8pp::context context;
 	v8::Isolate* isolate = context.isolate();
 
-	test(context, "");
 	test(context, "Error", v8::Exception::Error);
 	test(context, "RangeError", v8::Exception::RangeError);
 	test(context, "ReferenceError", v8::Exception::ReferenceError);

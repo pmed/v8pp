@@ -13,7 +13,7 @@ using exception_ctor = decltype(v8::Exception::Error); // assuming all Exception
 constexpr bool exception_ctor_with_options = V8_MAJOR_VERSION > 11 || (V8_MAJOR_VERSION == 11 && V8_MINOR_VERSION >= 9);
 
 v8::Local<v8::Value> throw_ex(v8::Isolate* isolate, std::string_view message,
-	exception_ctor = {}, v8::Local<v8::Value> exception_options = {});
+	exception_ctor ctor = v8::Exception::Error, v8::Local<v8::Value> exception_options = {});
 
 } // namespace v8pp
 
