@@ -28,7 +28,7 @@ jobs:
 
     - name: Install V8 apt 
       if: startsWith(matrix.os, 'ubuntu')
-      run: sudo apt install libv8-dev -y
+      run: sudo apt updte && sudo apt install libv8-dev -y
 
     - name: Install V8 brew
       if: startsWith(matrix.os, 'macos')
