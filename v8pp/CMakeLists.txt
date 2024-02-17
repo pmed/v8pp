@@ -33,6 +33,7 @@ set(V8PP_HEADERS
 	property.hpp
 	ptr_traits.hpp
 	throw_ex.hpp
+	type_info.hpp
 	utility.hpp
 	version.hpp
 )

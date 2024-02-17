@@ -50,6 +50,7 @@
     <ClInclude Include="property.hpp" />
     <ClInclude Include="ptr_traits.hpp" />
     <ClInclude Include="throw_ex.hpp" />
+    <ClInclude Include="type_info.hpp" />
     <ClInclude Include="utility.hpp" />
     <ClInclude Include="version.hpp" />
   </ItemGroup>

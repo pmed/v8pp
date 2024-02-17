@@ -245,20 +245,10 @@ void test_type_traits()
 	static_assert(v8pp::detail::is_shared_ptr<std::shared_ptr<int>>::value, "int");
 }
 
-struct some_struct {};
-namespace test { class some_class {}; }
-
 void test_utility()
 {
 	test_type_traits();
 	test_function_traits();
 	test_tuple_tail();
 	test_is_callable();
-
-	using v8pp::detail::type_id;
-
-	check_eq("type_id", type_id<int>().name(), "int");
-	check_eq("type_id", type_id<bool>().name(), "bool");
-	check_eq("type_id", type_id<some_struct>().name(), "some_struct");
-	check_eq("type_id", type_id<test::some_class>().name(), "test::some_class");
 }

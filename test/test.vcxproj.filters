@@ -15,6 +15,7 @@
     <ClCompile Include="test_json.cpp" />
     <ClCompile Include="test_utility.cpp" />
     <ClCompile Include="test_ptr_traits.cpp" />
+    <ClCompile Include="test_type_info.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="test.hpp" />
