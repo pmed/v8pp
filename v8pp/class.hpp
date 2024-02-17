@@ -301,7 +301,10 @@ public:
 			->SetAccessor(v8_name,
 				&member_get<attribute_type>, &member_set<attribute_type>,
 				data,
-				v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
+#if V8_MAJOR_VERSION < 12 || (V8_MAJOR_VERSION == 12 && V8_MINOR_VERSION < 1)
+				v8::DEFAULT,
+#endif
+				v8::PropertyAttribute(v8::DontDelete));
 		return *this;
 	}
 
@@ -337,7 +340,11 @@ public:
 		v8::Local<v8::String> v8_name = v8pp::to_v8(isolate(), name);
 		v8::Local<v8::Value> data = detail::external_data::set(isolate(), property_type(std::move(get), std::move(set)));
 		class_info_.class_function_template()->PrototypeTemplate()
-			->SetAccessor(v8_name, getter, setter, data, v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
+			->SetAccessor(v8_name, getter, setter, data,
+#if V8_MAJOR_VERSION < 12 || (V8_MAJOR_VERSION == 12 && V8_MINOR_VERSION < 1)
+				v8::DEFAULT,
+#endif
+				v8::PropertyAttribute(v8::DontDelete));
 		return *this;
 	}
 
