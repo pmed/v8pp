@@ -11,6 +11,7 @@
 #include "v8pp/function.hpp"
 #include "v8pp/property.hpp"
 #include "v8pp/ptr_traits.hpp"
+#include "v8pp/type_info.hpp"
 
 namespace v8pp {
 
