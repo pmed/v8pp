@@ -20,6 +20,7 @@
 #include "v8pp/context.hpp"
 #include "v8pp/convert.hpp"
 #include "v8pp/utility.hpp"
+#include "v8pp/type_info.hpp"
 
 template<typename Sequence>
 std::ostream& print_sequence(std::ostream& os, Sequence const& sequence, char const brackets[2]);
