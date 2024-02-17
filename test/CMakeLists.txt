@@ -15,6 +15,7 @@ add_executable(v8pp_test
 	test_property.cpp
 	test_ptr_traits.cpp
 	test_throw_ex.cpp
+	test_type_info.cpp
 	test_utility.cpp
 )
 

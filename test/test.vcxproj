@@ -42,6 +42,7 @@
     <ClCompile Include="test_property.cpp" />
     <ClCompile Include="test_ptr_traits.cpp" />
     <ClCompile Include="test_throw_ex.cpp" />
+    <ClCompile Include="test_type_info.cpp" />
     <ClCompile Include="test_utility.cpp" />
   </ItemGroup>
   <ItemGroup>
