@@ -15,6 +15,21 @@ constexpr bool exception_ctor_with_options = V8_MAJOR_VERSION > 11 || (V8_MAJOR_
 v8::Local<v8::Value> throw_ex(v8::Isolate* isolate, std::string_view message,
 	exception_ctor ctor = v8::Exception::Error, v8::Local<v8::Value> exception_options = {});
 
+v8::Local<v8::Value> throw_error(v8::Isolate* isolate, std::string_view message,
+	v8::Local<v8::Value> exception_options = {});
+
+v8::Local<v8::Value> throw_range_error(v8::Isolate* isolate, std::string_view message,
+	v8::Local<v8::Value> exception_options = {});
+
+v8::Local<v8::Value> throw_reference_error(v8::Isolate* isolate, std::string_view message,
+	v8::Local<v8::Value> exception_options = {});
+
+v8::Local<v8::Value> throw_syntax_error(v8::Isolate* isolate, std::string_view message,
+	v8::Local<v8::Value> exception_options = {});
+
+v8::Local<v8::Value> throw_type_error(v8::Isolate* isolate, std::string_view message,
+	v8::Local<v8::Value> exception_options = {});
+
 } // namespace v8pp
 
 #if V8PP_HEADER_ONLY
