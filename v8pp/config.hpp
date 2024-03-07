@@ -2,19 +2,19 @@
 #define V8PP_CONFIG_HPP_INCLUDED
 
 /// v8pp library version
-#define V8PP_VERSION "@PROJECT_VERSION@"
-#define V8PP_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
-#define V8PP_VERSION_MINOR @PROJECT_VERSION_MINOR@
-#define V8PP_VERSION_PATCH @PROJECT_VERSION_PATCH@
+#define V8PP_VERSION "2.1.0"
+#define V8PP_VERSION_MAJOR 2
+#define V8PP_VERSION_MINOR 1
+#define V8PP_VERSION_PATCH 0
 
 /// v8::Isolate data slot number, used in v8pp for shared data
 #if !defined(V8PP_ISOLATE_DATA_SLOT)
-#define V8PP_ISOLATE_DATA_SLOT @V8PP_ISOLATE_DATA_SLOT@
+#define V8PP_ISOLATE_DATA_SLOT @V8PP_ISOLATE_DATA_SLOT @
 #endif
 
 /// v8pp plugin initialization procedure name
 #if !defined(V8PP_PLUGIN_INIT_PROC_NAME)
-#define V8PP_PLUGIN_INIT_PROC_NAME @V8PP_PLUGIN_INIT_PROC_NAME@
+#define V8PP_PLUGIN_INIT_PROC_NAME @V8PP_PLUGIN_INIT_PROC_NAME @
 #endif
 
 /// v8pp plugin filename suffix
@@ -34,10 +34,11 @@
 #endif
 
 #define V8PP_PLUGIN_INIT(isolate) extern "C" V8PP_EXPORT \
-v8::Local<v8::Value> V8PP_PLUGIN_INIT_PROC_NAME(isolate)
+	v8::Local<v8::Value>                                 \
+	V8PP_PLUGIN_INIT_PROC_NAME(isolate)
 
 #ifndef V8PP_HEADER_ONLY
-#define V8PP_HEADER_ONLY @V8PP_HEADER_ONLY@
+#define V8PP_HEADER_ONLY false
 #endif
 
 #if V8PP_HEADER_ONLY
@@ -46,7 +47,7 @@ v8::Local<v8::Value> V8PP_PLUGIN_INIT_PROC_NAME(isolate)
 #define V8PP_IMPL
 #endif
 
-#define V8PP_STRINGIZE(s)  V8PP_STRINGIZE0(s)
+#define V8PP_STRINGIZE(s) V8PP_STRINGIZE0(s)
 #define V8PP_STRINGIZE0(s) #s
 
 #endif // V8PP_CONFIG_HPP_INCLUDED
