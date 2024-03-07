@@ -416,7 +416,7 @@ private:
 		else
 		{
 			Number const min = std::numeric_limits<T>::lowest();
-			Number const max = std::numeric_limits<T>::max();
+			Number const max = (std::numeric_limits<T>::max)();
 			if (number >= min && number <= max)
 			{
 				result = static_cast<T>(number);
@@ -531,7 +531,7 @@ struct convert<Sequence, typename std::enable_if<detail::is_sequence<Sequence>::
 
 	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
 	{
-		constexpr int max_size = std::numeric_limits<int>::max();
+		constexpr int max_size = (std::numeric_limits<int>::max)();
 		if (value.size() > max_size)
 		{
 			throw std::runtime_error("Invalid array length: actual "
