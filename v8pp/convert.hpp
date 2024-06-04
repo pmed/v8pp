@@ -465,9 +465,7 @@ private:
 	using is_integral_not_bool = std::bool_constant<std::is_integral<T>::value && !is_bool<T>::value>;
 
 	template<typename T>
-	struct is_any : std::true_type
-	{
-	};
+	using is_any = std::true_type;
 
 	static bool is_map_object(v8::Isolate* isolate, v8::Local<v8::Object> obj)
 	{
@@ -486,7 +484,7 @@ private:
 		}
 		else
 		{
-			Number const min = std::numeric_limits<T>::min();
+			Number const min = std::numeric_limits<T>::lowest();
 			Number const max = std::numeric_limits<T>::max();
 			if (number >= min && number <= max)
 			{

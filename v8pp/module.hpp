@@ -81,10 +81,17 @@ public:
 		static_assert(!detail::is_callable<Variable>::value, "Variable must not be callable");
 		v8::HandleScope scope(isolate_);
 
+#if V8_MAJOR_VERSION > 12 || (V8_MAJOR_VERSION == 12 && V8_MINOR_VERSION >= 1)
+		obj_->SetAccessor(v8pp::to_v8(isolate_, name),
+			&var_get<Variable>, &var_set<Variable>,
+			detail::external_data::set(isolate_, &var),
+			v8::PropertyAttribute(v8::DontDelete));
+#else
 		obj_->SetAccessor(v8pp::to_v8(isolate_, name),
 			&var_get<Variable>, &var_set<Variable>,
 			detail::external_data::set(isolate_, &var),
 			v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
+#endif
 		return *this;
 	}
 
@@ -107,7 +114,11 @@ public:
 		v8::AccessorSetterCallback setter = property_type::is_readonly ? nullptr : property_type::template set<Traits>;
 		v8::Local<v8::String> v8_name = v8pp::to_v8(isolate_, name);
 		v8::Local<v8::Value> data = detail::external_data::set(isolate_, property_type(std::move(get), std::move(set)));
+#if V8_MAJOR_VERSION > 12 || (V8_MAJOR_VERSION == 12 && V8_MINOR_VERSION >= 1)
+		obj_->SetAccessor(v8_name, getter, setter, data, v8::PropertyAttribute(v8::DontDelete));
+#else
 		obj_->SetAccessor(v8_name, getter, setter, data, v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
+#endif
 		return *this;
 	}
 

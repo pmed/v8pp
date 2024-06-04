@@ -84,7 +84,11 @@ int main(int argc, char const* argv[])
 		else if (arg == "-v" || arg == "--version")
 		{
 			std::cout << "V8 version " << v8::V8::GetVersion() << std::endl;
-			std::cout << "v8pp version " << v8pp::version() << std::endl;
+			std::cout << "v8pp version " << v8pp::version()
+				<< " (major=" << v8pp::version_major()
+				<< " minor=" << v8pp::version_minor()
+				<< " patch=" << v8pp::version_patch()
+				<< ")\n";
 			std::cout << "v8pp build options " << v8pp::build_options() << std::endl;
 		}
 		else if (arg == "--lib-path")
@@ -101,6 +105,10 @@ int main(int argc, char const* argv[])
 			scripts.push_back(arg);
 		}
 	}
+
+	// allow Isolate::RequestGarbageCollectionForTesting() before Initialize()
+	// for v8pp::class_ tests
+	v8::V8::SetFlagsFromString("--expose_gc");
 
 	//v8::V8::InitializeICU();
 	v8::V8::InitializeExternalStartupData(argv[0]);
@@ -139,7 +147,11 @@ int main(int argc, char const* argv[])
 	}
 
 	v8::V8::Dispose();
+#if V8_MAJOR_VERSION > 9 || (V8_MAJOR_VERSION == 9 && V8_MINOR_VERSION >= 8)
+	v8::V8::DisposePlatform();
+#else
 	v8::V8::ShutdownPlatform();
+#endif
 
 	return result;
 }

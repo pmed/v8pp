@@ -2,19 +2,20 @@
 
 namespace v8pp {
 
-V8PP_IMPL v8::Local<v8::Value> throw_ex(v8::Isolate* isolate, std::string_view str)
+V8PP_IMPL v8::Local<v8::Value> throw_ex(v8::Isolate* isolate, std::string_view message, exception_ctor ctor, v8::Local<v8::Value> exception_options)
 {
-	v8::Local<v8::String> msg = v8::String::NewFromUtf8(isolate, str.data(),
-		v8::NewStringType::kNormal, static_cast<int>(str.size())).ToLocalChecked();
-	return isolate->ThrowException(msg);
-}
+	v8::Local<v8::String> msg = v8::String::NewFromUtf8(isolate, message.data(),
+		v8::NewStringType::kNormal, static_cast<int>(message.size())).ToLocalChecked();
 
-V8PP_IMPL v8::Local<v8::Value> throw_ex(v8::Isolate* isolate, std::string_view str,
-	v8::Local<v8::Value> (*exception_ctor)(v8::Local<v8::String>))
-{
-	v8::Local<v8::String> msg = v8::String::NewFromUtf8(isolate, str.data(),
-		v8::NewStringType::kNormal, static_cast<int>(str.size())).ToLocalChecked();
-	return isolate->ThrowException(exception_ctor(msg));
+// if constexpr (exception_ctor_with_options) doesn't work win VC++ 2022
+#if V8_MAJOR_VERSION > 11 || (V8_MAJOR_VERSION == 11 && V8_MINOR_VERSION >= 9)
+	v8::Local<v8::Value> ex = ctor(msg, exception_options);
+#else
+	(void)exception_options;
+	v8::Local<v8::Value> ex = ctor(msg);
+#endif
+
+	return isolate->ThrowException(ex);
 }
 
 } // namespace v8pp

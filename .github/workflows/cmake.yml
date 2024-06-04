@@ -8,25 +8,27 @@ jobs:
         build_type: [ Release ]
         shared_lib: [ false, true ]
         header_only: [ false, true ]
-        v8_compress_pointers: [ false, true ]
-        exclude:
+        include:
           - os: ubuntu-latest
-            v8_compress_pointers: true
+            v8_compress_pointers: false
+            v8_enable_sandbox: false
           - os: macos-latest
-            v8_compress_pointers: false
+            v8_compress_pointers: true
+            v8_enable_sandbox: true
           - os: windows-latest
-            v8_compress_pointers: false
+            v8_compress_pointers: true
+            v8_enable_sandbox: true
 
     runs-on: ${{matrix.os}}
 
-    name: '${{matrix.os}} ${{matrix.build_type}} shared_lib=${{matrix.shared_lib}} header_only=${{matrix.header_only}} v8_compress_pointers=${{matrix.v8_compress_pointers}}'
+    name: '${{matrix.os}} ${{matrix.build_type}} shared_lib=${{matrix.shared_lib}} header_only=${{matrix.header_only}} v8_compress_pointers=${{matrix.v8_compress_pointers}} v8_enable_sandbox=${{matrix.v8_enable_sandbox}}'
 
     steps:
     - uses: actions/checkout@v2
 
     - name: Install V8 apt 
       if: startsWith(matrix.os, 'ubuntu')
-      run: sudo apt install libv8-dev -y
+      run: sudo apt update && sudo apt install libv8-dev -y
 
     - name: Install V8 brew
       if: startsWith(matrix.os, 'macos')
@@ -34,20 +36,20 @@ jobs:
 
     - name: Install V8 nuget
       if: startsWith(matrix.os, 'windows')
-      run: nuget install v8-v142-x64 -OutputDirectory ${{github.workspace}}/build
+      run: nuget install v8-v143-x64 -OutputDirectory ${{github.workspace}}/build
 
     - name: Install Visual C++ 
       if: startsWith(matrix.os, 'windows')
       uses: ilammy/msvc-dev-cmd@v1
       with:
         arch: x64
-        toolset: 14.29 # Visual C++ 2019
+        vsversion: 2022
 
     - name: Install ninja-build tool
       uses: seanmiddleditch/gha-setup-ninja@v3
 
     - name: Configure CMake
-      run: cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBUILD_TESTING=TRUE -DBUILD_SHARED_LIBS=${{matrix.shared_lib}} -DV8PP_HEADER_ONLY=${{matrix.header_only}} -DV8_COMPRESS_POINTERS=${{matrix.v8_compress_pointers}}
+      run: cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBUILD_TESTING=TRUE -DBUILD_SHARED_LIBS=${{matrix.shared_lib}} -DV8PP_HEADER_ONLY=${{matrix.header_only}} -DV8_COMPRESS_POINTERS=${{matrix.v8_compress_pointers}} -DV8_ENABLE_SANDBOX=${{matrix.v8_enable_sandbox}}
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{matrix.build_type}}

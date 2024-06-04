@@ -10,6 +10,7 @@
 
 struct Xbase
 {
+	char c = 'X';
 	int var = 1;
 
 	int get() const { return var; }
@@ -227,11 +228,11 @@ void test_class_()
 		;
 
 	check_eq("C++ exception from X ctor",
-		run_script<std::string>(context, "ret = ''; try { new X(1, 2); } catch(err) { ret = err; } ret"),
+		run_script<std::string>(context, "ret = ''; try { new X(1, 2); } catch(err) { ret = err.message; } ret"),
 		"C++ exception");
 	check("Unhandled C++ exception from X ctor", context.run_script("x = new X(1, 2); x").IsEmpty());
 	check_eq("V8 exception from X ctor",
-		run_script<std::string>(context, "ret = ''; try { new X(1, 2, 3); } catch(err) { ret = err; } ret"),
+		run_script<std::string>(context, "ret = ''; try { new X(1, 2, 3); } catch(err) { ret = err.message; } ret"),
 		"JS exception");
 	check("Unhandled V8 exception from X ctor", context.run_script("x = new X(1, 2, 3); x").IsEmpty());
 
@@ -320,8 +321,6 @@ void test_class_()
 	check("unref y3_obj", v8pp::to_v8(isolate, y3).IsEmpty());
 	y3_obj.Clear();
 
-	std::string const v8_flags = "--expose_gc";
-	v8::V8::SetFlagsFromString(v8_flags.data(), (int)v8_flags.length());
 	context.isolate()->RequestGarbageCollectionForTesting(
 		v8::Isolate::GarbageCollectionType::kFullGarbageCollection);
 
@@ -344,6 +343,7 @@ void test_multiple_inheritance()
 {
 	struct A
 	{
+		char a = 'A';
 		int x;
 		A() : x(1) {}
 		int f() { return x; }
@@ -354,6 +354,7 @@ void test_multiple_inheritance()
 
 	struct B
 	{
+		char b = 'B';
 		int x;
 		B() : x(2) {}
 		int g() { return x; }

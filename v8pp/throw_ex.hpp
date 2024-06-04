@@ -9,10 +9,11 @@
 
 namespace v8pp {
 
-v8::Local<v8::Value> throw_ex(v8::Isolate* isolate, std::string_view str);
+using exception_ctor = decltype(v8::Exception::Error); // assuming all Exception ctors have the same type
+constexpr bool exception_ctor_with_options = V8_MAJOR_VERSION > 11 || (V8_MAJOR_VERSION == 11 && V8_MINOR_VERSION >= 9);
 
-v8::Local<v8::Value> throw_ex(v8::Isolate* isolate, std::string_view str,
-	v8::Local<v8::Value> (*exception_ctor)(v8::Local<v8::String>));
+v8::Local<v8::Value> throw_ex(v8::Isolate* isolate, std::string_view message,
+	exception_ctor ctor = v8::Exception::Error, v8::Local<v8::Value> exception_options = {});
 
 } // namespace v8pp
 

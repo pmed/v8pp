@@ -110,7 +110,10 @@ decltype(auto) call_from_v8(F&& func, v8::FunctionCallbackInfo<v8::Value> const&
 
 		if (args.Length() > call_traits::arg_count || args.Length() < call_traits::arg_count - call_traits::optional_arg_count)
 		{
-			throw std::runtime_error("argument count does not match function definition");
+			throw std::runtime_error(
+				"Argument count does not match function definition. Expected " +
+				std::to_string(call_traits::arg_count) + " but got " +
+				std::to_string(args.Length()));
 		}
 
 		if constexpr (with_isolate)

@@ -3,6 +3,9 @@
 
 /// v8pp library version
 #define V8PP_VERSION "@PROJECT_VERSION@"
+#define V8PP_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+#define V8PP_VERSION_MINOR @PROJECT_VERSION_MINOR@
+#define V8PP_VERSION_PATCH @PROJECT_VERSION_PATCH@
 
 /// v8::Isolate data slot number, used in v8pp for shared data
 #if !defined(V8PP_ISOLATE_DATA_SLOT)

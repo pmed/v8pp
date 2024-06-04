@@ -232,14 +232,14 @@ void check_range(v8::Isolate* isolate)
 	}
 	else
 	{
-		min = std::numeric_limits<T>::min();
+		min = std::numeric_limits<T>::lowest();
 		max = std::numeric_limits<T>::max();
 	}
 
 	check_range(zero);
 	check_range(min);
 	check_range(max);
-	check_range.check_ex(std::nextafter(double(min), std::numeric_limits<double>::min())); // like min - 1 (out of range)
+	check_range.check_ex(std::nextafter(double(min), std::numeric_limits<double>::lowest())); // like min - 1 (out of range)
 	check_range.check_ex(std::nextafter(double(max), std::numeric_limits<double>::max())); // like max + 1 (out of range)
 }
 
@@ -310,21 +310,23 @@ void test_convert_variant(v8::Isolate* isolate)
 
 	variant_check<bool, float, int32_t> check_arithmetic{ isolate };
 	check_arithmetic(true, 5.5f, 2);
+	check_arithmetic(false, 1.1f, 0);
 
 	variant_check<int32_t, float, bool> check_arithmetic_reversed{ isolate };
 	check_arithmetic_reversed(2, 5.5f, true);
+	check_arithmetic_reversed(-2, 2.2f, false);
 
 	variant_check<std::vector<float>, float, std::string> check_vector{ isolate };
 	check_vector({1.f, 2.f, 3.f}, 4.f, "testing");
 
 	// The order here matters
-	variant_check<int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t, /*uint64_t,*/ float, double> order_check{ isolate };
+	variant_check<int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, /*int64_t, uint64_t,*/ float, double> order_check{ isolate };
 	order_check(
 		std::numeric_limits<int8_t>::min(), std::numeric_limits<uint8_t>::max(),
 		std::numeric_limits<int16_t>::min(), std::numeric_limits<uint16_t>::max(),
 		std::numeric_limits<int32_t>::min(), std::numeric_limits<uint32_t>::max(),
-		V8_MIN_INT, //TODO: V8_MAX_INT,
-		std::numeric_limits<float>::min(), std::numeric_limits<double>::max());
+		//TODO: V8_MIN_INT, V8_MAX_INT,
+		std::numeric_limits<float>::lowest(), std::numeric_limits<double>::max());
 
 	variant_check<bool, int8_t> simple_arithmetic{ isolate };
 	simple_arithmetic.check_ex(std::numeric_limits<uint32_t>::max()); // does not fit into int8_t

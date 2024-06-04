@@ -1,5 +1,7 @@
 # v8pp target
 
+include(GNUInstallDirs)
+
 if(DEFINED VCPKG_TARGET_TRIPLET)
 	find_package(V8 CONFIG REQUIRED)
 else()
@@ -10,7 +12,11 @@ endif()
 configure_file(config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/config.hpp)
 
 if(V8_COMPRESS_POINTERS)
-	set(V8PP_DEFINES V8_COMPRESS_POINTERS V8_31BIT_SMIS_ON_64BIT_ARCH)
+	list(APPEND V8PP_DEFINES V8_COMPRESS_POINTERS V8_31BIT_SMIS_ON_64BIT_ARCH)
+endif()
+
+if (V8_ENABLE_SANDBOX)
+	list(APPEND V8PP_DEFINES V8_ENABLE_SANDBOX)
 endif()
 
 set(V8PP_HEADERS
@@ -58,7 +64,7 @@ if(MSVC)
 	# set warning level 3 for system headers
 	list(APPEND V8PP_COMPILE_OPTIONS /experimental:external /external:anglebrackets /external:W3)
 else()
-	set(V8PP_COMPILE_OPTIONS -fno-rtti -fexceptions -Wall -Wextra -Wpedantic)
+	set(V8PP_COMPILE_OPTIONS -frtti -fexceptions -Wall -Wextra -Wpedantic)
 endif()
 
 if(V8PP_HEADER_ONLY)
@@ -82,12 +88,16 @@ else()
 	if(BUILD_SHARED_LIBS)
 		target_link_libraries(v8pp PUBLIC ${CMAKE_DL_LIBS})
 	endif()
+	if(APPLE)
+		# turn off RTTI to avoid generating typeinfo for v8::ArrayBuffer::Allocator
+		# used in context.cpp
+		set_source_files_properties(context.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
+	endif()
 endif()
 
 #source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${V8PP_HEADERS} ${V8PP_SOURCES})
 
 # Install
-include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 set(targets_export_name v8pp_Targets)

@@ -35,6 +35,8 @@ if(WIN32)
 	if (NOT V8_NUGET_DEV_DIR)
 		message(FATAL_ERROR "Not found ${V8_PACKAGE_NAME} in ${V8_PACKAGE_DIRS}")
 	else()
+		list(GET V8_NUGET_DEV_DIR -1 V8_NUGET_DEV_DIR_LAST)
+		set(V8_NUGET_DEV_DIR ${V8_NUGET_DEV_DIR_LAST})
 		message(STATUS "Found V8 ${V8_NUGET_DEV_DIR}")
 	endif()
 

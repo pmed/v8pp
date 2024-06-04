@@ -106,18 +106,19 @@ void test_context()
 
 		// Isolate and HandleScope shall exist before init_global
 		v8::Isolate* isolate = v8pp::context::create_isolate();
-		v8::Isolate::Scope isolate_scope(isolate);
-		v8::HandleScope scope(isolate);
+		{
+			v8::Isolate::Scope isolate_scope(isolate);
+			v8::HandleScope scope(isolate);
 
-		v8pp::context::options opt;
-		opt.isolate = isolate; // use existing one
-		opt.add_default_global_methods = false;
-		opt.global = init_global(isolate);
+			v8pp::context::options opt;
+			opt.isolate = isolate; // use existing one
+			opt.add_default_global_methods = false;
+			opt.global = init_global(isolate);
 
-		v8pp::context context(opt);
-
-		int const r = context.run_script("value + func()")->Int32Value(context.isolate()->GetCurrentContext()).FromJust();
-
-		check_eq("run_script with customized global", r, 42);
+			v8pp::context context(opt);
+			int const r = context.run_script("value + func()")->Int32Value(context.isolate()->GetCurrentContext()).FromJust();
+			check_eq("run_script with customized global", r, 42);
+		}
+		isolate->Dispose();
 	}
 }
