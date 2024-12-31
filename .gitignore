@@ -13,3 +13,5 @@
 *.so
 *.o
 *.a
+/include-what-you-use
+/build*/
