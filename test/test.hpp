@@ -42,6 +42,26 @@ std::ostream& operator<<(std::ostream& os, std::basic_string_view<Char, Traits> 
 	return print_sequence(os, string_view, "''");
 }
 
+inline std::ostream& operator<<(std::ostream& os, char16_t ch)
+{
+	return os << static_cast<int64_t>(ch);
+}
+
+inline std::ostream& operator<<(std::ostream& os, char16_t const* str)
+{
+	return print_sequence(os, std::basic_string_view<char16_t>(str), "''");
+}
+
+inline std::ostream& operator<<(std::ostream& os, wchar_t ch)
+{
+	return os << static_cast<int64_t>(ch);
+}
+
+inline std::ostream& operator<<(std::ostream& os, wchar_t const* str)
+{
+	return print_sequence(os, std::basic_string_view<wchar_t>(str), "''");
+}
+
 template<typename T, typename Alloc>
 std::ostream& operator<<(std::ostream& os, std::vector<T, Alloc> const& vector)
 {
