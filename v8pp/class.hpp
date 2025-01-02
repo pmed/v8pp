@@ -296,12 +296,10 @@ public:
 		attribute_type attr = attribute;
 
 		v8::Local<v8::Name> v8_name = v8pp::to_v8(isolate(), name);
+		v8::AccessorNameGetterCallback getter = &member_get<attribute_type>;
+		v8::AccessorNameSetterCallback setter = &member_set<attribute_type>;
 		v8::Local<v8::Value> data = detail::external_data::set(isolate(), std::forward<attribute_type>(attr));
-		class_info_.class_function_template()->PrototypeTemplate()
-			->SetAccessor(v8_name,
-				&member_get<attribute_type>, &member_set<attribute_type>,
-				data,
-				v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
+		class_info_.class_function_template()->PrototypeTemplate()->SetNativeDataProperty(v8_name, getter, setter, data, v8::PropertyAttribute::DontDelete);
 		return *this;
 	}
 
@@ -332,12 +330,11 @@ public:
 
 		v8::HandleScope scope(isolate());
 
-		v8::AccessorGetterCallback getter = property_type::template get<Traits>;
-		v8::AccessorSetterCallback setter = property_type::is_readonly ? nullptr : property_type::template set<Traits>;
+		v8::AccessorNameGetterCallback getter = property_type::template get<Traits>;
+		v8::AccessorNameSetterCallback setter = property_type::is_readonly ? nullptr : property_type::template set<Traits>;
 		v8::Local<v8::String> v8_name = v8pp::to_v8(isolate(), name);
 		v8::Local<v8::Value> data = detail::external_data::set(isolate(), property_type(std::move(get), std::move(set)));
-		class_info_.class_function_template()->PrototypeTemplate()
-			->SetAccessor(v8_name, getter, setter, data, v8::DEFAULT, v8::PropertyAttribute(v8::DontDelete));
+		class_info_.class_function_template()->PrototypeTemplate()->SetNativeDataProperty(v8_name, getter, setter, data, v8::PropertyAttribute::DontDelete);
 		return *this;
 	}
 

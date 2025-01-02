@@ -76,7 +76,7 @@ int external_get2(X const& x, v8::Isolate*)
 	return x.var;
 }
 
-void external_get3(X const& x, v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
+void external_get3(X const& x, v8::Local<v8::Name>, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
 	info.GetReturnValue().Set(v8pp::to_v8(info.GetIsolate(), x.var));
 }
@@ -91,7 +91,7 @@ void external_set2(X& x, v8::Isolate*, int value)
 	x.var = value;
 }
 
-void external_set3(X& x, v8::Local<v8::String>, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info)
+void external_set3(X& x, v8::Local<v8::Name>, v8::Local<v8::Value> value, v8::PropertyCallbackInfo<void> const& info)
 {
 	x.var = v8pp::from_v8<int>(info.GetIsolate(), value);
 }
@@ -125,7 +125,7 @@ static int extern_fun(v8::FunctionCallbackInfo<v8::Value> const& args)
 }
 
 template<typename Traits>
-void get_rprop_direct(v8::Local<v8::String>, v8::PropertyCallbackInfo<v8::Value> const& info)
+void get_rprop_direct(v8::Local<v8::Name>, v8::PropertyCallbackInfo<v8::Value> const& info)
 {
 	auto self = v8pp::class_<X, Traits>::unwrap_object(info.GetIsolate(), info.This());
 	info.GetReturnValue().Set(v8pp::to_v8(info.GetIsolate(), self->var));
