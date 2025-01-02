@@ -303,7 +303,9 @@ v8::Local<v8::Value> context::run_script(std::string_view source, std::string_vi
 {
 	v8::EscapableHandleScope scope(isolate_);
 	v8::Local<v8::Context> context = isolate_->GetCurrentContext();
-#if V8_MAJOR_VERSION > 9 || (V8_MAJOR_VERSION == 9 && V8_MINOR_VERSION >= 7)
+#if V8_MAJOR_VERSION > 12 || (V8_MAJOR_VERSION == 12 && V8_MINOR_VERSION >= 2)
+	v8::ScriptOrigin origin(to_v8(isolate_, filename));
+#elif V8_MAJOR_VERSION > 9 || (V8_MAJOR_VERSION == 9 && V8_MINOR_VERSION >= 7)
 	v8::ScriptOrigin origin(isolate_, to_v8(isolate_, filename));
 #else
 	v8::ScriptOrigin origin(to_v8(isolate_, filename));
