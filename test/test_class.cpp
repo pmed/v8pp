@@ -52,7 +52,7 @@ struct X : Xbase
 template<typename Traits, typename X_ptr = typename v8pp::class_<X, Traits>::object_pointer_type>
 static X_ptr create_X(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
-	X_ptr x(new X);
+	X_ptr x = Traits::template create<X>();
 	switch (args.Length())
 	{
 	case 1:
