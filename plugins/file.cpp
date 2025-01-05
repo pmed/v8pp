@@ -121,7 +121,7 @@ v8::Local<v8::Value> init(v8::Isolate* isolate)
 	// Create a module to add classes and functions to and return a
 	// new instance of the module to be embedded into the v8 context
 	v8pp::module m(isolate);
-	m.function("rename", [](char const* src, char const* dest) -> bool
+	m.function("rename", +[](char const* src, char const* dest) -> bool
 	{
 		return std::rename(src, dest) == 0;
 	});
