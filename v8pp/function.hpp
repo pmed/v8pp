@@ -26,7 +26,7 @@ public:
 	{
 		if constexpr (is_bitcast_allowed<T>)
 		{
-			void* ptr;
+			void* ptr = nullptr;
 			memcpy(&ptr, &value, sizeof value);
 			return v8::External::New(isolate, ptr);
 		}
