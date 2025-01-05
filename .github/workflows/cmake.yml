@@ -4,7 +4,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        os: [ ubuntu-latest, windows-latest ] # macos-latest, 
         build_type: [ Release ]
         shared_lib: [ false, true ]
         header_only: [ false, true ]
@@ -12,9 +12,9 @@ jobs:
           - os: ubuntu-latest
             v8_compress_pointers: false
             v8_enable_sandbox: false
-          - os: macos-latest
-            v8_compress_pointers: true
-            v8_enable_sandbox: true
+          #- os: macos-latest
+          #  v8_compress_pointers: true
+          #  v8_enable_sandbox: true
           - os: windows-latest
             v8_compress_pointers: true
             v8_enable_sandbox: true
