@@ -158,8 +158,9 @@ catch (std::exception const& ex)
 {
 	if (info.ShouldThrowOnError())
 	{
-		info.GetReturnValue().Set(throw_ex(info.GetIsolate(), ex.what()));
+		info.GetIsolate()->ThrowException(throw_ex(info.GetIsolate(), ex.what()));
 	}
+	// TODO: info.GetReturnValue().Set(false);
 }
 
 } // namespace detail
@@ -219,9 +220,10 @@ struct property<Get, detail::none, GetClass, detail::none> final
 		//assert(false && "read-only property");
 		if (info.ShouldThrowOnError())
 		{
-			info.GetReturnValue().Set(throw_ex(info.GetIsolate(),
+			info.GetIsolate()->ThrowException(v8pp::to_v8(info.GetIsolate(),
 				"read-only property " + from_v8<std::string>(info.GetIsolate(), name)));
 		}
+		// TODO: info.GetReturnValue().Set(false);
 	}
 };
 
