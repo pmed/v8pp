@@ -235,9 +235,8 @@ public:
 	class_& inherit()
 	{
 		using namespace detail;
-		static_assert(std::is_base_of<U, T>::value,
-			"Class U should be base for class T");
-		//TODO: std::is_convertible<T*, U*> and check for duplicates in hierarchy?
+		static_assert(std::derived_from<T, U>, "Class U should be base for class T");
+		// TODO: std::is_convertible<T*, U*> and check for duplicates in hierarchy?
 		object_registry& base = classes::find<Traits>(isolate(), type_id<U>());
 		class_info_.add_base(base, [](pointer_type const& ptr) -> pointer_type
 		{
@@ -288,8 +287,7 @@ public:
 	template<typename Attribute>
 	class_& var(std::string_view name, Attribute attribute)
 	{
-		static_assert(std::is_member_object_pointer<Attribute>::value,
-			"Attribute must be pointer to member data");
+		static_assert(std::is_member_object_pointer_v<Attribute>, "Attribute must be pointer to member data");
 
 		v8::HandleScope scope(isolate());
 
@@ -308,19 +306,17 @@ public:
 	template<typename GetFunction, typename SetFunction = detail::none>
 	class_& property(std::string_view name, GetFunction&& get, SetFunction&& set = {})
 	{
-		using Getter = typename std::conditional<
-			std::is_member_function_pointer<GetFunction>::value,
+		using Getter = typename std::conditional_t<std::is_member_function_pointer_v<GetFunction>,
 			typename detail::function_traits<GetFunction>::template pointer_type<T>,
-			typename std::decay<GetFunction>::type>::type;
+			typename std::decay_t<GetFunction>>;
 
-		using Setter = typename std::conditional<
-			std::is_member_function_pointer<SetFunction>::value,
+		using Setter = typename std::conditional_t<std::is_member_function_pointer_v<SetFunction>,
 			typename detail::function_traits<SetFunction>::template pointer_type<T>,
-			typename std::decay<SetFunction>::type>::type;
+			typename std::decay_t<SetFunction>>;
 
-		static_assert(std::is_member_function_pointer<GetFunction>::value
+		static_assert(std::is_member_function_pointer_v<GetFunction>
 			|| detail::is_callable<Getter>::value, "GetFunction must be callable");
-		static_assert(std::is_member_function_pointer<SetFunction>::value
+		static_assert(std::is_member_function_pointer_v<SetFunction>
 			|| detail::is_callable<Setter>::value
 			|| std::same_as<Setter, detail::none>, "SetFunction must be callable");
 

@@ -69,7 +69,7 @@ public:
 	template<typename Function, typename Traits = raw_ptr_traits>
 	module& function(std::string_view name, Function&& func)
 	{
-		using Fun = typename std::decay<Function>::type;
+		using Fun = typename std::decay_t<Function>;
 		static_assert(detail::is_callable<Fun>::value, "Function must be callable");
 		return value(name, wrap_function_template<Function, Traits>(isolate_, std::forward<Function>(func)));
 	}
@@ -93,8 +93,9 @@ public:
 	template<typename GetFunction, typename SetFunction = detail::none>
 	module& property(char const* name, GetFunction&& get, SetFunction&& set = {})
 	{
-		using Getter = typename std::decay<GetFunction>::type;
-		using Setter = typename std::decay<SetFunction>::type;
+		using Getter = typename std::decay_t<GetFunction>;
+		using Setter = typename std::decay_t<SetFunction>;
+
 		static_assert(detail::is_callable<Getter>::value, "GetFunction must be callable");
 		static_assert(detail::is_callable<Setter>::value
 			|| std::same_as<Setter, detail::none>, "SetFunction must be callable");

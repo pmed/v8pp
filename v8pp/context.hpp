@@ -87,7 +87,7 @@ public:
 	template<typename Function, typename Traits = raw_ptr_traits>
 	context& function(std::string_view name, Function&& func)
 	{
-		using Fun = typename std::decay<Function>::type;
+		using Fun = typename std::decay_t<Function>;
 		static_assert(detail::is_callable<Fun>::value, "Function must be callable");
 		return value(name, wrap_function<Function, Traits>(isolate_, name, std::forward<Function>(func)));
 	}

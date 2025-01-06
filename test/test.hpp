@@ -154,7 +154,7 @@ std::ostream& operator<<(std::ostream& os, std::pair<First, Second> const& pair)
 template<typename Enum> requires std::is_enum_v<Enum>
 std::ostream& operator<<(std::ostream& os, Enum value)
 {
-	return os << static_cast<typename std::underlying_type<Enum>::type>(value);
+	return os << static_cast<typename std::underlying_type_t<Enum>>(value);
 }
 
 template<typename... Ts>

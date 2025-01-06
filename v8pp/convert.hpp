@@ -687,7 +687,7 @@ struct convert<T, typename std::enable_if<is_wrapped_class<T>::value>::type>
 {
 	using from_type = T&;
 	using to_type = v8::Local<v8::Object>;
-	using class_type = typename std::remove_cv<T>::type;
+	using class_type = typename std::remove_cv_t<T>;
 
 	static bool is_valid(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
@@ -721,7 +721,7 @@ struct convert<std::shared_ptr<T>, typename std::enable_if<is_wrapped_class<T>::
 {
 	using from_type = std::shared_ptr<T>;
 	using to_type = v8::Local<v8::Object>;
-	using class_type = typename std::remove_cv<T>::type;
+	using class_type = typename std::remove_cv_t<T>;
 
 	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
 	{
@@ -748,7 +748,7 @@ struct convert<T, ref_from_shared_ptr>
 {
 	using from_type = T&;
 	using to_type = v8::Local<v8::Object>;
-	using class_type = typename std::remove_cv<T>::type;
+	using class_type = typename std::remove_cv_t<T>;
 
 	static bool is_valid(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{

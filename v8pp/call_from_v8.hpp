@@ -15,11 +15,10 @@ template<typename F, size_t Offset = 0>
 struct call_from_v8_traits
 {
 	static constexpr size_t offset = Offset;
-	static constexpr bool is_mem_fun = std::is_member_function_pointer<F>::value;
+	static constexpr bool is_mem_fun = std::is_member_function_pointer_v<F>;
 	using arguments = typename function_traits<F>::arguments;
 
-	static constexpr size_t arg_count =
-		std::tuple_size<arguments>::value - is_mem_fun - offset;
+	static constexpr size_t arg_count = std::tuple_size_v<arguments> - is_mem_fun - offset;
 
 	template<size_t Index, bool>
 	struct tuple_element

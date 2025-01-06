@@ -155,8 +155,7 @@ void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	using FTraits = function_traits<F>;
 
-	static_assert(is_callable<F>::value || std::is_member_function_pointer<F>::value,
-		"required callable F");
+	static_assert(is_callable<F>::value || std::is_member_function_pointer_v<F>, "required callable F");
 
 	v8::Isolate* isolate = args.GetIsolate();
 	v8::HandleScope scope(isolate);
@@ -185,7 +184,7 @@ void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 template<typename F, typename Traits = raw_ptr_traits>
 v8::Local<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&& func)
 {
-	using F_type = typename std::decay<F>::type;
+	using F_type = typename std::decay_t<F>;
 	return v8::FunctionTemplate::New(isolate,
 		&detail::forward_function<Traits, F_type>,
 		detail::external_data::set(isolate, std::forward<F_type>(func)));
@@ -197,7 +196,7 @@ v8::Local<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&&
 template<typename F, typename Traits = raw_ptr_traits>
 v8::Local<v8::Function> wrap_function(v8::Isolate* isolate, std::string_view name, F&& func)
 {
-	using F_type = typename std::decay<F>::type;
+	using F_type = typename std::decay_t<F>;
 	v8::Local<v8::Function> fn = v8::Function::New(isolate->GetCurrentContext(),
 		&detail::forward_function<Traits, F_type>,
 		detail::external_data::set(isolate, std::forward<F_type>(func))).ToLocalChecked();
