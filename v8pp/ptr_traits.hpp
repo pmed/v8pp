@@ -4,7 +4,7 @@
 
 namespace v8pp {
 
-template<typename T, typename Enable = void>
+template<typename T>
 struct convert;
 
 struct raw_ptr_traits
@@ -56,8 +56,10 @@ struct raw_ptr_traits
 	}
 };
 
+template<typename T>
 struct ref_from_shared_ptr
 {
+	using type = T;
 };
 
 struct shared_ptr_traits
@@ -82,7 +84,7 @@ struct shared_ptr_traits
 	using convert_ptr = convert<std::shared_ptr<T>>;
 
 	template<typename T>
-	using convert_ref = convert<T, ref_from_shared_ptr>;
+	using convert_ref = convert<ref_from_shared_ptr<T>>;
 
 	template<typename T, typename... Args>
 	static object_pointer_type<T> create(Args&&... args)

@@ -148,6 +148,9 @@ void test_convert_tuple(v8::Isolate* isolate)
 	std::tuple<size_t, size_t, size_t> const tuple_3{ 1, 2, 3 };
 	test_conv(isolate, tuple_3);
 
+	std::pair<bool, char> const pair{ false, 'N' };
+	test_conv(isolate, pair);
+
 	check_ex<v8pp::invalid_argument>("Tuple", [isolate, &tuple_1]()
 	{
 		// incorrect number of elements
