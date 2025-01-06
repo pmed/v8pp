@@ -499,7 +499,11 @@ private:
 		}
 		catch (std::exception const& ex)
 		{
-			info.GetReturnValue().Set(throw_ex(isolate, ex.what()));
+			if (info.ShouldThrowOnError())
+			{
+				isolate->ThrowException(throw_ex(isolate, ex.what()));
+			}
+			//TODO: info.GetReturnValue().Set(false);
 		}
 	}
 };
