@@ -120,15 +120,15 @@ void test_raw_ptr_traits()
 	X x;
 	traits::pointer_type ptr = &x;
 
-	static_assert(std::is_same<traits::pointer_type, void*>::value, "raw pointer_type");
-	static_assert(std::is_same<traits::const_pointer_type, void const*>::value, "raw const_pointer_type");
+	static_assert(std::same_as<traits::pointer_type, void*>);
+	static_assert(std::same_as<traits::const_pointer_type, void const*>);
 
-	static_assert(std::is_same<traits::object_pointer_type<X>, X*>::value, "raw object_pointer_type");
-	static_assert(std::is_same<traits::object_const_pointer_type<X>, X const*>::value, "raw object_const_pointer_type");
+	static_assert(std::same_as<traits::object_pointer_type<X>, X*>);
+	static_assert(std::same_as<traits::object_const_pointer_type<X>, X const*>);
 
-	static_assert(std::is_same<traits::object_id, void*>::value, "raw object_id");
-	static_assert(std::is_same<traits::convert_ptr<X>, v8pp::convert<X*>>::value, "raw convert_ptr");
-	static_assert(std::is_same<traits::convert_ref<X>, v8pp::convert<X&>>::value, "raw convert_ref");
+	static_assert(std::same_as<traits::object_id, void*>);
+	static_assert(std::same_as<traits::convert_ptr<X>, v8pp::convert<X*>>);
+	static_assert(std::same_as<traits::convert_ref<X>, v8pp::convert<X&>>);
 
 	traits::object_id id = traits::pointer_id(ptr);
 	check_eq("raw_ptr_traits::pointer_id", id, &x);
@@ -145,15 +145,15 @@ void test_shared_ptr_traits()
 	std::shared_ptr<Y> y(Y::make(1), Y::done);
 	traits::pointer_type ptr = y;
 
-	static_assert(std::is_same<traits::pointer_type, std::shared_ptr<void>>::value, "shared pointer_type");
-	static_assert(std::is_same<traits::const_pointer_type, std::shared_ptr<void const>>::value, "shared const_pointer_type");
+	static_assert(std::same_as<traits::pointer_type, std::shared_ptr<void>>);
+	static_assert(std::same_as<traits::const_pointer_type, std::shared_ptr<void const>>);
 
-	static_assert(std::is_same<traits::object_pointer_type<Y>, std::shared_ptr<Y>>::value, "shared object_pointer_type");
-	static_assert(std::is_same<traits::object_const_pointer_type<Y>, std::shared_ptr<Y const>>::value, "shared object_const_pointer_type");
+	static_assert(std::same_as<traits::object_pointer_type<Y>, std::shared_ptr<Y>>);
+	static_assert(std::same_as<traits::object_const_pointer_type<Y>, std::shared_ptr<Y const>>);
 
-	static_assert(std::is_same<traits::object_id, void*>::value, "shared object_id");
-	static_assert(std::is_same<traits::convert_ptr<Y>, v8pp::convert<std::shared_ptr<Y>>>::value, "shared convert_ptr");
-	static_assert(std::is_same<traits::convert_ref<Y>, v8pp::convert<Y, v8pp::ref_from_shared_ptr>>::value, "shared convert_ref");
+	static_assert(std::same_as<traits::object_id, void*>);
+	static_assert(std::same_as<traits::convert_ptr<Y>, v8pp::convert<std::shared_ptr<Y>>>);
+	static_assert(std::same_as<traits::convert_ref<Y>, v8pp::convert<Y, v8pp::ref_from_shared_ptr>>);
 
 	traits::object_id id = traits::pointer_id(ptr);
 	check_eq("shared_ptr_traits::pointer_id", id, y.get());

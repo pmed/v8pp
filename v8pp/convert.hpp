@@ -409,7 +409,7 @@ private:
 	static void get_number(v8::Isolate* isolate, v8::Local<v8::Value> value, std::optional<from_type>& result)
 	{
 		Number const number = v8pp::convert<Number>::from_v8(isolate, value);
-		if constexpr (std::is_same_v<T, uint64_t>)
+		if constexpr (std::same_as<T, uint64_t>)
 		{
 			result = static_cast<T>(number);
 		}

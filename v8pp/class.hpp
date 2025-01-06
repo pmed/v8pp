@@ -322,7 +322,7 @@ public:
 			|| detail::is_callable<Getter>::value, "GetFunction must be callable");
 		static_assert(std::is_member_function_pointer<SetFunction>::value
 			|| detail::is_callable<Setter>::value
-			|| std::is_same<Setter, detail::none>::value, "SetFunction must be callable");
+			|| std::same_as<Setter, detail::none>, "SetFunction must be callable");
 
 		using GetClass = std::conditional_t<detail::function_with_object<Getter, T>, T, detail::none>;
 		using SetClass = std::conditional_t<detail::function_with_object<Setter, T>, T, detail::none>;

@@ -97,7 +97,7 @@ public:
 		using Setter = typename std::decay<SetFunction>::type;
 		static_assert(detail::is_callable<Getter>::value, "GetFunction must be callable");
 		static_assert(detail::is_callable<Setter>::value
-			|| std::is_same<Setter, detail::none>::value, "SetFunction must be callable");
+			|| std::same_as<Setter, detail::none>, "SetFunction must be callable");
 
 		using property_type = v8pp::property<Getter, Setter, detail::none, detail::none>;
 		using Traits = detail::none;

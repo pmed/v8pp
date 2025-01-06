@@ -220,12 +220,12 @@ void check_range(v8::Isolate* isolate)
 
 	T zero{ 0 };
 	T min, max;
-	if constexpr (std::is_same_v<T, int64_t>)
+	if constexpr (std::same_as<T, int64_t>)
 	{
 		min = V8_MIN_INT;
 		max = V8_MAX_INT;
 	}
-	else if constexpr (std::is_same_v<T, uint64_t>)
+	else if constexpr (std::same_as<T, uint64_t>)
 	{
 		min = 0;
 		max = V8_MAX_INT;
