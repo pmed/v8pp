@@ -1,5 +1,4 @@
-#ifndef V8PP_FUNCTION_HPP_INCLUDED
-#define V8PP_FUNCTION_HPP_INCLUDED
+#pragma once
 
 #include <cstring> // for memcpy
 
@@ -210,5 +209,3 @@ v8::Local<v8::Function> wrap_function(v8::Isolate* isolate, std::string_view nam
 }
 
 } // namespace v8pp
-
-#endif // V8PP_FUNCTION_HPP_INCLUDED

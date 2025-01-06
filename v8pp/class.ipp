@@ -1,5 +1,6 @@
 #include "v8pp/class.hpp"
 
+#include <cassert>
 #include <cstdio> // for snprintf
 
 namespace v8pp::detail {

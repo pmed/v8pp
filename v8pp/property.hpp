@@ -1,7 +1,4 @@
-#ifndef V8PP_PROPERTY_HPP_INCLUDED
-#define V8PP_PROPERTY_HPP_INCLUDED
-
-#include <cassert>
+#pragma once
 
 #include "v8pp/convert.hpp"
 #include "v8pp/function.hpp"
@@ -226,5 +223,3 @@ struct property<Get, detail::none, GetClass, detail::none> final
 };
 
 } // namespace v8pp
-
-#endif // V8PP_PROPERTY_HPP_INCLUDED

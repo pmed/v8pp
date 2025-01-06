@@ -1,5 +1,4 @@
-#ifndef V8PP_CONVERT_HPP_INCLUDED
-#define V8PP_CONVERT_HPP_INCLUDED
+#pragma once
 
 #include <v8.h>
 
@@ -905,5 +904,3 @@ inline invalid_argument::invalid_argument(v8::Isolate* isolate, v8::Local<v8::Va
 }
 
 } // namespace v8pp
-
-#endif // V8PP_CONVERT_HPP_INCLUDED

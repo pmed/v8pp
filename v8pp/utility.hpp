@@ -1,5 +1,4 @@
-#ifndef V8PP_UTILITY_HPP_INCLUDED
-#define V8PP_UTILITY_HPP_INCLUDED
+#pragma once
 
 #include <concepts>
 #include <functional>
@@ -335,5 +334,3 @@ using is_callable = std::integral_constant<bool,
 	is_callable_impl<F, std::is_class<F>::value>::value>;
 
 } // namespace v8pp::detail
-
-#endif // V8PP_UTILITY_HPP_INCLUDED

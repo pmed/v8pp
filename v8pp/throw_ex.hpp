@@ -1,5 +1,4 @@
-#ifndef V8PP_THROW_EX_HPP_INCLUDED
-#define V8PP_THROW_EX_HPP_INCLUDED
+#pragma once
 
 #include <string_view>
 
@@ -35,5 +34,3 @@ v8::Local<v8::Value> throw_type_error(v8::Isolate* isolate, std::string_view mes
 #if V8PP_HEADER_ONLY
 #include "v8pp/throw_ex.ipp"
 #endif
-
-#endif // V8PP_THROW_EX_HPP_INCLUDED

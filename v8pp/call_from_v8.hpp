@@ -1,5 +1,4 @@
-#ifndef V8PP_CALL_FROM_V8_HPP_INCLUDED
-#define V8PP_CALL_FROM_V8_HPP_INCLUDED
+#pragma once
 
 #include <functional>
 #include <utility>
@@ -112,5 +111,3 @@ decltype(auto) call_from_v8(F&& func, v8::FunctionCallbackInfo<v8::Value> const&
 }
 
 } // namespace v8pp::detail
-
-#endif // V8PP_CALL_FROM_V8_HPP_INCLUDED

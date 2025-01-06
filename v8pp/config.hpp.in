@@ -1,5 +1,4 @@
-#ifndef V8PP_CONFIG_HPP_INCLUDED
-#define V8PP_CONFIG_HPP_INCLUDED
+#pragma once
 
 /// v8pp library version
 #define V8PP_VERSION "@PROJECT_VERSION@"
@@ -48,5 +47,3 @@ v8::Local<v8::Value> V8PP_PLUGIN_INIT_PROC_NAME(isolate)
 
 #define V8PP_STRINGIZE(s)  V8PP_STRINGIZE0(s)
 #define V8PP_STRINGIZE0(s) #s
-
-#endif // V8PP_CONFIG_HPP_INCLUDED

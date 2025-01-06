@@ -1,5 +1,4 @@
-#ifndef V8PP_JSON_HPP_INCLUDED
-#define V8PP_JSON_HPP_INCLUDED
+#pragma once
 
 #include <string>
 
@@ -29,5 +28,3 @@ v8::Local<v8::Object> json_object(v8::Isolate* isolate, v8::Local<v8::Object> ob
 #if V8PP_HEADER_ONLY
 #include "v8pp/json.ipp"
 #endif
-
-#endif // V8PP_JSON_HPP_INCLUDED

@@ -1,5 +1,4 @@
-#ifndef V8PP_CONTEXT_HPP_INCLUDED
-#define V8PP_CONTEXT_HPP_INCLUDED
+#pragma once
 
 #include <string>
 #include <map>
@@ -119,5 +118,3 @@ private:
 };
 
 } // namespace v8pp
-
-#endif // V8PP_CONTEXT_HPP_INCLUDED

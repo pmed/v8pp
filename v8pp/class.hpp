@@ -1,5 +1,4 @@
-#ifndef V8PP_CLASS_HPP_INCLUDED
-#define V8PP_CLASS_HPP_INCLUDED
+#pragma once
 
 #include <algorithm>
 #include <memory>
@@ -503,5 +502,3 @@ void cleanup(v8::Isolate* isolate);
 #if V8PP_HEADER_ONLY
 #include "v8pp/class.ipp"
 #endif
-
-#endif // V8PP_CLASS_HPP_INCLUDED
