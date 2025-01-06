@@ -2,9 +2,7 @@
 
 #include <cstdio> // for snprintf
 
-namespace v8pp {
-
-namespace detail {
+namespace v8pp::detail {
 
 static V8PP_IMPL std::string pointer_str(void const* ptr)
 {
@@ -417,7 +415,9 @@ V8PP_IMPL classes* classes::instance(operation op, v8::Isolate* isolate)
 	return nullptr; // should never reach this line
 }
 
-} // namespace detail
+} // namespace v8pp::detail
+
+namespace v8pp {
 
 V8PP_IMPL void cleanup(v8::Isolate* isolate)
 {

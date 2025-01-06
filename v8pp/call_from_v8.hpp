@@ -9,7 +9,7 @@
 #include "v8pp/convert.hpp"
 #include "v8pp/utility.hpp"
 
-namespace v8pp { namespace detail {
+namespace v8pp::detail {
 
 template<typename F, size_t Offset = 0>
 struct call_from_v8_traits
@@ -111,6 +111,6 @@ decltype(auto) call_from_v8(F&& func, v8::FunctionCallbackInfo<v8::Value> const&
 	}
 }
 
-}} // namespace v8pp::detail
+} // namespace v8pp::detail
 
 #endif // V8PP_CALL_FROM_V8_HPP_INCLUDED

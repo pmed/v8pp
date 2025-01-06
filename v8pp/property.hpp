@@ -6,12 +6,7 @@
 #include "v8pp/convert.hpp"
 #include "v8pp/function.hpp"
 
-namespace v8pp {
-
-template<typename Get, typename Set, typename GetClass, typename SetClass>
-struct property;
-
-namespace detail {
+namespace v8pp::detail {
 
 template<typename F, typename T, typename U = typename call_from_v8_traits<F>::template arg_type<0>>
 inline constexpr bool function_with_object = std::is_member_function_pointer_v<F> ||
@@ -164,7 +159,9 @@ catch (std::exception const& ex)
 	// TODO: info.GetReturnValue().Set(false);
 }
 
-} // namespace detail
+} // namespace v8pp::detail
+
+namespace v8pp {
 
 /// Property with get and set functions
 template<typename Get, typename Set, typename GetClass, typename SetClass>

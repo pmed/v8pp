@@ -10,7 +10,7 @@
 #include "v8pp/throw_ex.hpp"
 #include "v8pp/utility.hpp"
 
-namespace v8pp { namespace detail {
+namespace v8pp::detail {
 
 class external_data
 {
@@ -178,7 +178,9 @@ void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 	}
 }
 
-} // namespace detail
+} // namespace v8pp::detail
+
+namespace v8pp {
 
 /// Wrap C++ function into new V8 function template
 template<typename F, typename Traits = raw_ptr_traits>

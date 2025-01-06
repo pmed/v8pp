@@ -9,7 +9,7 @@
 #include <tuple>
 #include <type_traits>
 
-namespace v8pp { namespace detail {
+namespace v8pp::detail {
 
 template<typename T>
 struct tuple_tail;
@@ -334,6 +334,6 @@ template<typename F>
 using is_callable = std::integral_constant<bool,
 	is_callable_impl<F, std::is_class<F>::value>::value>;
 
-}} // namespace v8pp::detail
+} // namespace v8pp::detail
 
 #endif // V8PP_UTILITY_HPP_INCLUDED

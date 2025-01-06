@@ -13,9 +13,7 @@
 #include "v8pp/ptr_traits.hpp"
 #include "v8pp/type_info.hpp"
 
-namespace v8pp {
-
-namespace detail {
+namespace v8pp::detail {
 
 struct class_info
 {
@@ -140,7 +138,9 @@ private:
 	static classes* instance(operation op, v8::Isolate* isolate);
 };
 
-} // namespace detail
+} // namespace v8pp::detail
+
+namespace v8pp {
 
 /// Interface to access C++ classes bound to V8
 template<typename T, typename Traits = raw_ptr_traits>
