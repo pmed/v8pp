@@ -234,14 +234,13 @@ public:
 	template<typename U>
 	class_& inherit()
 	{
-		using namespace detail;
 		static_assert(std::derived_from<T, U>, "Class U should be base for class T");
 		// TODO: std::is_convertible<T*, U*> and check for duplicates in hierarchy?
-		object_registry& base = classes::find<Traits>(isolate(), type_id<U>());
-		class_info_.add_base(base, [](pointer_type const& ptr) -> pointer_type
+		auto& base = detail::classes::find<Traits>(isolate(), detail::type_id<U>());
+		class_info_.add_base(base, [](pointer_type const& ptr)
 		{
-			return pointer_type(Traits::template static_pointer_cast<U>(
-				Traits::template static_pointer_cast<T>(ptr)));
+			return pointer_type{Traits::template static_pointer_cast<U>(
+				Traits::template static_pointer_cast<T>(ptr))};
 		});
 		class_info_.js_function_template()->Inherit(base.class_function_template());
 		return *this;
@@ -375,18 +374,15 @@ public:
 
 	/// Create JavaScript object which references externally created C++ class.
 	/// It will not take ownership of the C++ pointer.
-	static v8::Local<v8::Object> reference_external(v8::Isolate* isolate,
-		object_pointer_type const& ext)
+	static v8::Local<v8::Object> reference_external(v8::Isolate* isolate, object_pointer_type const& ext)
 	{
-		using namespace detail;
-		return classes::find<Traits>(isolate, type_id<T>()).wrap_object(ext, false);
+		return detail::classes::find<Traits>(isolate, detail::type_id<T>()).wrap_object(ext, false);
 	}
 
 	/// Remove external reference from JavaScript
 	static void unreference_external(v8::Isolate* isolate, object_pointer_type const& ext)
 	{
-		using namespace detail;
-		return classes::find<Traits>(isolate, type_id<T>()).remove_object(Traits::pointer_id(ext));
+		return detail::classes::find<Traits>(isolate, detail::type_id<T>()).remove_object(Traits::pointer_id(ext));
 	}
 
 	/// As reference_external but delete memory for C++ object
@@ -394,16 +390,14 @@ public:
 	/// to allocate `ext`
 	static v8::Local<v8::Object> import_external(v8::Isolate* isolate, object_pointer_type const& ext)
 	{
-		using namespace detail;
-		return classes::find<Traits>(isolate, type_id<T>()).wrap_object(ext, true);
+		return detail::classes::find<Traits>(isolate, detail::type_id<T>()).wrap_object(ext, true);
 	}
 
 	/// Get wrapped object from V8 value, may return nullptr on fail.
 	static object_pointer_type unwrap_object(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
-		using namespace detail;
 		return Traits::template static_pointer_cast<T>(
-			classes::find<Traits>(isolate, type_id<T>()).unwrap_object(value));
+			detail::classes::find<Traits>(isolate, detail::type_id<T>()).unwrap_object(value));
 	}
 
 	/// Create a wrapped C++ object and import it into JavaScript
@@ -414,20 +408,16 @@ public:
 	}
 
 	/// Find V8 object handle for a wrapped C++ object, may return empty handle on fail.
-	static v8::Local<v8::Object> find_object(v8::Isolate* isolate,
-		object_const_pointer_type const& obj)
+	static v8::Local<v8::Object> find_object(v8::Isolate* isolate, object_const_pointer_type const& obj)
 	{
-		using namespace detail;
-		return classes::find<Traits>(isolate, type_id<T>())
-			.find_v8_object(Traits::const_pointer_cast(obj));
+		return detail::classes::find<Traits>(isolate, detail::type_id<T>()).find_v8_object(Traits::const_pointer_cast(obj));
 	}
 
 	/// Find V8 object handle for a wrapped C++ object, may return empty handle on fail
 	/// or wrap a copy of the obj if class_.auto_wrap_objects()
 	static v8::Local<v8::Object> find_object(v8::Isolate* isolate, T const& obj)
 	{
-		using namespace detail;
-		detail::object_registry<Traits>& class_info = classes::find<Traits>(isolate, type_id<T>());
+		auto& class_info = detail::classes::find<Traits>(isolate, detail::type_id<T>());
 		v8::Local<v8::Object> wrapped_object = class_info.find_v8_object(Traits::key(const_cast<T*>(&obj)));
 		if (wrapped_object.IsEmpty() && class_info.auto_wrap_objects())
 		{
@@ -443,22 +433,19 @@ public:
 	/// Destroy wrapped C++ object
 	static void destroy_object(v8::Isolate* isolate, object_pointer_type const& obj)
 	{
-		using namespace detail;
-		classes::find<Traits>(isolate, type_id<T>()).remove_object(Traits::pointer_id(obj));
+		detail::classes::find<Traits>(isolate, detail::type_id<T>()).remove_object(Traits::pointer_id(obj));
 	}
 
 	/// Destroy all wrapped C++ objects of this class
 	static void destroy_objects(v8::Isolate* isolate)
 	{
-		using namespace detail;
-		classes::find<Traits>(isolate, type_id<T>()).remove_objects();
+		detail::classes::find<Traits>(isolate, detail::type_id<T>()).remove_objects();
 	}
 
 	/// Destroy all wrapped C++ objects and this binding class_
 	static void destroy(v8::Isolate* isolate)
 	{
-		using namespace detail;
-		classes::remove<Traits>(isolate, type_id<T>());
+		detail::classes::remove<Traits>(isolate, detail::type_id<T>());
 	}
 
 private:
