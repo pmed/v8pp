@@ -1,6 +1,7 @@
 #ifndef V8PP_UTILITY_HPP_INCLUDED
 #define V8PP_UTILITY_HPP_INCLUDED
 
+#include <concepts>
 #include <functional>
 #include <memory>
 #include <string>
@@ -22,6 +23,9 @@ struct tuple_tail<std::tuple<Head, Tail...>>
 struct none
 {
 };
+
+template<typename Char>
+concept WideChar = std::same_as<Char, char16_t> || std::same_as<Char, char32_t> || std::same_as<Char, wchar_t>;
 
 /////////////////////////////////////////////////////////////////////////////
 //
