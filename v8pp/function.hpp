@@ -1,5 +1,4 @@
-#ifndef V8PP_FUNCTION_HPP_INCLUDED
-#define V8PP_FUNCTION_HPP_INCLUDED
+#pragma once
 
 #include <cstring> // for memcpy
 
@@ -10,7 +9,7 @@
 #include "v8pp/throw_ex.hpp"
 #include "v8pp/utility.hpp"
 
-namespace v8pp { namespace detail {
+namespace v8pp::detail {
 
 class external_data
 {
@@ -155,14 +154,13 @@ void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 {
 	using FTraits = function_traits<F>;
 
-	static_assert(is_callable<F>::value || std::is_member_function_pointer<F>::value,
-		"required callable F");
+	static_assert(is_callable<F>::value || std::is_member_function_pointer_v<F>, "required callable F");
 
 	v8::Isolate* isolate = args.GetIsolate();
 	v8::HandleScope scope(isolate);
 	try
 	{
-		if constexpr (std::is_same_v<typename FTraits::return_type, void>)
+		if constexpr (std::same_as<typename FTraits::return_type, void>)
 		{
 			invoke<Traits, F, FTraits>(args);
 		}
@@ -179,13 +177,15 @@ void forward_function(v8::FunctionCallbackInfo<v8::Value> const& args)
 	}
 }
 
-} // namespace detail
+} // namespace v8pp::detail
+
+namespace v8pp {
 
 /// Wrap C++ function into new V8 function template
 template<typename F, typename Traits = raw_ptr_traits>
 v8::Local<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&& func)
 {
-	using F_type = typename std::decay<F>::type;
+	using F_type = typename std::decay_t<F>;
 	return v8::FunctionTemplate::New(isolate,
 		&detail::forward_function<Traits, F_type>,
 		detail::external_data::set(isolate, std::forward<F_type>(func)));
@@ -197,7 +197,7 @@ v8::Local<v8::FunctionTemplate> wrap_function_template(v8::Isolate* isolate, F&&
 template<typename F, typename Traits = raw_ptr_traits>
 v8::Local<v8::Function> wrap_function(v8::Isolate* isolate, std::string_view name, F&& func)
 {
-	using F_type = typename std::decay<F>::type;
+	using F_type = typename std::decay_t<F>;
 	v8::Local<v8::Function> fn = v8::Function::New(isolate->GetCurrentContext(),
 		&detail::forward_function<Traits, F_type>,
 		detail::external_data::set(isolate, std::forward<F_type>(func))).ToLocalChecked();
@@ -209,5 +209,3 @@ v8::Local<v8::Function> wrap_function(v8::Isolate* isolate, std::string_view nam
 }
 
 } // namespace v8pp
-
-#endif // V8PP_FUNCTION_HPP_INCLUDED

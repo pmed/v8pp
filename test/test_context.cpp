@@ -6,10 +6,10 @@
 
 #include <type_traits>
 
-static_assert(std::is_move_constructible<v8pp::context>::value, "");
-static_assert(std::is_move_assignable<v8pp::context>::value, "");
-static_assert(!std::is_copy_assignable<v8pp::context>::value, "");
-static_assert(!std::is_copy_constructible<v8pp::context>::value, "");
+static_assert(std::is_move_constructible_v<v8pp::context>);
+static_assert(std::is_move_assignable_v<v8pp::context>);
+static_assert(!std::is_copy_assignable_v<v8pp::context>);
+static_assert(!std::is_copy_constructible_v<v8pp::context>);
 
 void test_context()
 {

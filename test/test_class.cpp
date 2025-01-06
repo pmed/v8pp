@@ -190,10 +190,10 @@ void test_class_()
 		.static_("my_static_const_var", 42, true)
 		;
 
-	static_assert(std::is_move_constructible<decltype(X_class)>::value, "");
-	static_assert(!std::is_move_assignable<decltype(X_class)>::value, "");
-	static_assert(!std::is_copy_assignable<decltype(X_class)>::value, "");
-	static_assert(!std::is_copy_constructible<decltype(X_class)>::value, "");
+	static_assert(std::is_move_constructible_v<decltype(X_class)>);
+	static_assert(!std::is_move_assignable_v<decltype(X_class)>);
+	static_assert(!std::is_copy_assignable_v<decltype(X_class)>);
+	static_assert(!std::is_copy_constructible_v<decltype(X_class)>);
 
 	v8pp::class_<Y, Traits> Y_class(isolate);
 	Y_class
@@ -324,7 +324,7 @@ void test_class_()
 	context.isolate()->RequestGarbageCollectionForTesting(
 		v8::Isolate::GarbageCollectionType::kFullGarbageCollection);
 
-	bool const use_shared_ptr = std::is_same<Traits, v8pp::shared_ptr_traits>::value;
+	bool constexpr use_shared_ptr = std::same_as<Traits, v8pp::shared_ptr_traits>;
 
 	check_eq("Y count after GC", Y::instance_count,
 		1 + 2 * use_shared_ptr); // y1 + (y2 + y3 when use_shared_ptr)

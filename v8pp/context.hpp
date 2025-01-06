@@ -1,5 +1,4 @@
-#ifndef V8PP_CONTEXT_HPP_INCLUDED
-#define V8PP_CONTEXT_HPP_INCLUDED
+#pragma once
 
 #include <string>
 #include <map>
@@ -87,7 +86,7 @@ public:
 	template<typename Function, typename Traits = raw_ptr_traits>
 	context& function(std::string_view name, Function&& func)
 	{
-		using Fun = typename std::decay<Function>::type;
+		using Fun = typename std::decay_t<Function>;
 		static_assert(detail::is_callable<Fun>::value, "Function must be callable");
 		return value(name, wrap_function<Function, Traits>(isolate_, name, std::forward<Function>(func)));
 	}
@@ -119,5 +118,3 @@ private:
 };
 
 } // namespace v8pp
-
-#endif // V8PP_CONTEXT_HPP_INCLUDED

@@ -1,5 +1,4 @@
-#ifndef V8PP_CALL_V8_HPP_INCLUDED
-#define V8PP_CALL_V8_HPP_INCLUDED
+#pragma once
 
 #include <v8.h>
 
@@ -33,5 +32,3 @@ v8::Local<v8::Value> call_v8(v8::Isolate* isolate, v8::Local<v8::Function> func,
 }
 
 } // namespace v8pp
-
-#endif // V8PP_CALL_V8_HPP_INCLUDED

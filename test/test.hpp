@@ -31,13 +31,13 @@ std::ostream& operator<<(std::ostream& os, std::array<T, N> const& array)
 	return print_sequence(os, array, "[]");
 }
 
-template<typename Char, typename Traits, typename Alloc, typename = typename std::enable_if<!std::is_same<Char, char>::value>::type>
+template<v8pp::detail::WideChar Char, typename Traits, typename Alloc>
 std::ostream& operator<<(std::ostream& os, std::basic_string<Char, Traits, Alloc> const& string)
 {
 	return print_sequence(os, string, "''");
 }
 
-template<typename Char, typename Traits, typename = typename std::enable_if_t<!std::is_same_v<Char, char>>>
+template<v8pp::detail::WideChar Char, typename Traits>
 std::ostream& operator<<(std::ostream& os, std::basic_string_view<Char, Traits> const& string_view)
 {
 	return print_sequence(os, string_view, "''");
@@ -51,6 +51,16 @@ inline std::ostream& operator<<(std::ostream& os, char16_t ch)
 inline std::ostream& operator<<(std::ostream& os, char16_t const* str)
 {
 	return print_sequence(os, std::basic_string_view<char16_t>(str), "''");
+}
+
+inline std::ostream& operator<<(std::ostream& os, char32_t ch)
+{
+	return os << static_cast<int64_t>(ch);
+}
+
+inline std::ostream& operator<<(std::ostream& os, char32_t const* str)
+{
+	return print_sequence(os, std::basic_string_view<char32_t>(str), "''");
 }
 
 inline std::ostream& operator<<(std::ostream& os, wchar_t ch)
@@ -141,10 +151,10 @@ std::ostream& operator<<(std::ostream& os, std::pair<First, Second> const& pair)
 	return os << pair.first << ": " << pair.second;
 }
 
-template<typename Enum, typename = typename std::enable_if<std::is_enum<Enum>::value>::type>
+template<typename Enum> requires std::is_enum_v<Enum>
 std::ostream& operator<<(std::ostream& os, Enum value)
 {
-	return os << static_cast<typename std::underlying_type<Enum>::type>(value);
+	return os << static_cast<typename std::underlying_type_t<Enum>>(value);
 }
 
 template<typename... Ts>

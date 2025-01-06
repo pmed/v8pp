@@ -1,5 +1,4 @@
-#ifndef V8PP_PTR_TRAITS_HPP_INCLUDED
-#define V8PP_PTR_TRAITS_HPP_INCLUDED
+#pragma once
 
 #include <memory>
 
@@ -111,5 +110,3 @@ struct shared_ptr_traits
 };
 
 } //namespace v8pp
-
-#endif // V8PP_PTR_TRAITS_HPP_INCLUDED

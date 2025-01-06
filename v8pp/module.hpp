@@ -1,5 +1,4 @@
-#ifndef V8PP_MODULE_HPP_INCLUDED
-#define V8PP_MODULE_HPP_INCLUDED
+#pragma once
 
 #include <v8.h>
 
@@ -69,7 +68,7 @@ public:
 	template<typename Function, typename Traits = raw_ptr_traits>
 	module& function(std::string_view name, Function&& func)
 	{
-		using Fun = typename std::decay<Function>::type;
+		using Fun = typename std::decay_t<Function>;
 		static_assert(detail::is_callable<Fun>::value, "Function must be callable");
 		return value(name, wrap_function_template<Function, Traits>(isolate_, std::forward<Function>(func)));
 	}
@@ -93,11 +92,12 @@ public:
 	template<typename GetFunction, typename SetFunction = detail::none>
 	module& property(char const* name, GetFunction&& get, SetFunction&& set = {})
 	{
-		using Getter = typename std::decay<GetFunction>::type;
-		using Setter = typename std::decay<SetFunction>::type;
+		using Getter = typename std::decay_t<GetFunction>;
+		using Setter = typename std::decay_t<SetFunction>;
+
 		static_assert(detail::is_callable<Getter>::value, "GetFunction must be callable");
 		static_assert(detail::is_callable<Setter>::value
-			|| std::is_same<Setter, detail::none>::value, "SetFunction must be callable");
+			|| std::same_as<Setter, detail::none>, "SetFunction must be callable");
 
 		using property_type = v8pp::property<Getter, Setter, detail::none, detail::none>;
 		using Traits = detail::none;
@@ -163,5 +163,3 @@ private:
 };
 
 } // namespace v8pp
-
-#endif // V8PP_MODULE_HPP_INCLUDED

@@ -1,5 +1,4 @@
-#ifndef V8PP_CALL_FROM_V8_HPP_INCLUDED
-#define V8PP_CALL_FROM_V8_HPP_INCLUDED
+#pragma once
 
 #include <functional>
 #include <utility>
@@ -9,17 +8,16 @@
 #include "v8pp/convert.hpp"
 #include "v8pp/utility.hpp"
 
-namespace v8pp { namespace detail {
+namespace v8pp::detail {
 
 template<typename F, size_t Offset = 0>
 struct call_from_v8_traits
 {
 	static constexpr size_t offset = Offset;
-	static constexpr bool is_mem_fun = std::is_member_function_pointer<F>::value;
+	static constexpr bool is_mem_fun = std::is_member_function_pointer_v<F>;
 	using arguments = typename function_traits<F>::arguments;
 
-	static constexpr size_t arg_count =
-		std::tuple_size<arguments>::value - is_mem_fun - offset;
+	static constexpr size_t arg_count = std::tuple_size_v<arguments> - is_mem_fun - offset;
 
 	template<size_t Index, bool>
 	struct tuple_element
@@ -56,11 +54,11 @@ struct call_from_v8_traits
 
 template<typename F, size_t Offset, typename CallTraits = call_from_v8_traits<F>>
 inline constexpr bool is_direct_args = CallTraits::arg_count == (Offset + 1) &&
-	std::is_same_v<typename CallTraits::template arg_type<Offset>, v8::FunctionCallbackInfo<v8::Value> const&>;
+	std::same_as<typename CallTraits::template arg_type<Offset>, v8::FunctionCallbackInfo<v8::Value> const&>;
 
 template<typename F, size_t Offset = 0, typename CallTraits = call_from_v8_traits<F>>
 inline constexpr bool is_first_arg_isolate = CallTraits::arg_count != (Offset + 0) &&
-	std::is_same_v<typename CallTraits::template arg_type<Offset>, v8::Isolate*>;
+	std::same_as<typename CallTraits::template arg_type<Offset>, v8::Isolate*>;
 
 template<typename Traits, typename F, typename CallTraits, size_t... Indices, typename... ObjArg>
 decltype(auto) call_from_v8_impl(F&& func, v8::FunctionCallbackInfo<v8::Value> const& args,
@@ -112,6 +110,4 @@ decltype(auto) call_from_v8(F&& func, v8::FunctionCallbackInfo<v8::Value> const&
 	}
 }
 
-}} // namespace v8pp::detail
-
-#endif // V8PP_CALL_FROM_V8_HPP_INCLUDED
+} // namespace v8pp::detail

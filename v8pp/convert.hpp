@@ -1,5 +1,4 @@
-#ifndef V8PP_CONVERT_HPP_INCLUDED
-#define V8PP_CONVERT_HPP_INCLUDED
+#pragma once
 
 #include <v8.h>
 
@@ -409,7 +408,7 @@ private:
 	static void get_number(v8::Isolate* isolate, v8::Local<v8::Value> value, std::optional<from_type>& result)
 	{
 		Number const number = v8pp::convert<Number>::from_v8(isolate, value);
-		if constexpr (std::is_same_v<T, uint64_t>)
+		if constexpr (std::same_as<T, uint64_t>)
 		{
 			result = static_cast<T>(number);
 		}
@@ -687,7 +686,7 @@ struct convert<T, typename std::enable_if<is_wrapped_class<T>::value>::type>
 {
 	using from_type = T&;
 	using to_type = v8::Local<v8::Object>;
-	using class_type = typename std::remove_cv<T>::type;
+	using class_type = typename std::remove_cv_t<T>;
 
 	static bool is_valid(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
@@ -721,7 +720,7 @@ struct convert<std::shared_ptr<T>, typename std::enable_if<is_wrapped_class<T>::
 {
 	using from_type = std::shared_ptr<T>;
 	using to_type = v8::Local<v8::Object>;
-	using class_type = typename std::remove_cv<T>::type;
+	using class_type = typename std::remove_cv_t<T>;
 
 	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
 	{
@@ -748,7 +747,7 @@ struct convert<T, ref_from_shared_ptr>
 {
 	using from_type = T&;
 	using to_type = v8::Local<v8::Object>;
-	using class_type = typename std::remove_cv<T>::type;
+	using class_type = typename std::remove_cv_t<T>;
 
 	static bool is_valid(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
@@ -905,5 +904,3 @@ inline invalid_argument::invalid_argument(v8::Isolate* isolate, v8::Local<v8::Va
 }
 
 } // namespace v8pp
-
-#endif // V8PP_CONVERT_HPP_INCLUDED

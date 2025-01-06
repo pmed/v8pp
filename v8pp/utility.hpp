@@ -1,6 +1,6 @@
-#ifndef V8PP_UTILITY_HPP_INCLUDED
-#define V8PP_UTILITY_HPP_INCLUDED
+#pragma once
 
+#include <concepts>
 #include <functional>
 #include <memory>
 #include <string>
@@ -8,7 +8,7 @@
 #include <tuple>
 #include <type_traits>
 
-namespace v8pp { namespace detail {
+namespace v8pp::detail {
 
 template<typename T>
 struct tuple_tail;
@@ -22,6 +22,9 @@ struct tuple_tail<std::tuple<Head, Tail...>>
 struct none
 {
 };
+
+template<typename Char>
+concept WideChar = std::same_as<Char, char16_t> || std::same_as<Char, char32_t> || std::same_as<Char, wchar_t>;
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -298,9 +301,6 @@ struct function_traits<F&&> : function_traits<F>
 {
 };
 
-template<typename F>
-inline constexpr bool is_void_return = std::is_same_v<void, typename function_traits<F>::return_type>;
-
 template<typename F, bool is_class>
 struct is_callable_impl
 	: std::is_function<typename std::remove_pointer<F>::type>
@@ -333,6 +333,4 @@ template<typename F>
 using is_callable = std::integral_constant<bool,
 	is_callable_impl<F, std::is_class<F>::value>::value>;
 
-}} // namespace v8pp::detail
-
-#endif // V8PP_UTILITY_HPP_INCLUDED
+} // namespace v8pp::detail

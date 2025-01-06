@@ -1,5 +1,4 @@
-#ifndef V8PP_TYPE_INFO_HPP_INCLUDED
-#define V8PP_TYPE_INFO_HPP_INCLUDED
+#pragma once
 
 #include <string_view>
 
@@ -64,5 +63,3 @@ constexpr type_info type_id()
 }
 
 } // namespace v8pp::detail
-
-#endif // V8PP_TYPE_INFO_HPP_INCLUDED

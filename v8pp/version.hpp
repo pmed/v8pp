@@ -1,5 +1,4 @@
-#ifndef V8PP_VERSION_HPP_INCLUDED
-#define V8PP_VERSION_HPP_INCLUDED
+#pragma once
 
 #include "v8pp/config.hpp"
 
@@ -18,5 +17,3 @@ char const* build_options();
 #if V8PP_HEADER_ONLY
 #include "v8pp/version.ipp"
 #endif
-
-#endif // V8PP_VERSION_HPP_INCLUDED

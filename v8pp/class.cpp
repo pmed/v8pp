@@ -3,7 +3,7 @@
 #if !V8PP_HEADER_ONLY
 #include "v8pp/class.ipp"
 
-namespace v8pp { namespace detail {
+namespace v8pp::detail {
 
 template
 class object_registry<raw_ptr_traits>;
@@ -33,6 +33,6 @@ template
 object_registry<shared_ptr_traits>& classes::find<shared_ptr_traits>(v8::Isolate* isolate,
 	type_info const& type);
 
-}} // namespace v8pp::detail
+} // namespace v8pp::detail
 
 #endif
