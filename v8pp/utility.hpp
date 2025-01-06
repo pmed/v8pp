@@ -26,141 +26,75 @@ struct none
 template<typename Char>
 concept WideChar = std::same_as<Char, char16_t> || std::same_as<Char, char32_t> || std::same_as<Char, wchar_t>;
 
-/////////////////////////////////////////////////////////////////////////////
-//
-// is_string<T>
-//
 template<typename T>
-struct is_string : std::false_type
-{
+concept String = std::same_as<T, std::string> || std::same_as<T, std::string_view>
+	|| std::same_as<T, std::wstring> || std::same_as<T, std::wstring_view>
+	|| std::same_as<T, std::u16string> || std::same_as<T, std::u16string_view>
+	|| std::same_as<T, std::u32string> || std::same_as<T, std::u32string_view>
+	|| std::same_as<T, char const*> || std::same_as<T, char16_t const*>
+	||	std::same_as<T, char32_t const*> || std::same_as<T, wchar_t const*>;
+
+template<typename T>
+concept Mapping = requires(T t) {
+	typename T::key_type;
+	typename T::mapped_type;
+	t.begin();
+	t.end();
 };
 
-template<typename Char, typename Traits, typename Alloc>
-struct is_string<std::basic_string<Char, Traits, Alloc>> : std::true_type
-{
-};
 
-template<typename Char, typename Traits>
-struct is_string<std::basic_string_view<Char, Traits>> : std::true_type
-{
-};
+template<typename T>
+concept Sequence = requires(T t) {
+	typename T::value_type;
+	t.begin();
+	t.end();
+	t.emplace_back(std::declval<typename T::value_type>());
+} && !String<T>;
 
-template<>
-struct is_string<char const*> : std::true_type
-{
-};
-
-template<>
-struct is_string<char16_t const*> : std::true_type
-{
-};
-
-template<>
-struct is_string<char32_t const*> : std::true_type
-{
-};
-
-template<>
-struct is_string<wchar_t const*> : std::true_type
-{
-};
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// is_mapping<T>
-//
-template<typename T, typename U = void>
-struct is_mapping_impl : std::false_type
-{
+template<typename T>
+concept HasReserve = requires(T t) {
+	t.reserve(0);
 };
 
 template<typename T>
-struct is_mapping_impl<T, std::void_t<typename T::key_type, typename T::mapped_type,
-	decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> : std::true_type
-{
+concept Array = requires(T t) {
+	typename std::tuple_size<T>::type;
+	typename T::value_type;
+	t.begin();
+	t.end();
 };
 
 template<typename T>
-using is_mapping = is_mapping_impl<T>;
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// is_sequence<T>
-//
-template<typename T, typename U = void>
-struct is_sequence_impl : std::false_type
-{
-};
+concept Tuple = requires(T t) {
+	typename std::tuple_size<T>::type;
+	typename std::tuple_element<0, T>::type;
+	typename std::tuple_element_t<0, T>;
+	std::get<0>(t);
+} && !Array<T>;
 
 template<typename T>
-struct is_sequence_impl<T, std::void_t<typename T::value_type,
-	decltype(std::declval<T>().begin()), decltype(std::declval<T>().end()),
-	decltype(std::declval<T>().emplace_back(std::declval<typename T::value_type>()))>> : std::negation<is_string<T>>
-{
-};
+concept SharedPtr = std::same_as<T, std::shared_ptr<typename T::element_type>>;
 
 template<typename T>
-using is_sequence = is_sequence_impl<T>;
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// has_reserve<T>
-//
-template<typename T, typename U = void>
-struct has_reserve_impl : std::false_type
-{
-};
+using is_string = std::bool_constant<String<T>>;
 
 template<typename T>
-struct has_reserve_impl<T, std::void_t<decltype(std::declval<T>().reserve(0))>> : std::true_type
-{
-};
+using is_mapping = std::bool_constant<Mapping<T>>;
 
 template<typename T>
-using has_reserve = has_reserve_impl<T>;
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// is_array<T>
-//
-template<typename T>
-struct is_array : std::false_type
-{
-};
-
-template<typename T, std::size_t N>
-struct is_array<std::array<T, N>> : std::true_type
-{
-	static constexpr size_t length = N;
-};
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// is_tuple<T>
-//
-template<typename T>
-struct is_tuple : std::false_type
-{
-};
-
-template<typename... Ts>
-struct is_tuple<std::tuple<Ts...>> : std::true_type
-{
-};
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// is_shared_ptr<T>
-//
-template<typename T>
-struct is_shared_ptr : std::false_type
-{
-};
+using is_sequence = std::bool_constant<Sequence<T>>;
 
 template<typename T>
-struct is_shared_ptr<std::shared_ptr<T>> : std::true_type
-{
-};
+using has_reserve = std::bool_constant<HasReserve<T>>;
+
+template<typename T>
+using is_array = std::bool_constant<Array<T>>;
+
+template<typename T>
+using is_tuple = std::bool_constant<Tuple<T>>;
+
+template<typename T>
+using is_shared_ptr = std::bool_constant<SharedPtr<T>>;
 
 /////////////////////////////////////////////////////////////////////////////
 //
