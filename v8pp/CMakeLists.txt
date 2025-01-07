@@ -89,11 +89,6 @@ else()
 	if(BUILD_SHARED_LIBS)
 		target_link_libraries(v8pp PUBLIC ${CMAKE_DL_LIBS})
 	endif()
-	if(APPLE)
-		# turn off RTTI to avoid generating typeinfo for v8::ArrayBuffer::Allocator
-		# used in context.cpp
-		set_source_files_properties(context.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
-	endif()
 endif()
 
 #source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${V8PP_HEADERS} ${V8PP_SOURCES})
