@@ -76,15 +76,22 @@ struct convert<String, typename std::enable_if<detail::is_string<String>::value>
 			throw invalid_argument(isolate, value, "String");
 		}
 
+		v8::HandleScope scope(isolate);
+		v8::Local<v8::String> str = value->ToString(isolate->GetCurrentContext()).ToLocalChecked();
+
 		if constexpr (sizeof(Char) == 1)
 		{
-			v8::String::Utf8Value const str(isolate, value);
-			return from_type(reinterpret_cast<Char const*>(*str), str.length());
+			auto const len = str->Utf8Length(isolate);
+			from_type result(len, 0);
+			result.resize(str->WriteUtf8(isolate, result.data(), len, nullptr, v8::String::NO_NULL_TERMINATION | v8::String::REPLACE_INVALID_UTF8));
+			return result;
 		}
 		else
 		{
-			v8::String::Value const str(isolate, value);
-			return from_type(reinterpret_cast<Char const*>(*str), str.length());
+			auto const len = str->Length();
+			from_type result(len, 0);
+			result.resize(str->Write(isolate, reinterpret_cast<uint16_t*>(result.data()), 0, len, v8::String::NO_NULL_TERMINATION));
+			return result;
 		}
 	}
 
