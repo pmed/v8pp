@@ -79,6 +79,22 @@ struct convert<String, typename std::enable_if<detail::is_string<String>::value>
 		v8::HandleScope scope(isolate);
 		v8::Local<v8::String> str = value->ToString(isolate->GetCurrentContext()).ToLocalChecked();
 
+#if V8_MAJOR_VERSION > 13 || (V8_MAJOR_VERSION == 13 && V8_MINOR_VERSION >= 3)
+		if constexpr (sizeof(Char) == 1)
+		{
+			auto const len = str->Utf8LengthV2(isolate);
+			from_type result(len, 0);
+			result.resize(str->WriteUtf8V2(isolate, result.data(), len));
+			return result;
+		}
+		else
+		{
+			auto const len = str->Length();
+			from_type result(len, 0);
+			str->WriteV2(isolate, 0, len, reinterpret_cast<uint16_t*>(result.data()));
+			return result;
+		}
+#else
 		if constexpr (sizeof(Char) == 1)
 		{
 			auto const len = str->Utf8Length(isolate);
@@ -93,6 +109,7 @@ struct convert<String, typename std::enable_if<detail::is_string<String>::value>
 			result.resize(str->Write(isolate, reinterpret_cast<uint16_t*>(result.data()), 0, len, v8::String::NO_NULL_TERMINATION));
 			return result;
 		}
+#endif
 	}
 
 	static to_type to_v8(v8::Isolate* isolate, std::basic_string_view<Char, Traits> value)
