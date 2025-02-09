@@ -34,7 +34,7 @@ public:
 	using const_pointer_type = typename Traits::const_pointer_type;
 	using object_id = typename Traits::object_id;
 
-	using ctor_function = std::function<pointer_type (v8::FunctionCallbackInfo<v8::Value> const& args)>;
+	using ctor_function = std::function<std::pair<pointer_type, size_t> (v8::FunctionCallbackInfo<v8::Value> const& args)>;
 	using dtor_function = std::function<void (v8::Isolate*, pointer_type const&)>;
 	using cast_function = pointer_type (*)(pointer_type const&);
 
@@ -74,7 +74,7 @@ public:
 	pointer_type find_object(object_id id, type_info const& actual_type) const;
 	v8::Local<v8::Object> find_v8_object(pointer_type const& ptr) const;
 
-	v8::Local<v8::Object> wrap_object(pointer_type const& object, bool call_dtor);
+	v8::Local<v8::Object> wrap_object(pointer_type const& object, size_t size);
 	v8::Local<v8::Object> wrap_object(v8::FunctionCallbackInfo<v8::Value> const& args);
 	pointer_type unwrap_object(v8::Local<v8::Value> value);
 
@@ -82,7 +82,7 @@ private:
 	struct wrapped_object
 	{
 		v8::Global<v8::Object> pobj;
-		bool call_dtor;
+		size_t size; // 0 for referenced objects
 	};
 
 	void reset_object(pointer_type const& object, wrapped_object& wrapped);
@@ -163,12 +163,9 @@ public:
 
 private:
 	template<typename... Args>
-	static object_pointer_type object_create(v8::Isolate* isolate, Args&&... args)
+	static object_pointer_type object_create(Args&&... args)
 	{
-		object_pointer_type object = Traits::template create<T>(std::forward<Args>(args)...);
-		isolate->AdjustAmountOfExternalAllocatedMemory(
-			static_cast<int64_t>(Traits::object_size(object)));
-		return object;
+		return Traits::template create<T>(std::forward<Args>(args)...);
 	}
 
 	template<typename... Args>
@@ -176,19 +173,13 @@ private:
 	{
 		static object_pointer_type call(v8::FunctionCallbackInfo<v8::Value> const& args)
 		{
-			object_pointer_type object = detail::call_from_v8<Traits>(Traits::template create<T, Args...>, args);
-			args.GetIsolate()->AdjustAmountOfExternalAllocatedMemory(
-				static_cast<int64_t>(Traits::object_size(object)));
-			return object;
+			return detail::call_from_v8<Traits>(Traits::template create<T, Args...>, args);
 		}
 	};
 
-	static void object_destroy(v8::Isolate* isolate, pointer_type const& ptr)
+	static void object_destroy(v8::Isolate*, pointer_type const& ptr)
 	{
-		object_pointer_type object = Traits::template static_pointer_cast<T>(ptr);
-		Traits::destroy(object);
-		isolate->AdjustAmountOfExternalAllocatedMemory(
-			-static_cast<int64_t>(Traits::object_size(object)));
+		Traits::destroy(Traits::template static_pointer_cast<T>(ptr));
 	}
 
 	explicit class_(v8::Isolate* isolate, detail::type_info const& existing)
@@ -224,7 +215,8 @@ public:
 	{
 		class_info_.set_ctor([create = std::move(create)](v8::FunctionCallbackInfo<v8::Value> const& args)
 		{
-			return create(args);
+			auto object = create(args);
+			return std::make_pair(object, Traits::object_size(object));
 		});
 		return *this;
 	}
@@ -375,7 +367,7 @@ public:
 	/// It will not take ownership of the C++ pointer.
 	static v8::Local<v8::Object> reference_external(v8::Isolate* isolate, object_pointer_type const& ext)
 	{
-		return detail::classes::find<Traits>(isolate, detail::type_id<T>()).wrap_object(ext, false);
+		return detail::classes::find<Traits>(isolate, detail::type_id<T>()).wrap_object(ext, 0);
 	}
 
 	/// Remove external reference from JavaScript
@@ -389,7 +381,7 @@ public:
 	/// to allocate `ext`
 	static v8::Local<v8::Object> import_external(v8::Isolate* isolate, object_pointer_type const& ext)
 	{
-		return detail::classes::find<Traits>(isolate, detail::type_id<T>()).wrap_object(ext, true);
+		return detail::classes::find<Traits>(isolate, detail::type_id<T>()).wrap_object(ext, Traits::object_size(ext));
 	}
 
 	/// Get wrapped object from V8 value, may return nullptr on fail.
@@ -403,7 +395,7 @@ public:
 	template<typename... Args>
 	static v8::Local<v8::Object> create_object(v8::Isolate* isolate, Args&&... args)
 	{
-		return import_external(isolate, object_create(isolate, std::forward<Args>(args)...));
+		return import_external(isolate, object_create(std::forward<Args>(args)...));
 	}
 
 	/// Find V8 object handle for a wrapped C++ object, may return empty handle on fail.
@@ -423,7 +415,7 @@ public:
 			object_pointer_type clone = Traits::clone(obj);
 			if (clone)
 			{
-				wrapped_object = class_info.wrap_object(clone, true);
+				wrapped_object = class_info.wrap_object(clone, Traits::object_size(clone));
 			}
 		}
 		return wrapped_object;
