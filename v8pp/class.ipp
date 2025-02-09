@@ -197,7 +197,7 @@ V8PP_IMPL v8::Local<v8::Object> object_registry<Traits>::find_v8_object(pointer_
 }
 
 template<typename Traits>
-V8PP_IMPL v8::Local<v8::Object> object_registry<Traits>::wrap_object(pointer_type const& object, bool call_dtor)
+V8PP_IMPL v8::Local<v8::Object> object_registry<Traits>::wrap_object(pointer_type const& object, size_t size)
 {
 	if (!object)
 	{
@@ -230,7 +230,11 @@ V8PP_IMPL v8::Local<v8::Object> object_registry<Traits>::wrap_object(pointer_typ
 				object_registry* this_ = static_cast<object_registry*>(data.GetInternalField(1));
 				this_->remove_object(object);
 			}, v8::WeakCallbackType::kInternalFields);
-		objects_.emplace(object, wrapped_object{ std::move(pobj), call_dtor });
+		objects_.emplace(object, wrapped_object{ std::move(pobj), size });
+		if (size)
+		{
+			isolate_->AdjustAmountOfExternalAllocatedMemory(static_cast<int64_t>(size));
+		}
 	}
 
 	return scope.Escape(obj);
@@ -244,7 +248,8 @@ V8PP_IMPL v8::Local<v8::Object> object_registry<Traits>::wrap_object(v8::Functio
 		//assert(false && "create not allowed");
 		throw std::runtime_error(class_name() + " has no constructor");
 	}
-	return wrap_object(ctor_(args), true);
+	auto [object, size] = ctor_(args);
+	return wrap_object(object, size);
 }
 
 template<typename Traits>
@@ -281,8 +286,9 @@ object_registry<Traits>::unwrap_object(v8::Local<v8::Value> value)
 template<typename Traits>
 V8PP_IMPL void object_registry<Traits>::reset_object(pointer_type const& object, wrapped_object& wrapped)
 {
-	if (wrapped.call_dtor)
+	if (wrapped.size)
 	{
+		isolate_->AdjustAmountOfExternalAllocatedMemory(-static_cast<int64_t>(wrapped.size));
 		dtor_(isolate_, object);
 	}
 	wrapped.pobj.Reset();
