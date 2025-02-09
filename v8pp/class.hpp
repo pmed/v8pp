@@ -12,6 +12,10 @@
 #include "v8pp/ptr_traits.hpp"
 #include "v8pp/type_info.hpp"
 
+#if V8_MAJOR_VERSION > 13 || (V8_MAJOR_VERSION == 13 && V8_MINOR_VERSION >= 3)
+#include <v8-external-memory-accounter.h>
+#endif
+
 namespace v8pp::detail {
 
 struct class_info
@@ -106,6 +110,29 @@ private:
 	v8::Isolate* isolate_;
 	v8::Global<v8::FunctionTemplate> func_;
 	v8::Global<v8::FunctionTemplate> js_func_;
+
+#if V8_MAJOR_VERSION > 13 || (V8_MAJOR_VERSION == 13 && V8_MINOR_VERSION >= 3)
+	v8::ExternalMemoryAccounter external_memory_accounter_;
+
+	void increase_allocated_memory(size_t size)
+	{
+		external_memory_accounter_.Increase(isolate_, size);
+	}
+
+	void decrease_allocated_memory(size_t size)
+	{
+		external_memory_accounter_.Decrease(isolate_, size);
+	}
+#else
+	void increase_allocated_memory(size_t size)
+	{
+		isolate_->AdjustAmountOfExternalAllocatedMemory(static_cast<int64_t>(size));
+	}
+	void decrease_allocated_memory(size_t size)
+	{
+		isolate_->AdjustAmountOfExternalAllocatedMemory(-static_cast<int64_t>(size));
+	}
+#endif
 
 	ctor_function ctor_;
 	dtor_function dtor_;

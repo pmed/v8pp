@@ -233,7 +233,7 @@ V8PP_IMPL v8::Local<v8::Object> object_registry<Traits>::wrap_object(pointer_typ
 		objects_.emplace(object, wrapped_object{ std::move(pobj), size });
 		if (size)
 		{
-			isolate_->AdjustAmountOfExternalAllocatedMemory(static_cast<int64_t>(size));
+			increase_allocated_memory(size);
 		}
 	}
 
@@ -288,7 +288,7 @@ V8PP_IMPL void object_registry<Traits>::reset_object(pointer_type const& object,
 {
 	if (wrapped.size)
 	{
-		isolate_->AdjustAmountOfExternalAllocatedMemory(-static_cast<int64_t>(wrapped.size));
+		decrease_allocated_memory(wrapped.size);
 		dtor_(isolate_, object);
 	}
 	wrapped.pobj.Reset();
