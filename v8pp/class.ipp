@@ -278,7 +278,11 @@ object_registry<Traits>::unwrap_object(v8::Local<v8::Value> value)
 				}
 			}
 		}
+#if V8_MAJOR_VERSION > 12 || (V8_MAJOR_VERSION == 12 && V8_MINOR_VERSION >= 9)
+		value = obj->GetPrototypeV2();
+#else
 		value = obj->GetPrototype();
+#endif
 	}
 	return nullptr;
 }
