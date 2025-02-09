@@ -1,4 +1,5 @@
 #include "v8pp/json.hpp"
+#include "v8pp/convert.hpp"
 
 namespace v8pp {
 
@@ -13,9 +14,7 @@ V8PP_IMPL std::string json_str(v8::Isolate* isolate, v8::Local<v8::Value> value)
 
 	v8::Local<v8::Context> context = isolate->GetCurrentContext();
 	v8::Local<v8::String> result = v8::JSON::Stringify(context, value).ToLocalChecked();
-	v8::String::Utf8Value const str(isolate, result);
-
-	return std::string(*str, str.length());
+	return v8pp::from_v8<std::string>(isolate, result);
 }
 
 V8PP_IMPL v8::Local<v8::Value> json_parse(v8::Isolate* isolate, std::string_view str)
@@ -28,12 +27,10 @@ V8PP_IMPL v8::Local<v8::Value> json_parse(v8::Isolate* isolate, std::string_view
 	v8::EscapableHandleScope scope(isolate);
 
 	v8::Local<v8::Context> context = isolate->GetCurrentContext();
-	v8::Local<v8::String> value = v8::String::NewFromUtf8(isolate, str.data(),
-		v8::NewStringType::kNormal, static_cast<int>(str.size())).ToLocalChecked();
 
 	v8::TryCatch try_catch(isolate);
 	v8::Local<v8::Value> result;
-	bool const is_empty_result = v8::JSON::Parse(context, value).ToLocal(&result);
+	bool const is_empty_result = v8::JSON::Parse(context, v8pp::to_v8(isolate, str)).ToLocal(&result);
 	(void)is_empty_result;
 	if (try_catch.HasCaught())
 	{
