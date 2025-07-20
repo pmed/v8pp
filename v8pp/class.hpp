@@ -344,11 +344,20 @@ public:
 
 		v8::HandleScope scope(isolate());
 
-		v8::AccessorNameGetterCallback getter = property_type::template get<Traits>;
-		v8::AccessorNameSetterCallback setter = property_type::is_readonly ? nullptr : property_type::template set<Traits>;
 		v8::Local<v8::String> v8_name = v8pp::to_v8(isolate(), name);
 		v8::Local<v8::Value> data = detail::external_data::set(isolate(), property_type(std::move(get), std::move(set)));
-		class_info_.class_function_template()->PrototypeTemplate()->SetNativeDataProperty(v8_name, getter, setter, data, v8::PropertyAttribute::DontDelete);
+		
+		v8::Local<v8::FunctionTemplate> getter_template = wrap_function_template<Getter, Traits>(isolate(), std::forward<Getter>(get));
+		
+		v8::Local<v8::FunctionTemplate> setter_template;
+		if constexpr (!property_type::is_readonly) {
+			setter_template = wrap_function_template<Setter, Traits>(isolate(), std::forward<Setter>(set));
+		}
+		
+		class_info_.class_function_template()->PrototypeTemplate()
+            ->SetAccessorProperty (v8_name, getter_template, setter_template,
+                v8::PropertyAttribute::DontDelete);
+        
 		return *this;
 	}
 
