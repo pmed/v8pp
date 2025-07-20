@@ -1,6 +1,7 @@
 [![Build status](https://github.com/pmed/v8pp/actions/workflows/cmake.yml/badge.svg)](https://github.com/pmed/v8pp/actions/workflows/cmake.yml)
 [![NPM](https://img.shields.io/npm/v/v8pp.svg)](https://npmjs.com/package/v8pp)
 [![Join the chat at https://gitter.im/pmed/v8pp](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pmed/v8pp?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/pmed/v8pp)
 
 # v8pp
 
@@ -57,7 +58,7 @@ Some of them could be:
 ## Binding example
 
 v8pp supports V8 versions after 6.3 with `v8::Isolate` usage in API. There are 2 targets for binding:
- 
+
   * `v8pp::module`, a wrapper class around `v8::ObjectTemplate`
   * `v8pp::class_`, a template class wrapper around `v8::FunctionTemplate`
 
@@ -75,7 +76,7 @@ struct X
     X(int v, bool u) : var(v) {}
     int var;
     int get() const { return var; }
-    void set(int x) { var = x; } 
+    void set(int x) { var = x; }
 };
 
 // bind free variables and functions
@@ -127,7 +128,7 @@ void RegisterModule(v8::Local<v8::Object> exports)
 {
     v8pp::module addon(v8::Isolate::GetCurrent());
 
-    // set bindings... 
+    // set bindings...
     addon
         .function("fun", &function)
         .class_("cls", my_class)
