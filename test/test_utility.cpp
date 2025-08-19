@@ -6,6 +6,8 @@
 #include <map>
 #include <unordered_map>
 
+namespace {
+
 template<typename Ret, typename F>
 void test_ret(F&&)
 {
@@ -61,11 +63,11 @@ void test_function_traits()
 		char i(float) const volatile { return 0; }
 		void operator()(int, char&) const volatile {}
 
-		float w;
+		float w = 0;
 		const int x = 1;
-		volatile char y;
+		volatile char y = 0;
 		const volatile bool z = true;
-		mutable volatile short zz;
+		mutable volatile short zz = 0;
 	};
 
 	test_ret<float>(&X::f);
@@ -171,83 +173,107 @@ void test_is_callable()
 	static_assert(!is_callable<Y>::value, "Y is not callable");
 }
 
-void test_type_traits()
+void test_concepts()
 {
-	static_assert(v8pp::detail::is_string<std::string>::value, "std::string");
-	static_assert(!v8pp::detail::is_sequence<std::string>::value, "std::string");
-	static_assert(!v8pp::detail::is_mapping<std::string>::value, "std::string");
-	static_assert(!v8pp::detail::is_array<std::string>::value, "std::string");
+	static_assert(v8pp::detail::String<std::string>, "std::string");
+	static_assert(!v8pp::detail::Sequence<std::string>, "std::string");
+	static_assert(!v8pp::detail::Mapping<std::string>, "std::string");
+	static_assert(!v8pp::detail::Array<std::string>, "std::string");
+	static_assert(v8pp::detail::HasReserve<std::string>, "std::string");
+	static_assert(!v8pp::detail::Tuple<std::string>, "std::string");
 
-	static_assert(v8pp::detail::is_string<std::string_view>::value, "std::string_view");
-	static_assert(v8pp::detail::is_string<std::u16string>::value, "std::u16string");
-	static_assert(v8pp::detail::is_string<std::u16string_view>::value, "std::u16string_view");
-	static_assert(v8pp::detail::is_string<std::u32string>::value, "std::u32string");
-	static_assert(v8pp::detail::is_string<std::u32string_view>::value, "std::u32string_view");
-	static_assert(v8pp::detail::is_string<std::wstring>::value, "std::wstring");
-	static_assert(v8pp::detail::is_string<std::wstring_view>::value, "std::wstring_view");
-	static_assert(v8pp::detail::is_string<char const*>::value, "char const*");
-	static_assert(v8pp::detail::is_string<char16_t const*>::value, "char16_t const*");
-	static_assert(v8pp::detail::is_string<char32_t const*>::value, "char32_t const*");
-	static_assert(v8pp::detail::is_string<wchar_t const*>::value, "wchar_t const*");
+	static_assert(v8pp::detail::String<std::string_view>, "std::string_view");
+	static_assert(v8pp::detail::String<std::u16string>, "std::u16string");
+	static_assert(v8pp::detail::String<std::u16string_view>, "std::u16string_view");
+	static_assert(v8pp::detail::String<std::u32string>, "std::u32string");
+	static_assert(v8pp::detail::String<std::u32string_view>, "std::u32string_view");
+	static_assert(v8pp::detail::String<std::wstring>, "std::wstring");
+	static_assert(v8pp::detail::String<std::wstring_view>, "std::wstring_view");
+	static_assert(v8pp::detail::String<char const*>, "char const*");
+	static_assert(v8pp::detail::String<char16_t const*>, "char16_t const*");
+	static_assert(v8pp::detail::String<char32_t const*>, "char32_t const*");
+	static_assert(v8pp::detail::String<wchar_t const*>, "wchar_t const*");
 
-	static_assert(!v8pp::detail::is_string<std::array<int, 1>>::value, "std::array");
-	static_assert(!v8pp::detail::is_mapping<std::array<int, 1>>::value, "std::array");
-	static_assert(!v8pp::detail::is_sequence<std::array<int, 1>>::value, "std::array");
-	static_assert(!v8pp::detail::is_sequence<std::array<int, 1>>::value, "std::array");
-	static_assert(v8pp::detail::is_array<std::array<int, 1>>::value, "std::array");
-	static_assert(!v8pp::detail::has_reserve<std::array<int, 1>>::value, "std::array");
+	static_assert(!v8pp::detail::String<std::array<int, 1>>, "std::array");
+	static_assert(!v8pp::detail::Mapping<std::array<int, 1>>, "std::array");
+	static_assert(!v8pp::detail::Sequence<std::array<int, 1>>, "std::array");
+	static_assert(!v8pp::detail::Sequence<std::array<int, 1>>, "std::array");
+	static_assert(v8pp::detail::Array<std::array<int, 1>>, "std::array");
+	static_assert(!v8pp::detail::HasReserve<std::array<int, 1>>, "std::array");
+	static_assert(!v8pp::detail::Tuple<std::array<int, 1>>, "std::array");
 
-	static_assert(!v8pp::detail::is_string<std::vector<char>>::value, "std::vector");
-	static_assert(!v8pp::detail::is_mapping<std::vector<char>>::value, "std::vector");
-	static_assert(v8pp::detail::is_sequence<std::vector<char>>::value, "std::vector");
-	static_assert(!v8pp::detail::is_array<std::vector<char>>::value, "std::vector");
-	static_assert(v8pp::detail::has_reserve<std::vector<char>>::value, "std::vector");
+	static_assert(!v8pp::detail::String<std::vector<char>>, "std::vector");
+	static_assert(!v8pp::detail::Mapping<std::vector<char>>, "std::vector");
+	static_assert(v8pp::detail::Sequence<std::vector<char>>, "std::vector");
+	static_assert(!v8pp::detail::Array<std::vector<char>>, "std::vector");
+	static_assert(v8pp::detail::HasReserve<std::vector<char>>, "std::vector");
+	static_assert(!v8pp::detail::Tuple<std::vector<char>>, "std::vector");
 
-	static_assert(!v8pp::detail::is_string<std::deque<int>>::value, "std::deque");
-	static_assert(!v8pp::detail::is_mapping<std::deque<int>>::value, "std::deque");
-	static_assert(v8pp::detail::is_sequence<std::deque<int>>::value, "std::deque");
-	static_assert(!v8pp::detail::is_array<std::deque<int>>::value, "std::deque");
-	static_assert(!v8pp::detail::has_reserve<std::deque<int>>::value, "std::deque");
+	static_assert(!v8pp::detail::String<std::deque<int>>, "std::deque");
+	static_assert(!v8pp::detail::Mapping<std::deque<int>>, "std::deque");
+	static_assert(v8pp::detail::Sequence<std::deque<int>>, "std::deque");
+	static_assert(!v8pp::detail::Array<std::deque<int>>, "std::deque");
+	static_assert(!v8pp::detail::HasReserve<std::deque<int>>, "std::deque");
+	static_assert(!v8pp::detail::Tuple<std::deque<int>>, "std::deque");
 
-	static_assert(!v8pp::detail::is_string<std::list<bool>>::value, "std::list");
-	static_assert(!v8pp::detail::is_mapping<std::list<bool>>::value, "std::list");
-	static_assert(v8pp::detail::is_sequence<std::list<bool>>::value, "std::list");
-	static_assert(!v8pp::detail::is_array<std::list<bool>>::value, "std::list");
-	static_assert(!v8pp::detail::has_reserve<std::list<bool>>::value, "std::list");
+	static_assert(!v8pp::detail::String<std::list<bool>>, "std::list");
+	static_assert(!v8pp::detail::Mapping<std::list<bool>>, "std::list");
+	static_assert(v8pp::detail::Sequence<std::list<bool>>, "std::list");
+	static_assert(!v8pp::detail::Array<std::list<bool>>, "std::list");
+	static_assert(!v8pp::detail::HasReserve<std::list<bool>>, "std::list");
+	static_assert(!v8pp::detail::Tuple<std::list<bool>>, "std::list");
 
-	static_assert(!v8pp::detail::is_string<std::tuple<int, char>>::value, "std::tuple");
-	static_assert(!v8pp::detail::is_mapping<std::tuple<int, char>>::value, "std::tuple");
-	static_assert(!v8pp::detail::is_sequence<std::tuple<int, char>>::value, "std::tuple");
-	static_assert(!v8pp::detail::is_array<std::tuple<int, char>>::value, "std::tuple");
-	static_assert(v8pp::detail::is_tuple<std::tuple<int, char>>::value, "std::tuple");
+	static_assert(!v8pp::detail::String<std::map<int, float>>, "std::map");
+	static_assert(v8pp::detail::Mapping<std::map<int, float>>, "std::map");
+	static_assert(!v8pp::detail::Sequence<std::map<int, char>>, "std::map");
+	static_assert(!v8pp::detail::Array<std::map<int, char>>, "std::map");
+	static_assert(!v8pp::detail::HasReserve<std::map<int, char>>, "std::map");
+	static_assert(!v8pp::detail::Tuple<std::map<int, char>>, "std::map");
 
-	static_assert(!v8pp::detail::is_string<std::map<int, float>>::value, "std::map");
-	static_assert(v8pp::detail::is_mapping<std::map<int, float>>::value, "std::map");
-	static_assert(!v8pp::detail::is_sequence<std::map<int, char>>::value, "std::map");
-	static_assert(!v8pp::detail::is_array<std::map<int, char>>::value, "std::map");
+	static_assert(!v8pp::detail::String<std::multimap<int, char>>, "std::multimap");
+	static_assert(v8pp::detail::Mapping<std::multimap<bool, std::string, std::greater<>>>, "std::multimap");
+	static_assert(!v8pp::detail::Sequence<std::multimap<int, char>>, "std::multimap");
+	static_assert(!v8pp::detail::Array<std::multimap<int, char>>, "std::multimap");
+	static_assert(!v8pp::detail::HasReserve<std::multimap<int, char>>, "std::multimap");
+	static_assert(!v8pp::detail::Tuple<std::multimap<int, char>>, "std::multimap");
 
-	static_assert(!v8pp::detail::is_string<std::multimap<int, char>>::value, "std::multimap");
-	static_assert(v8pp::detail::is_mapping<std::multimap<bool, std::string, std::greater<>>>::value, "std::multimap");
-	static_assert(!v8pp::detail::is_sequence<std::multimap<int, char>>::value, "std::multimap");
-	static_assert(!v8pp::detail::is_array<std::multimap<int, char>>::value, "std::multimap");
+	static_assert(!v8pp::detail::String<std::unordered_map<int, char>>, "std::unordered_map");
+	static_assert(v8pp::detail::Mapping<std::unordered_map<std::string, std::string>>, "std::unordered_map");
+	static_assert(!v8pp::detail::Sequence<std::unordered_map<int, char>>, "std::unordered_map");
+	static_assert(!v8pp::detail::Array<std::unordered_map<int, char>>, "std::unordered_map");
+	static_assert(v8pp::detail::HasReserve<std::unordered_map<int, char>>, "std::unordered_map");
+	static_assert(!v8pp::detail::Tuple<std::unordered_map<int, char>>, "std::unordered_map");
 
-	static_assert(!v8pp::detail::is_string<std::unordered_map<int, char>>::value, "std::unordered_map");
-	static_assert(v8pp::detail::is_mapping<std::unordered_map<std::string, std::string>>::value, "std::unordered_map");
-	static_assert(!v8pp::detail::is_sequence<std::unordered_map<int, char>>::value, "std::unordered_map");
-	static_assert(!v8pp::detail::is_array<std::unordered_map<int, char>>::value, "std::unordered_map");
+	static_assert(!v8pp::detail::String<std::unordered_multimap<int, char>>, "std::unordered_multimap");
+	static_assert(v8pp::detail::Mapping<std::unordered_multimap<char, std::string>>, "std::unordered_multimap");
+	static_assert(!v8pp::detail::Sequence<std::unordered_multimap<int, char>>, "std::unordered_multimap");
+	static_assert(!v8pp::detail::Array<std::unordered_multimap<int, char>>, "std::unordered_multimap");
+	static_assert(v8pp::detail::HasReserve<std::unordered_multimap<int, char>>, "std::unordered_multimap");
+	static_assert(!v8pp::detail::Tuple<std::unordered_multimap<int, char>>, "std::unordered_multimap");
 
-	static_assert(!v8pp::detail::is_array<std::unordered_multimap<int, char>>::value, "std::unordered_multimap");
-	static_assert(v8pp::detail::is_mapping<std::unordered_multimap<char, std::string>>::value, "std::unordered_multimap");
-	static_assert(!v8pp::detail::is_sequence<std::unordered_multimap<int, char>>::value, "std::unordered_multimap");
-	static_assert(!v8pp::detail::is_array<std::unordered_multimap<int, char>>::value, "std::unordered_multimap");
+	static_assert(v8pp::detail::Tuple<std::tuple<int, char, float>>, "std::tuple");
+	static_assert(v8pp::detail::Tuple<std::tuple<std::tuple<bool>>>, "std::tuple");
+	static_assert(v8pp::detail::Tuple<std::pair<int, int>>, "std::tuple");
+	static_assert(!v8pp::detail::Tuple<std::array<int, 10>>, "std::tuple");
+	static_assert(!v8pp::detail::Tuple<int>, "std::tuple");
+	static_assert(!v8pp::detail::Tuple<int>, "std::tuple");
+	static_assert(!v8pp::detail::String<std::tuple<int, char>>, "std::tuple");
+	static_assert(!v8pp::detail::Mapping<std::tuple<int, char>>, "std::tuple");
+	static_assert(!v8pp::detail::Sequence<std::tuple<int, char>>, "std::tuple");
+	static_assert(!v8pp::detail::Array<std::tuple<int, char>>, "std::tuple");
+	static_assert(!v8pp::detail::HasReserve<std::tuple<int, char>>, "std::tuple");
 
 	static_assert(!v8pp::detail::is_shared_ptr<int>::value, "int");
 	static_assert(v8pp::detail::is_shared_ptr<std::shared_ptr<int>>::value, "int");
+	static_assert(v8pp::detail::is_shared_ptr<std::shared_ptr<std::vector<char>>>::value, "std::vector<char");
+	static_assert(!v8pp::detail::is_shared_ptr<std::string>::value, "std::string");
 }
+
+} // unnamed namespace
 
 void test_utility()
 {
-	test_type_traits();
+	test_concepts();
 	test_function_traits();
 	test_tuple_tail();
 	test_is_callable();

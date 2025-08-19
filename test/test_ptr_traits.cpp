@@ -153,7 +153,7 @@ void test_shared_ptr_traits()
 
 	static_assert(std::same_as<traits::object_id, void*>);
 	static_assert(std::same_as<traits::convert_ptr<Y>, v8pp::convert<std::shared_ptr<Y>>>);
-	static_assert(std::same_as<traits::convert_ref<Y>, v8pp::convert<Y, v8pp::ref_from_shared_ptr>>);
+	static_assert(std::same_as<traits::convert_ref<Y>, v8pp::convert<v8pp::ref_from_shared_ptr<Y>>>);
 
 	traits::object_id id = traits::pointer_id(ptr);
 	check_eq("shared_ptr_traits::pointer_id", id, y.get());
