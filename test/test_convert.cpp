@@ -61,24 +61,87 @@ void test_string_conv(v8::Isolate* isolate, Char const (&str)[N])
 		v8pp::from_v8<Char const*>(isolate, v8pp::to_v8(isolate, empty, 0)), empty);
 }
 
+struct address
+{
+	std::string zip;
+	std::string city;
+	std::string street;
+	std::string house;
+	std::optional<std::string> flat;
+
+	//for test framework
+	bool operator==(address const& other) const = default;
+
+	friend std::ostream& operator<<(std::ostream& os, address const& a)
+	{
+		return os << "address: " << a.zip << " " << a.city << " " << a.street << " " << a.house << " " << a.flat;
+	}
+};
+
 struct person
 {
 	std::string name;
 	int age;
+	std::optional<address> home;
 
 	//for test framework
-	bool operator!=(person const& other) const
-	{
-		return name != other.name || age != other.age;
-	}
+	bool operator==(person const& other) const = default;
 
 	friend std::ostream& operator<<(std::ostream& os, person const& p)
 	{
-		return os << "person: " << p.name << " age: " << p.age;
+		return os << "person: " << p.name << " age: " << p.age << " home: " << p.home;
 	}
 };
 
 namespace v8pp {
+
+template<>
+struct convert<address>
+{
+	using from_type = address;
+	using to_type = v8::Local<v8::Object>;
+
+	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
+	{
+		return !value.IsEmpty() && value->IsObject();
+	}
+
+	static to_type to_v8(v8::Isolate* isolate, address const& a)
+	{
+		v8::EscapableHandleScope scope(isolate);
+		v8::Local<v8::Object> obj = v8::Object::New(isolate);
+		obj->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "zip"), v8pp::to_v8(isolate, a.zip)).FromJust();
+		obj->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "city"), v8pp::to_v8(isolate, a.city)).FromJust();
+		obj->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "street"), v8pp::to_v8(isolate, a.street)).FromJust();
+		obj->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "house"), v8pp::to_v8(isolate, a.house)).FromJust();
+		obj->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "flat"), v8pp::to_v8(isolate, a.flat)).FromJust();
+		return scope.Escape(obj);
+	}
+
+	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	{
+		if (!is_valid(isolate, value))
+		{
+			throw std::runtime_error("expected object");
+		}
+
+		v8::HandleScope scope(isolate);
+		v8::Local<v8::Object> obj = value.As<v8::Object>();
+
+		address result;
+		result.zip = v8pp::from_v8<std::string>(isolate,
+			obj->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "zip")).ToLocalChecked());
+		result.city = v8pp::from_v8<std::string>(isolate,
+			obj->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "city")).ToLocalChecked());
+		result.street = v8pp::from_v8<std::string>(isolate,
+			obj->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "street")).ToLocalChecked());
+		result.house = v8pp::from_v8<std::string>(isolate,
+			obj->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "house")).ToLocalChecked());
+		result.flat = v8pp::from_v8<std::string>(isolate,
+			obj->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "flat")).ToLocalChecked());
+		return result;
+	}
+};
 
 template<>
 struct convert<person>
@@ -97,9 +160,11 @@ struct convert<person>
 		v8::Local<v8::Object> obj = v8::Object::New(isolate);
 		obj->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "name"), v8pp::to_v8(isolate, p.name)).FromJust();
 		obj->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "age"), v8pp::to_v8(isolate, p.age)).FromJust();
+		obj->Set(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "home"), v8pp::to_v8(isolate, p.home)).FromJust();
 		/* Simpler after #include <v8pp/object.hpp>
 		set_option(isolate, obj, "name", p.name);
 		set_option(isolate, obj, "age", p.age);
+		set_option(isolate, obj, "home", p.home);
 		*/
 		return scope.Escape(obj);
 	}
@@ -119,10 +184,13 @@ struct convert<person>
 			obj->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "name")).ToLocalChecked());
 		result.age = v8pp::from_v8<int>(isolate,
 			obj->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "age")).ToLocalChecked());
+		result.home = v8pp::from_v8<std::optional<address>>(isolate,
+			obj->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, "home")).ToLocalChecked());
 
 		/* Simpler after #include <v8pp/object.hpp>
 		get_option(isolate, obj, "name", result.name);
 		get_option(isolate, obj, "age", result.age);
+		get_option(isolate, obj, "home", result.home);
 		*/
 		return result;
 	}
@@ -135,6 +203,25 @@ void test_convert_user_type(v8::Isolate* isolate)
 	person p;
 	p.name = "Al"; p.age = 33;
 	test_conv(isolate, p);
+	p.home = { .zip = "90210", .city = "Beverly Hills", .street = "Main St", .house = "123", .flat = "B2" };
+	test_conv(isolate, p);
+}
+
+void test_convert_optional(v8::Isolate* isolate)
+{
+	test_conv(isolate, std::optional<int>{42});
+	test_conv(isolate, std::optional<int>{std::nullopt});
+
+	check("null", v8pp::from_v8<std::optional<std::string>>(isolate, v8::Null(isolate)) == std::nullopt);
+    check("undefined", v8pp::from_v8<std::optional<std::string>>(isolate, v8::Undefined(isolate)) == std::nullopt);
+
+    check("nullopt", v8pp::to_v8(isolate, std::nullopt)->IsNull());
+	check("monostate", v8pp::to_v8(isolate, std::monostate{})->IsUndefined());
+
+	check_ex<v8pp::invalid_argument>("wrong optional type", [isolate]()
+	{
+		v8pp::from_v8<std::optional<int>>(isolate, v8pp::to_v8(isolate, std::optional<std::string>{"aa"}));
+	});
 }
 
 void test_convert_tuple(v8::Isolate* isolate)
@@ -147,6 +234,9 @@ void test_convert_tuple(v8::Isolate* isolate)
 
 	std::tuple<size_t, size_t, size_t> const tuple_3{ 1, 2, 3 };
 	test_conv(isolate, tuple_3);
+
+	std::tuple<int, std::optional<int>, int, std::optional<int>> const tuple_4{ 1, 2, 3, std::nullopt };
+	test_conv(isolate, tuple_4);
 
 	check_ex<v8pp::invalid_argument>("Tuple", [isolate, &tuple_1]()
 	{
@@ -316,8 +406,9 @@ void test_convert_variant(v8::Isolate* isolate)
 	check_arithmetic_reversed(2, 5.5f, true);
 	check_arithmetic_reversed(-2, 2.2f, false);
 
-	variant_check<std::vector<float>, float, std::string> check_vector{ isolate };
-	check_vector({1.f, 2.f, 3.f}, 4.f, "testing");
+	variant_check<std::vector<float>, float, std::optional<std::string>> check_vector{ isolate };
+	check_vector({1.f, 2.f, 3.f}, 4.f, std::optional<std::string>("testing"));
+	check_vector(std::vector<float>{}, 0.f, std::optional<std::string>{});
 
 	// The order here matters
 	variant_check<int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, /*int64_t, uint64_t,*/ float, double> order_check{ isolate };
@@ -353,6 +444,10 @@ void test_convert_variant(v8::Isolate* isolate)
 
 	variant_check<U2, std::unordered_multimap<char, U>> unordered_multimap_check{ isolate };
 	unordered_multimap_check(U2{3.0}, std::unordered_multimap<char, U>{ { 'a', U{1} }, { 'b', U{2} } });
+
+	variant_check<int, std::optional<std::string>, bool> optional_check{ isolate };
+	optional_check(true, "test", 1);
+	optional_check(0, std::optional<std::string>{}, false);
 }
 
 void test_convert()
@@ -405,6 +500,7 @@ void test_convert()
 		v8pp::from_v8<std::vector<int>>(isolate, v8pp::to_v8(isolate, list.begin(), list.end())), vector);
 
 	test_convert_user_type(isolate);
+	test_convert_optional(isolate);
 	test_convert_tuple(isolate);
 	test_convert_variant(isolate);
 }

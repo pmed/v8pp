@@ -157,6 +157,12 @@ std::ostream& operator<<(std::ostream& os, Enum value)
 	return os << static_cast<typename std::underlying_type_t<Enum>>(value);
 }
 
+template<typename T>
+std::ostream& operator<<(std::ostream& os, std::optional<T> const& optional)
+{
+	return optional ? os << *optional : os << "nullopt";
+}
+
 template<typename... Ts>
 std::ostream& operator<<(std::ostream& os, std::tuple<Ts...> const& tuple)
 {
