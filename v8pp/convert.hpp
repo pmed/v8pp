@@ -156,22 +156,49 @@ struct convert<std::monostate>
 
 	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
 	{
-		return value.IsEmpty() || value->IsNullOrUndefined();
+		return value.IsEmpty() || value->IsUndefined();
 	}
 
-	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	static std::monostate from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
 		if (!is_valid(isolate, value))
 		{
 			throw invalid_argument(isolate, value, "Undefined");
 		}
 
-		return from_type{};
+		return std::monostate{};
 	}
 
-	static to_type to_v8(v8::Isolate* isolate, from_type value)
+	static v8::Local<v8::Primitive> to_v8(v8::Isolate* isolate, std::monostate)
 	{
 		return v8::Undefined(isolate);
+	}
+};
+
+template<>
+struct convert<std::nullopt_t>
+{
+	using from_type = std::nullopt_t;
+	using to_type = v8::Local<v8::Primitive>;
+
+	static bool is_valid(v8::Isolate*, v8::Local<v8::Value> value)
+	{
+		return value.IsEmpty() || value->IsNull();
+	}
+
+	static std::nullopt_t from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
+	{
+		if (!is_valid(isolate, value))
+		{
+			throw invalid_argument(isolate, value, "Null");
+		}
+
+		return std::nullopt;
+	}
+
+	static v8::Local<v8::Primitive> to_v8(v8::Isolate* isolate, std::nullopt_t)
+	{
+		return v8::Null(isolate);
 	}
 };
 
@@ -320,32 +347,38 @@ template<typename T>
 struct convert<std::optional<T>>
 {
 	using from_type = std::optional<T>;
-	using to_type = typename convert<T>::to_type;
+	using to_type = v8::Local<v8::Value>;
 
 	static bool is_valid(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
-		return convert<T>::is_valid(isolate, value);
+		return value.IsEmpty() || value->IsNullOrUndefined() || convert<T>::is_valid(isolate, value);
 	}
 
 	static from_type from_v8(v8::Isolate* isolate, v8::Local<v8::Value> value)
 	{
-		if (!is_valid(isolate, value))
+	    if (value.IsEmpty() || value->IsNullOrUndefined())
 		{
-			return from_type{};
+			return std::nullopt;
 		}
-
-		return convert<T>::from_v8(isolate, value);
-	}
-
-	static to_type to_v8(v8::Isolate* isolate, from_type const& value)
-	{
-		if (value.has_value())
+		else if (convert<T>::is_valid(isolate, value))
 		{
-			return convert<T>::to_v8(isolate, value.value());
+			return convert<T>::from_v8(isolate, value);
 		}
 		else
 		{
-			return to_type::Cast(v8::Undefined(isolate));
+		    throw invalid_argument(isolate, value, "Optional");
+		}
+	}
+
+	static to_type to_v8(v8::Isolate* isolate, std::optional<T> const& value)
+	{
+		if (value)
+		{
+			return convert<T>::to_v8(isolate, *value);
+		}
+		else
+		{
+			return v8::Undefined(isolate);
 		}
 	}
 };
@@ -426,41 +459,45 @@ public:
 
 		v8::HandleScope scope(isolate);
 
+		if (value.IsEmpty() || value->IsNull())
+		{
+			return alternate<is_nullopt, detail::is_optional>(isolate, value);
+		}
+		else if (value->IsUndefined())
+		{
+			return alternate<is_monostate, detail::is_optional>(isolate, value);
+		}
 		if (value->IsBoolean())
 		{
-			return alternate<is_bool>(isolate, value);
+			return alternate<is_bool, detail::is_optional>(isolate, value);
 		}
 		else if (value->IsInt32() || value->IsUint32())
 		{
-			return alternate<is_integral_not_bool, std::is_floating_point>(isolate, value);
+			return alternate<is_integral_not_bool, std::is_floating_point, detail::is_optional>(isolate, value);
 		}
 		else if (value->IsNumber())
 		{
 			//TODO: 64-bit integers
-			return alternate<std::is_floating_point, is_integral_not_bool>(isolate, value);
+			return alternate<std::is_floating_point, is_integral_not_bool, detail::is_optional>(isolate, value);
 		}
 		else if (value->IsString())
 		{
-			return alternate<detail::is_string>(isolate, value);
+			return alternate<detail::is_string, detail::is_optional>(isolate, value);
 		}
 		else if (value->IsArray())
 		{
-			return alternate<detail::is_sequence, detail::is_array, detail::is_tuple>(isolate, value);
+			return alternate<detail::is_sequence, detail::is_array, detail::is_tuple, detail::is_optional>(isolate, value);
 		}
 		else if (value->IsObject())
 		{
 			if (is_map_object(isolate, value.As<v8::Object>()))
 			{
-				return alternate<detail::is_mapping, is_wrapped_class, detail::is_shared_ptr>(isolate, value);
+				return alternate<detail::is_mapping, is_wrapped_class, detail::is_shared_ptr, detail::is_optional>(isolate, value);
 			}
 			else
 			{
-				return alternate<is_wrapped_class, detail::is_shared_ptr>(isolate, value);
+				return alternate<is_wrapped_class, detail::is_shared_ptr, detail::is_optional>(isolate, value);
 			}
-		}
-		else if (value->IsNullOrUndefined())
-		{
-			return alternate<is_monostate>(isolate, value);
 		}
 		else
 		{
@@ -483,6 +520,9 @@ private:
 
 	template<typename T>
 	using is_monostate = std::is_same<T, std::monostate>;
+
+	template<typename T>
+	using is_nullopt = std::is_same<T, std::nullopt_t>;
 
 	template<typename T>
 	using is_integral_not_bool = std::bool_constant<std::is_integral<T>::value && !is_bool<T>::value>;
@@ -521,9 +561,16 @@ private:
 	{
 		if constexpr (std::is_same<T, std::monostate>::value)
 		{
-			if(v8pp::convert<std::monostate>::is_valid(isolate, value))
+			if (v8pp::convert<std::monostate>::is_valid(isolate, value))
 			{
 				result = std::monostate{};
+			}
+		}
+		else if constexpr (std::is_same<T, std::nullopt_t>::value)
+		{
+			if (v8pp::convert<std::nullopt_t>::is_valid(isolate, value))
+			{
+				result = std::nullopt;
 			}
 		}
 		else if constexpr (detail::is_shared_ptr<T>::value)
@@ -958,12 +1005,16 @@ v8::Local<v8::String> to_v8(v8::Isolate* isolate,
 #endif
 
 template<typename T>
-auto to_v8(v8::Isolate* isolate, std::optional<T> const& value) -> v8::Local<v8::Value>
+v8::Local<v8::Value> to_v8(v8::Isolate* isolate, std::optional<T> const& value)
 {
-	if (value.has_value())
-		return convert<T>::to_v8(isolate, value.value());
+	if (value)
+	{
+		return convert<T>::to_v8(isolate, *value);
+	}
 	else
+	{
 		return v8::Undefined(isolate);
+	}
 }
 
 template<typename T>
